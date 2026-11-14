@@ -1,0 +1,19 @@
+import {
+  PERMISSION_CODES as CONFIG_PERMISSION_CODES,
+  PERMISSION_DESCRIPTIONS as CONFIG_PERMISSION_DESCRIPTIONS,
+  STEP_UP_REQUIRED_PERMISSIONS as CONFIG_STEP_UP_REQUIRED_PERMISSIONS,
+} from '@arven/config';
+import { describe, expect, it } from 'vitest';
+import {
+  PERMISSION_CODES,
+  PERMISSION_DESCRIPTIONS,
+  STEP_UP_REQUIRED_PERMISSIONS,
+} from '../src/lib/permissions';
+
+describe('Admin browser-safe permissions registry parity', () => {
+  it('matches @arven/config PERMISSION_CODES, PERMISSION_DESCRIPTIONS, and STEP_UP_REQUIRED_PERMISSIONS identically', () => {
+    expect(PERMISSION_CODES).toEqual(CONFIG_PERMISSION_CODES);
+    expect(PERMISSION_DESCRIPTIONS).toEqual(CONFIG_PERMISSION_DESCRIPTIONS);
+    expect(STEP_UP_REQUIRED_PERMISSIONS).toEqual(CONFIG_STEP_UP_REQUIRED_PERMISSIONS);
+  });
+});

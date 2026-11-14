@@ -1,0 +1,36 @@
+{
+  "name": "@arven/admin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "typecheck": "next typegen && tsc --noEmit",
+    "lint": "eslint src test next.config.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@arven/config": "workspace:*",
+    "@arven/contracts": "workspace:*",
+    "@arven/ui": "workspace:*",
+    "@arven/validators": "workspace:*",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.5",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint-config-next": "^16.4.6",
+    "jsdom": "^31.0.1",
+    "postcss": "^8.5.33",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  }
+}

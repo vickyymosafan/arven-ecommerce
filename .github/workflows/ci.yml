@@ -1,0 +1,57 @@
+name: ARVEN CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: arven
+          POSTGRES_PASSWORD: arven_ci_password
+          POSTGRES_DB: arven_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:8
+        command: redis-server --appendonly yes --maxmemory-policy noeviction
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://arven:arven_ci_password@127.0.0.1:5432/arven_ci?schema=public
+      REDIS_URL: redis://127.0.0.1:6379
+      SESSION_SECRET: ci-only-session-secret-minimum-32-characters-long
+      CSRF_SECRET: ci-only-csrf-secret-minimum-32-characters-long
+      MFA_ENCRYPTION_KEY: 0000000000000000000000000000000000000000000000000000000000000000
+      EMAIL_DRIVER: local_capture
+      STORAGE_DRIVER: local_fs
+      PAYMENT_DRIVER: local_stub
+      COOKIE_SECURE: false
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm turbo lint typecheck build test

@@ -1,0 +1,93 @@
+import type { PermissionCode } from '@arven/config';
+
+/**
+ * Browser-safe copy of the canonical 36-permission registry from `@arven/config/constants`
+ * so Next.js client bundles never pull `@arven/config/env` (`node:fs` / `dotenv`).
+ * Verified for exact equality in `apps/admin/test/permissions.test.ts`.
+ */
+export const PERMISSION_CODES = [
+  'analytics.read',
+  'analytics.read.limited',
+  'analytics.export',
+  'product.read',
+  'product.write',
+  'product.publish',
+  'asset.read',
+  'asset.upload',
+  'asset.publish',
+  'inventory.read',
+  'inventory.receive',
+  'inventory.adjust',
+  'order.read',
+  'order.read.limited',
+  'order.fulfill',
+  'order.cancel',
+  'return.read',
+  'return.review',
+  'return.inspect',
+  'return.approve',
+  'refund.request',
+  'refund.approve',
+  'coupon.read',
+  'coupon.manage',
+  'customer.read',
+  'customer.note.write',
+  'review.moderate',
+  'cms.read',
+  'cms.write',
+  'cms.publish',
+  'user.read',
+  'user.manage.limited',
+  'user.role.manage',
+  'settings.provider.manage',
+  'audit.read',
+  'audit.read.scoped',
+] as const satisfies readonly PermissionCode[];
+
+export const PERMISSION_DESCRIPTIONS: Record<
+  PermissionCode,
+  { area: string; description: string }
+> = {
+  'analytics.read': { area: 'Sales Analytics', description: 'Full sales, conversion, cohort and 3D metrics' },
+  'analytics.read.limited': { area: 'Sales Analytics', description: 'Order-volume / SLA support summary without margin/PII' },
+  'analytics.export': { area: 'Sales Analytics', description: 'Export financial/analytics CSV or JSON (audit logged)' },
+  'product.read': { area: 'Products & Catalog', description: 'Read draft, review, and published catalog variants and media' },
+  'product.write': { area: 'Products & Catalog', description: 'Create/edit products, variants, prices, categories, collections' },
+  'product.publish': { area: 'Products & Catalog', description: 'Transition product status READY_TO_PUBLISH -> PUBLISHED or ARCHIVED' },
+  'asset.read': { area: '3D Assets & Presets', description: 'Read 3D asset metadata, validation runs, and presets' },
+  'asset.upload': { area: '3D Assets & Presets', description: 'Request presigned upload and create 3D validation run' },
+  'asset.publish': { area: '3D Assets & Presets', description: 'Approve validated READY 3D asset and customization presets' },
+  'inventory.read': { area: 'Inventory & Stock', description: 'View warehouse levels, movements, and active reservations' },
+  'inventory.receive': { area: 'Inventory & Stock', description: 'Append RECEIPT stock movement (+on_hand)' },
+  'inventory.adjust': { area: 'Inventory & Stock', description: 'Append ADJUSTMENT movement (reason and audit required)' },
+  'order.read': { area: 'Orders & Shipping', description: 'Full operational order, payment status, and shipment view' },
+  'order.read.limited': { area: 'Orders & Shipping', description: 'Support order view (masked contact PII, no raw gateway payloads)' },
+  'order.fulfill': { area: 'Orders & Shipping', description: 'Advance PAID -> PROCESSING -> READY_TO_SHIP and manage shipments' },
+  'order.cancel': { area: 'Orders & Shipping', description: 'Cancel eligible unpaid or pre-shipment order (releases reservation)' },
+  'return.read': { area: 'Returns & Refunds', description: 'View return requests, evidence, and inspection notes' },
+  'return.review': { area: 'Returns & Refunds', description: 'Triage return eligibility and request details' },
+  'return.inspect': { area: 'Returns & Refunds', description: 'Record physical receipt and RETURN_TO_STOCK inspection' },
+  'return.approve': { area: 'Returns & Refunds', description: 'Approve or reject return claim' },
+  'refund.request': { area: 'Returns & Refunds', description: 'Initiate refund request bound to order/return items' },
+  'refund.approve': { area: 'Returns & Refunds', description: 'Authorize and trigger refund payout (OWNER + MFA step-up)' },
+  'coupon.read': { area: 'Coupons & Promos', description: 'Inspect coupon definitions and redemption counts' },
+  'coupon.manage': { area: 'Coupons & Promos', description: 'Create, update, enable/disable promotional coupons' },
+  'customer.read': { area: 'Customers & Reviews', description: 'View customer profiles and order history' },
+  'customer.note.write': { area: 'Customers & Reviews', description: 'Append support notes on customer/order cases' },
+  'review.moderate': { area: 'Customers & Reviews', description: 'Approve or hide customer product reviews' },
+  'cms.read': { area: 'CMS', description: 'View draft/published Homepage, Lookbooks, Journal, Campaigns' },
+  'cms.write': { area: 'CMS', description: 'Create/edit CMS drafts' },
+  'cms.publish': { area: 'CMS', description: 'Publish or archive CMS pages, articles, and lookbooks' },
+  'user.read': { area: 'Users, Roles & Settings', description: 'View staff directory and role assignments' },
+  'user.manage.limited': { area: 'Users, Roles & Settings', description: 'Suspend/activate customer or non-privileged staff' },
+  'user.role.manage': { area: 'Users, Roles & Settings', description: 'Create/edit roles and grant/revoke any role (OWNER + MFA step-up)' },
+  'settings.provider.manage': { area: 'Users, Roles & Settings', description: 'Configure payment/shipping/store settings (OWNER + MFA step-up)' },
+  'audit.read': { area: 'Audit Logs', description: 'Query full immutable platform audit logs' },
+  'audit.read.scoped': { area: 'Audit Logs', description: 'Query domain-scoped audit events (inventory/orders)' },
+};
+
+export const STEP_UP_REQUIRED_PERMISSIONS = [
+  'user.role.manage',
+  'refund.approve',
+  'settings.provider.manage',
+] as const satisfies readonly PermissionCode[];

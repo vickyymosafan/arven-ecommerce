@@ -1,0 +1,53 @@
+/* packages/ui/src/styles/theme.css */
+
+@theme inline {
+  --font-display: var(--font-display), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-canvas: var(--arven-surface-canvas);
+  --color-subtle: var(--arven-surface-subtle);
+  --color-panel: var(--arven-surface-panel);
+  --color-panel-hover: var(--arven-surface-panel-hover);
+  --color-elevated: var(--arven-surface-elevated);
+  --color-inverse: var(--arven-surface-inverse);
+
+  --color-ink: var(--arven-text-primary);
+  --color-ink-secondary: var(--arven-text-secondary);
+  --color-ink-muted: var(--arven-text-muted);
+  --color-ink-inverse: var(--arven-text-inverse);
+
+  --color-hairline: var(--arven-border-hairline);
+  --color-control-border: var(--arven-border-control);
+  --color-strong-border: var(--arven-border-strong);
+
+  --color-accent: var(--arven-accent-primary);
+  --color-link: var(--arven-accent-link);
+  --color-focus: var(--arven-focus-ring);
+
+  --color-info-fg: var(--arven-status-info-fg);
+  --color-info-bg: var(--arven-status-info-bg);
+  --color-success-fg: var(--arven-status-success-fg);
+  --color-success-bg: var(--arven-status-success-bg);
+  --color-warning-fg: var(--arven-status-warning-fg);
+  --color-warning-bg: var(--arven-status-warning-bg);
+  --color-danger-fg: var(--arven-status-danger-fg);
+  --color-danger-bg: var(--arven-status-danger-bg);
+}
+
+@layer base {
+  html,
+  body {
+    background-color: var(--arven-surface-canvas);
+    color: var(--arven-text-primary);
+    font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+  }
+
+  ::selection {
+    background-color: var(--arven-accent-link);
+    color: var(--color-white);
+  }
+}

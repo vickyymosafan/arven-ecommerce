@@ -1,0 +1,257 @@
+/* packages/ui/src/styles/tokens.css */
+
+/* ==========================================================================
+   LAYER 1: PRIMITIVE TOKENS (Never referenced directly in JSX/TSX components)
+   ========================================================================== */
+:root {
+  /* Color Primitives */
+  --color-ivory-50: #F8F7F3;
+  --color-ivory-100: #F1EFE9;
+  --color-cream-200: #E9E4DA;
+  --color-cream-300: #DDD7CB;
+  --color-white: #FFFFFF;
+
+  --color-stone-200: #D8D3C8;   /* Non-interactive light hairline divider ONLY */
+  --color-stone-300: #B2B0A6;   /* Accessible muted text on dark surfaces */
+  --color-stone-400: #9E9C92;   /* Accessible interactive border on dark surfaces */
+  --color-stone-500: #8B897F;   /* BANNED for normal text on any light surface */
+  --color-stone-600: #747269;   /* Accessible control border on Cream/Ivory/White */
+  --color-stone-700: #5E5C54;   /* Accessible muted text on ALL light surfaces */
+
+  --color-graphite-700: #35383A;
+  --color-charcoal-800: #222528;
+  --color-charcoal-900: #17191B;
+  --color-charcoal-border-hairline: #46494C; /* Non-interactive dark hairline divider ONLY */
+
+  --color-blue-100: #E6EEF5;
+  --color-blue-300: #82B0DC;
+  --color-blue-600: #1F4E79;
+  --color-blue-900: #1E2C3A;
+
+  --color-sage-100: #E8F0EC;
+  --color-sage-300: #89BBA6;
+  --color-sage-600: #416B59;
+  --color-sage-900: #1E2E28;
+
+  --color-ochre-100: #F3ECE0;
+  --color-ochre-300: #E2AE55;
+  --color-ochre-700: #875B12;
+  --color-ochre-900: #30281B;
+
+  --color-terracotta-100: #F5EAE8;
+  --color-terracotta-300: #E48966;
+  --color-terracotta-700: #9C3D3D;
+  --color-terracotta-900: #35231E;
+
+  --color-scrim-dark-72: rgba(23, 25, 27, 0.72);
+
+  /* Spacing Scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* Container & Grid */
+  --container-max: 1440px;
+  --container-prose: 65ch;
+  --gutter-mobile: 16px;
+  --gutter-tablet: 24px;
+  --gutter-desktop: 48px;
+
+  /* Border Radii (Architectural Geometry) */
+  --radius-none: 0px;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-full: 9999px;
+
+  /* Elevation & Z-Index */
+  --shadow-none: none;
+  --shadow-raised: 0 4px 16px rgba(23, 25, 27, 0.08);
+  --shadow-overlay: 0 12px 36px rgba(23, 25, 27, 0.18);
+
+  --z-base: 0;
+  --z-sticky: 20;
+  --z-header: 30;
+  --z-drawer: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+
+  /* Motion Primitives */
+  --duration-instant: 0ms;
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-moderate: 320ms;
+  --duration-editorial: 480ms;
+
+  --ease-editorial: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-ui: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================================================
+   LAYER 2: SEMANTIC TOKENS
+   Light Editorial Storefront (Default & [data-theme="light"])
+   ========================================================================== */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --arven-surface-canvas: var(--color-ivory-50);       /* #F8F7F3 */
+  --arven-surface-subtle: var(--color-ivory-100);      /* #F1EFE9 */
+  --arven-surface-panel: var(--color-cream-200);       /* #E9E4DA */
+  --arven-surface-panel-hover: var(--color-cream-300); /* #DDD7CB */
+  --arven-surface-elevated: var(--color-white);        /* #FFFFFF */
+  --arven-surface-inverse: var(--color-charcoal-900);  /* #17191B */
+
+  --arven-text-primary: var(--color-charcoal-900);     /* #17191B */
+  --arven-text-secondary: var(--color-graphite-700);   /* #35383A */
+  --arven-text-muted: var(--color-stone-700);          /* #5E5C54 */
+  --arven-text-inverse: var(--color-ivory-50);         /* #F8F7F3 */
+
+  --arven-border-hairline: var(--color-stone-200);     /* #D8D3C8 (non-interactive only) */
+  --arven-border-control: var(--color-stone-600);      /* #747269 */
+  --arven-border-strong: var(--color-charcoal-900);    /* #17191B */
+
+  --arven-accent-primary: var(--color-charcoal-900);   /* #17191B */
+  --arven-accent-primary-hover: var(--color-graphite-700); /* #35383A */
+  --arven-accent-link: var(--color-blue-600);          /* #1F4E79 */
+  --arven-focus-ring: var(--color-blue-600);           /* #1F4E79 */
+
+  --arven-status-info-fg: var(--color-blue-600);       /* #1F4E79 */
+  --arven-status-info-bg: var(--color-blue-100);       /* #E6EEF5 */
+  --arven-status-success-fg: var(--color-sage-600);    /* #416B59 */
+  --arven-status-success-bg: var(--color-sage-100);    /* #E8F0EC */
+  --arven-status-warning-fg: var(--color-ochre-700);   /* #875B12 */
+  --arven-status-warning-bg: var(--color-ochre-100);   /* #F3ECE0 */
+  --arven-status-danger-fg: var(--color-terracotta-700); /* #9C3D3D */
+  --arven-status-danger-bg: var(--color-terracotta-100); /* #F5EAE8 */
+}
+
+/* ==========================================================================
+   Dark Showcase & Admin Operations Console ([data-theme="dark"])
+   Independently calibrated; never synthesized via CSS invert() filters.
+   ========================================================================== */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --arven-surface-canvas: var(--color-charcoal-900);   /* #17191B */
+  --arven-surface-subtle: var(--color-charcoal-800);   /* #222528 */
+  --arven-surface-panel: var(--color-graphite-700);    /* #35383A */
+  --arven-surface-panel-hover: var(--color-charcoal-800); /* #222528 + strong border */
+  --arven-surface-elevated: var(--color-graphite-700); /* #35383A */
+  --arven-surface-inverse: var(--color-ivory-50);      /* #F8F7F3 */
+
+  --arven-text-primary: var(--color-ivory-50);         /* #F8F7F3 */
+  --arven-text-secondary: var(--color-cream-200);      /* #E9E4DA */
+  --arven-text-muted: var(--color-stone-300);          /* #B2B0A6 */
+  --arven-text-inverse: var(--color-charcoal-900);     /* #17191B */
+
+  --arven-border-hairline: var(--color-charcoal-border-hairline); /* #46494C */
+  --arven-border-control: var(--color-stone-400);      /* #9E9C92 */
+  --arven-border-strong: var(--color-ivory-50);        /* #F8F7F3 */
+
+  --arven-accent-primary: var(--color-ivory-50);       /* #F8F7F3 */
+  --arven-accent-primary-hover: var(--color-cream-200); /* #E9E4DA */
+  --arven-accent-link: var(--color-blue-300);          /* #82B0DC */
+  --arven-focus-ring: var(--color-blue-300);           /* #82B0DC */
+
+  --arven-status-info-fg: var(--color-blue-300);       /* #82B0DC */
+  --arven-status-info-bg: var(--color-blue-900);       /* #1E2C3A */
+  --arven-status-success-fg: var(--color-sage-300);    /* #89BBA6 */
+  --arven-status-success-bg: var(--color-sage-900);    /* #1E2E28 */
+  --arven-status-warning-fg: var(--color-ochre-300);   /* #E2AE55 */
+  --arven-status-warning-bg: var(--color-ochre-900);   /* #30281B */
+  --arven-status-danger-fg: var(--color-terracotta-300); /* #E48966 */
+  --arven-status-danger-bg: var(--color-terracotta-900); /* #35231E */
+}
+
+/* ==========================================================================
+   LAYER 3: COMPONENT TOKENS (Bound strictly to Semantic Tokens)
+   ========================================================================== */
+:root,
+[data-theme="light"],
+[data-theme="dark"] {
+  --btn-primary-bg: var(--arven-accent-primary);
+  --btn-primary-fg: var(--arven-text-inverse);
+  --btn-primary-hover-bg: var(--arven-accent-primary-hover);
+  --btn-secondary-bg: var(--arven-surface-panel);
+  --btn-secondary-fg: var(--arven-text-primary);
+  --btn-secondary-border: var(--arven-border-control);
+  --btn-secondary-hover-bg: var(--arven-surface-panel-hover);
+  --btn-accent-bg: var(--color-blue-600);
+  --btn-accent-fg: var(--color-white);
+  --btn-danger-bg: var(--color-terracotta-700);
+  --btn-danger-fg: var(--color-white);
+
+  --input-bg: var(--arven-surface-elevated);
+  --input-fg: var(--arven-text-primary);
+  --input-placeholder: var(--arven-text-muted);
+  --input-border: var(--arven-border-control);
+  --input-border-focus: var(--arven-focus-ring);
+  --input-border-error: var(--arven-status-danger-fg);
+
+  --card-media-bg: var(--arven-surface-subtle);
+  --card-title-fg: var(--arven-text-primary);
+  --card-meta-fg: var(--arven-text-muted);
+  --card-border-hover: var(--arven-border-strong);
+
+  --table-header-bg: var(--arven-surface-panel);
+  --table-row-bg: var(--arven-surface-canvas);
+  --table-row-hover-bg: var(--arven-surface-subtle);
+  --table-border: var(--arven-border-hairline);
+
+  --stage3d-bg: var(--color-charcoal-900);
+  --stage3d-surface: var(--color-graphite-700);
+  --stage3d-fg: var(--color-ivory-50);
+  --stage3d-muted: var(--color-stone-300);
+}
+
+[data-theme="dark"] {
+  --btn-accent-bg: var(--color-blue-300);
+  --btn-accent-fg: var(--color-charcoal-900);
+  --btn-danger-bg: var(--color-terracotta-300);
+  --btn-danger-fg: var(--color-charcoal-900);
+}
+
+/* ==========================================================================
+   ACCESSIBILITY & REDUCED MOTION POLICY
+   ========================================================================== */
+:focus-visible {
+  outline: 2px solid var(--arven-focus-ring);
+  outline-offset: 2px;
+}
+
+input,
+select,
+textarea {
+  scroll-margin-bottom: 120px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0.01ms;
+    --duration-base: 0.01ms;
+    --duration-moderate: 0.01ms;
+    --duration-editorial: 0.01ms;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
