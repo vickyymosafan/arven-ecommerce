@@ -1,9 +1,15 @@
 import type {
   AddressResponse,
   AuthUserSummary,
+  CategoryNodeDto,
+  CollectionDetailDto,
+  CollectionSummaryDto,
   CreateAddressRequest,
   ForgotPasswordRequest,
   LoginRequest,
+  ProductCardDto,
+  ProductDetailDto,
+  PublicProductsQuery,
   RegisterRequest,
   ResetPasswordRequest,
   UpdateAddressRequest,
@@ -12,6 +18,19 @@ import type {
   UserSessionSummary,
   VerifyEmailRequest,
 } from '@arven/contracts';
+
+export interface PaginationMeta {
+  requestId: string;
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface PaginatedResult<T> {
+  items: T[];
+  meta: PaginationMeta;
+}
 
 export interface AuthSessionResponse {
   user: AuthUserSummary;
@@ -29,6 +48,10 @@ interface RawSuccessEnvelope<T> {
   data: T;
   meta: {
     requestId: string;
+    page?: number;
+    limit?: number;
+    total?: number;
+    totalPages?: number;
   };
 }
 
@@ -141,13 +164,13 @@ async function parseErrorResponse(response: Response): Promise<ApiClientError> {
   });
 }
 
-async function requestApi<T>(
+async function requestEnvelope<T>(
   path: string,
   options: {
     method?: string;
     body?: unknown;
   } = {},
-): Promise<T> {
+): Promise<RawSuccessEnvelope<T>> {
   const method = (options.method ?? 'GET').toUpperCase();
   const mutating = isMutatingMethod(method);
 
@@ -191,11 +214,38 @@ async function requestApi<T>(
   }
 
   if (response.status === 204) {
-    return undefined as T;
+    return {
+      success: true,
+      data: undefined as T,
+      meta: { requestId: response.headers.get('x-request-id') ?? '' },
+    };
   }
 
-  const envelope = (await response.json()) as RawSuccessEnvelope<T>;
+  return (await response.json()) as RawSuccessEnvelope<T>;
+}
+
+async function requestApi<T>(
+  path: string,
+  options: {
+    method?: string;
+    body?: unknown;
+  } = {},
+): Promise<T> {
+  const envelope = await requestEnvelope<T>(path, options);
   return envelope.data;
+}
+
+function toQueryString(
+  params: Record<string, string | number | boolean | undefined>,
+): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && String(value).trim() !== '') {
+      search.set(key, String(value).trim());
+    }
+  }
+  const encoded = search.toString();
+  return encoded ? `?${encoded}` : '';
 }
 
 export function extractFieldErrors(error: unknown): Record<string, string> {
@@ -295,5 +345,46 @@ export const storefrontApi = {
     return requestApi<void>(`/api/v1/users/me/sessions/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     });
+  },
+  getCategories(): Promise<CategoryNodeDto[]> {
+    return requestApi<CategoryNodeDto[]>('/api/v1/categories');
+  },
+  getCollections(): Promise<CollectionSummaryDto[]> {
+    return requestApi<CollectionSummaryDto[]>('/api/v1/collections');
+  },
+  getCollectionBySlug(slug: string): Promise<CollectionDetailDto> {
+    return requestApi<CollectionDetailDto>(`/api/v1/collections/${encodeURIComponent(slug)}`);
+  },
+  async getProducts(
+    query: Partial<PublicProductsQuery> = {},
+  ): Promise<PaginatedResult<ProductCardDto>> {
+    const qs = toQueryString({
+      page: query.page,
+      limit: query.limit,
+      category: query.category,
+      collection: query.collection,
+      size: query.size,
+      color: query.color,
+      minPrice: query.minPrice,
+      maxPrice: query.maxPrice,
+      inStock: query.inStock,
+      featured: query.featured,
+      q: query.q,
+      sort: query.sort,
+    });
+    const envelope = await requestEnvelope<ProductCardDto[]>(`/api/v1/products${qs}`);
+    return {
+      items: envelope.data,
+      meta: {
+        requestId: envelope.meta.requestId,
+        page: envelope.meta.page ?? 1,
+        limit: envelope.meta.limit ?? 12,
+        total: envelope.meta.total ?? envelope.data.length,
+        totalPages: envelope.meta.totalPages ?? 1,
+      },
+    };
+  },
+  getProductBySlug(slug: string): Promise<ProductDetailDto> {
+    return requestApi<ProductDetailDto>(`/api/v1/products/${encodeURIComponent(slug)}`);
   },
 };

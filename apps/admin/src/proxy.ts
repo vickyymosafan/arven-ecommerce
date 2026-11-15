@@ -16,6 +16,9 @@ function buildContentSecurityPolicy(nonce: string, isHttps: boolean): string {
   const scriptSrc = isDev
     ? `'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`
     : `'self' 'nonce-${nonce}' 'strict-dynamic'`;
+  const connectSrc = isDev
+    ? "'self' ws://127.0.0.1:* ws://localhost:*"
+    : "'self'";
 
   const directives = [
     "default-src 'self'",
@@ -23,7 +26,7 @@ function buildContentSecurityPolicy(nonce: string, isHttps: boolean): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self'",
-    "connect-src 'self'",
+    `connect-src ${connectSrc}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -113,6 +116,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2|wasm)$).*)',
+    '/((?!_next/static|_next/image|_next/hmr|_next/webpack-hmr|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2|wasm)$).*)',
   ],
 };

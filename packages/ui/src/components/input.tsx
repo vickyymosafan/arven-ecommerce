@@ -7,6 +7,7 @@ import {
   type InputHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
 } from 'react';
 import { cn } from '../lib/cn.js';
 import { IconAlertOctagon, IconEye, IconEyeOff } from './icons.js';
@@ -165,6 +166,30 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
     >
       {children}
     </select>
+  );
+});
+
+export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  invalid?: boolean;
+}
+
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
+  { invalid = false, className, rows = 3, ...props },
+  ref,
+) {
+  return (
+    <textarea
+      ref={ref}
+      rows={rows}
+      aria-invalid={invalid || undefined}
+      className={cn(
+        baseControlClasses,
+        'min-h-24 py-2.5',
+        invalid ? 'border-[var(--input-border-error)]' : undefined,
+        className,
+      )}
+      {...props}
+    />
   );
 });
 

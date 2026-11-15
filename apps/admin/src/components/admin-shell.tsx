@@ -30,6 +30,21 @@ interface AdminNavItem {
 const adminNavItems: readonly AdminNavItem[] = [
   { href: '/', label: 'Overview' },
   {
+    href: '/catalog/products',
+    label: 'Products',
+    requiredPermissions: ['product.read', 'product.write', 'product.publish'],
+  },
+  {
+    href: '/catalog/categories',
+    label: 'Categories',
+    requiredPermissions: ['product.read', 'product.write'],
+  },
+  {
+    href: '/catalog/collections',
+    label: 'Collections',
+    requiredPermissions: ['product.read', 'product.write'],
+  },
+  {
     href: '/users',
     label: 'Users',
     requiredPermissions: ['user.read', 'user.manage.limited', 'user.role.manage'],

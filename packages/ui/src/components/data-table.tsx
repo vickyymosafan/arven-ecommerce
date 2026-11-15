@@ -17,6 +17,7 @@ export interface DataTableProps<T> {
   rows: readonly T[];
   getRowKey: (row: T, index: number) => string;
   caption?: string;
+  tableBreakpoint?: 'md' | 'lg' | 'xl';
   isLoading?: boolean;
   loadingLabel?: string;
   error?: string | null;
@@ -28,11 +29,18 @@ export interface DataTableProps<T> {
   className?: string;
 }
 
+const TABLE_BREAKPOINT_CLASSES = {
+  md: { table: 'md:block', cards: 'md:hidden' },
+  lg: { table: 'lg:block', cards: 'lg:hidden' },
+  xl: { table: 'xl:block', cards: 'xl:hidden' },
+} as const;
+
 export function DataTable<T>({
   columns,
   rows,
   getRowKey,
   caption,
+  tableBreakpoint = 'md',
   isLoading = false,
   loadingLabel = 'Loading records',
   error,
@@ -69,10 +77,17 @@ export function DataTable<T>({
     );
   }
 
+  const breakpointClasses = TABLE_BREAKPOINT_CLASSES[tableBreakpoint];
+
   return (
     <div className={cn('w-full', className)}>
       {/* Desktop semantic table */}
-      <div className="hidden overflow-x-auto rounded-[var(--radius-sm)] border border-[var(--table-border)] bg-[var(--table-row-bg)] md:block">
+      <div
+        className={cn(
+          'hidden overflow-x-auto rounded-[var(--radius-sm)] border border-[var(--table-border)] bg-[var(--table-row-bg)]',
+          breakpointClasses.table,
+        )}
+      >
         <table className="w-full border-collapse text-left text-sm">
           {caption ? <caption className="sr-only">{caption}</caption> : null}
           <thead>
@@ -82,7 +97,7 @@ export function DataTable<T>({
                   key={column.key}
                   scope="col"
                   className={cn(
-                    'px-4 py-3 text-xs font-semibold uppercase tracking-[0.06em] text-ink-secondary',
+                    'whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-[0.06em] text-ink-secondary',
                     column.align === 'right' ? 'text-right' : 'text-left',
                     column.headerClassName,
                   )}
@@ -116,8 +131,8 @@ export function DataTable<T>({
         </table>
       </div>
 
-      {/* Mobile stacked card layout (zero horizontal overflow) */}
-      <div className="flex flex-col gap-3 md:hidden">
+      {/* Responsive stacked card layout (zero horizontal overflow on narrow/sidebar viewports) */}
+      <div className={cn('flex flex-col gap-3', breakpointClasses.cards)}>
         {rows.map((row, index) => (
           <article
             key={getRowKey(row, index)}

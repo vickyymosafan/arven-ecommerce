@@ -1,11 +1,29 @@
 import type {
+  AdminCategoryDto,
+  AdminCollectionDto,
   AdminLoginRequest,
+  AdminProductDetailDto,
+  AdminProductSummaryDto,
+  AdminProductVariantDto,
+  AdminProductsQuery,
   AdminUserSummaryDto,
   AuditLogEntryDto,
   AuthUserSummary,
+  CreateCategoryRequest,
+  CreateCollectionRequest,
+  CreateProductMediaRequest,
+  CreateProductRequest,
+  CreateProductVariantRequest,
   MfaSetupResponse,
   MfaVerifyRequest,
+  ProductMediaDto,
   RoleSummaryDto,
+  TransitionProductStatusRequest,
+  UpdateCategoryRequest,
+  UpdateCollectionRequest,
+  UpdateProductMediaRequest,
+  UpdateProductRequest,
+  UpdateProductVariantRequest,
 } from '@arven/contracts';
 import type {
   AssignUserRolesRequest,
@@ -398,6 +416,180 @@ export const adminApi = {
         totalPages: envelope.meta.totalPages ?? 1,
       },
     };
+  },
+  async listProducts(
+    query: Partial<AdminProductsQuery> = {},
+  ): Promise<PaginatedResult<AdminProductSummaryDto>> {
+    const qs = toQueryString({
+      page: query.page,
+      limit: query.limit,
+      status: query.status,
+      category: query.category,
+      collection: query.collection,
+      q: query.q,
+    });
+    const envelope = await requestAdminEnvelope<AdminProductSummaryDto[]>(
+      `/api/v1/admin/products${qs}`,
+    );
+    return {
+      items: envelope.data,
+      meta: {
+        requestId: envelope.meta.requestId,
+        page: envelope.meta.page ?? 1,
+        limit: envelope.meta.limit ?? 20,
+        total: envelope.meta.total ?? envelope.data.length,
+        totalPages: envelope.meta.totalPages ?? 1,
+      },
+    };
+  },
+  getProductById(id: string): Promise<AdminProductDetailDto> {
+    return requestAdminApi<AdminProductDetailDto>(
+      `/api/v1/admin/products/${encodeURIComponent(id)}`,
+    );
+  },
+  createProduct(input: CreateProductRequest): Promise<AdminProductDetailDto> {
+    return requestAdminApi<AdminProductDetailDto>('/api/v1/admin/products', {
+      method: 'POST',
+      body: input,
+    });
+  },
+  updateProduct(id: string, input: UpdateProductRequest): Promise<AdminProductDetailDto> {
+    return requestAdminApi<AdminProductDetailDto>(
+      `/api/v1/admin/products/${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+        body: input,
+      },
+    );
+  },
+  deleteProduct(id: string): Promise<void> {
+    return requestAdminApi<void>(`/api/v1/admin/products/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+  transitionProductStatus(
+    id: string,
+    input: TransitionProductStatusRequest,
+  ): Promise<AdminProductDetailDto> {
+    return requestAdminApi<AdminProductDetailDto>(
+      `/api/v1/admin/products/${encodeURIComponent(id)}/transition`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    );
+  },
+  createVariant(
+    productId: string,
+    input: CreateProductVariantRequest,
+  ): Promise<AdminProductVariantDto> {
+    return requestAdminApi<AdminProductVariantDto>(
+      `/api/v1/admin/products/${encodeURIComponent(productId)}/variants`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    );
+  },
+  updateVariant(
+    productId: string,
+    variantId: string,
+    input: UpdateProductVariantRequest,
+  ): Promise<AdminProductVariantDto> {
+    return requestAdminApi<AdminProductVariantDto>(
+      `/api/v1/admin/products/${encodeURIComponent(productId)}/variants/${encodeURIComponent(variantId)}`,
+      {
+        method: 'PATCH',
+        body: input,
+      },
+    );
+  },
+  deleteVariant(productId: string, variantId: string): Promise<void> {
+    return requestAdminApi<void>(
+      `/api/v1/admin/products/${encodeURIComponent(productId)}/variants/${encodeURIComponent(variantId)}`,
+      {
+        method: 'DELETE',
+      },
+    );
+  },
+  createMedia(
+    productId: string,
+    input: CreateProductMediaRequest,
+  ): Promise<ProductMediaDto> {
+    return requestAdminApi<ProductMediaDto>(
+      `/api/v1/admin/products/${encodeURIComponent(productId)}/media`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    );
+  },
+  updateMedia(
+    productId: string,
+    mediaId: string,
+    input: UpdateProductMediaRequest,
+  ): Promise<ProductMediaDto> {
+    return requestAdminApi<ProductMediaDto>(
+      `/api/v1/admin/products/${encodeURIComponent(productId)}/media/${encodeURIComponent(mediaId)}`,
+      {
+        method: 'PATCH',
+        body: input,
+      },
+    );
+  },
+  deleteMedia(productId: string, mediaId: string): Promise<void> {
+    return requestAdminApi<void>(
+      `/api/v1/admin/products/${encodeURIComponent(productId)}/media/${encodeURIComponent(mediaId)}`,
+      {
+        method: 'DELETE',
+      },
+    );
+  },
+  listCategories(): Promise<AdminCategoryDto[]> {
+    return requestAdminApi<AdminCategoryDto[]>('/api/v1/admin/categories');
+  },
+  createCategory(input: CreateCategoryRequest): Promise<AdminCategoryDto> {
+    return requestAdminApi<AdminCategoryDto>('/api/v1/admin/categories', {
+      method: 'POST',
+      body: input,
+    });
+  },
+  updateCategory(id: string, input: UpdateCategoryRequest): Promise<AdminCategoryDto> {
+    return requestAdminApi<AdminCategoryDto>(
+      `/api/v1/admin/categories/${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+        body: input,
+      },
+    );
+  },
+  deleteCategory(id: string): Promise<void> {
+    return requestAdminApi<void>(`/api/v1/admin/categories/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+  listCollections(): Promise<AdminCollectionDto[]> {
+    return requestAdminApi<AdminCollectionDto[]>('/api/v1/admin/collections');
+  },
+  createCollection(input: CreateCollectionRequest): Promise<AdminCollectionDto> {
+    return requestAdminApi<AdminCollectionDto>('/api/v1/admin/collections', {
+      method: 'POST',
+      body: input,
+    });
+  },
+  updateCollection(id: string, input: UpdateCollectionRequest): Promise<AdminCollectionDto> {
+    return requestAdminApi<AdminCollectionDto>(
+      `/api/v1/admin/collections/${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+        body: input,
+      },
+    );
+  },
+  deleteCollection(id: string): Promise<void> {
+    return requestAdminApi<void>(`/api/v1/admin/collections/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
   },
   getHealthLive(): Promise<LiveHealthResponse> {
     return requestAdminApi<LiveHealthResponse>('/api/v1/health/live');

@@ -47,13 +47,32 @@ export {
   Input,
   PasswordInput,
   Select,
+  Textarea,
   Checkbox,
   type CheckboxProps,
   type FormFieldProps,
   type InputProps,
   type PasswordInputProps,
   type SelectProps,
+  type TextareaProps,
 } from './components/input.js';
+export {
+  ProductCard,
+  type CatalogProductCardItem,
+  type CatalogProductMediaItem,
+  type CatalogStockStatus,
+  type ProductCardProps,
+} from './components/product-card.js';
+export {
+  VariantSelector,
+  type CatalogVariantOption,
+  type VariantSelectorProps,
+} from './components/variant-selector.js';
+export {
+  SizeGuideModal,
+  type CatalogSizeGuideData,
+  type SizeGuideModalProps,
+} from './components/size-guide-modal.js';
 export {
   ToastProvider,
   useToast,

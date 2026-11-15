@@ -180,6 +180,67 @@ export default function AdminOverviewPage() {
             </Surface>
           </div>
 
+          <section aria-labelledby="catalog-modules-heading" className="space-y-4">
+            <h2 id="catalog-modules-heading" className="font-display text-2xl font-normal text-ink">
+              Phase 03 Catalog Operations
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Surface variant="subtle" border="hairline" padding="md" className="flex flex-col justify-between gap-4">
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-semibold text-ink">Products &amp; Publish Gate</h3>
+                  <p className="text-xs leading-relaxed text-ink-muted">
+                    Create draft silhouettes, manage multi-variant pricing with audit logs, attach
+                    studio media, and execute 4-point Publish Gate reviews.
+                  </p>
+                </div>
+                <LinkButton
+                  href="/catalog/products"
+                  variant="secondary"
+                  size="sm"
+                  aria-disabled={!canAccess(['product.read', 'product.write', 'product.publish'])}
+                >
+                  Open Products
+                </LinkButton>
+              </Surface>
+
+              <Surface variant="subtle" border="hairline" padding="md" className="flex flex-col justify-between gap-4">
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-semibold text-ink">Categories &amp; Size Guides</h3>
+                  <p className="text-xs leading-relaxed text-ink-muted">
+                    Configure catalog taxonomy sort order, active status, and structured centimeter
+                    measurement charts.
+                  </p>
+                </div>
+                <LinkButton
+                  href="/catalog/categories"
+                  variant="secondary"
+                  size="sm"
+                  aria-disabled={!canAccess(['product.read', 'product.write'])}
+                >
+                  Open Categories
+                </LinkButton>
+              </Surface>
+
+              <Surface variant="subtle" border="hairline" padding="md" className="flex flex-col justify-between gap-4">
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-semibold text-ink">Capsule Collections</h3>
+                  <p className="text-xs leading-relaxed text-ink-muted">
+                    Curate editorial collections, publication schedules, banner artwork, and product
+                    ordering.
+                  </p>
+                </div>
+                <LinkButton
+                  href="/catalog/collections"
+                  variant="secondary"
+                  size="sm"
+                  aria-disabled={!canAccess(['product.read', 'product.write'])}
+                >
+                  Open Collections
+                </LinkButton>
+              </Surface>
+            </div>
+          </section>
+
           <section aria-labelledby="modules-heading" className="space-y-4">
             <h2 id="modules-heading" className="font-display text-2xl font-normal text-ink">
               Phase 02 Governance Workspaces
