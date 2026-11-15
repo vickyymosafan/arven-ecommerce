@@ -87,3 +87,5 @@ $RECYCLE.BIN/
 !.vscode/extensions.json
 *.swp
 *.swo
+
+.harness

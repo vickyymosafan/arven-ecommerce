@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { RuntimeConfig } from '@arven/config';
@@ -54,19 +55,60 @@ function escapeHtml(value: unknown): string {
     .replaceAll("'", '&#39;');
 }
 
+function resolveWorkspaceCaptureDir(rawDir: string): string {
+  if (path.isAbsolute(rawDir)) {
+    return path.normalize(rawDir);
+  }
+  let current = import.meta.dirname;
+  for (let i = 0; i < 6; i += 1) {
+    if (existsSync(path.join(current, 'pnpm-workspace.yaml'))) {
+      return path.resolve(current, rawDir);
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      break;
+    }
+    current = parent;
+  }
+  return path.resolve(rawDir);
+}
+
 export function renderTransactionalTemplate(input: TemplateEmailInput): {
   html: string;
   text: string;
+  actionUrl?: string;
 } {
   const locale = input.locale ?? 'en';
   const greeting =
-    typeof input.variables['recipientName'] === 'string'
-      ? input.variables['recipientName']
-      : locale === 'id'
-        ? 'Pelanggan Terhormat'
-        : 'Valued Client';
+    typeof input.variables['recipientName'] === 'string' &&
+    input.variables['recipientName'].trim().length > 0
+      ? input.variables['recipientName'].trim()
+      : typeof input.variables['fullName'] === 'string' &&
+          input.variables['fullName'].trim().length > 0
+        ? input.variables['fullName'].trim()
+        : locale === 'id'
+          ? 'Pelanggan Terhormat'
+          : 'Valued Client';
+  const token =
+    typeof input.variables['token'] === 'string' && input.variables['token'].trim().length > 0
+      ? input.variables['token'].trim()
+      : undefined;
+  const appUrl =
+    typeof input.variables['appUrl'] === 'string' && input.variables['appUrl'].trim().length > 0
+      ? input.variables['appUrl'].trim().replace(/\/$/, '')
+      : 'http://localhost:3000';
+  const explicitActionUrl =
+    typeof input.variables['actionUrl'] === 'string' &&
+    input.variables['actionUrl'].trim().length > 0
+      ? input.variables['actionUrl'].trim()
+      : undefined;
   const actionUrl =
-    typeof input.variables['actionUrl'] === 'string' ? input.variables['actionUrl'] : undefined;
+    explicitActionUrl ??
+    (token && input.template === 'auth.verification.requested'
+      ? `${appUrl}/auth/verify-email?token=${encodeURIComponent(token)}`
+      : token && input.template === 'auth.password_reset.requested'
+        ? `${appUrl}/auth/reset-password?token=${encodeURIComponent(token)}`
+        : undefined);
 
   let bodyLead = '';
   let actionLabel = '';
@@ -110,7 +152,13 @@ export function renderTransactionalTemplate(input: TemplateEmailInput): {
   }
 
   const ctaHtml = actionUrl
-    ? `<p style="margin:24px 0;"><a href="${escapeHtml(actionUrl)}" style="display:inline-block;padding:12px 24px;background:#17191B;color:#F8F7F3;text-decoration:none;letter-spacing:0.08em;text-transform:uppercase;font-size:12px;">${escapeHtml(actionLabel || 'Continue')}</a></p>`
+    ? [
+        `<p style="margin:24px 0;"><a href="${escapeHtml(actionUrl)}" style="display:inline-block;padding:12px 24px;background:#17191B;color:#F8F7F3;text-decoration:none;letter-spacing:0.08em;text-transform:uppercase;font-size:12px;">${escapeHtml(actionLabel || 'Continue')}</a></p>`,
+        `<p style="margin:0 0 12px;font-size:12px;color:#5E5C54;word-break:break-all;">${escapeHtml(actionUrl)}</p>`,
+      ].join('')
+    : '';
+  const tokenHtml = token
+    ? `<p style="margin:0 0 12px;font-size:12px;color:#5E5C54;font-family:monospace;">Token: ${escapeHtml(token)}</p>`
     : '';
 
   const html = [
@@ -123,6 +171,7 @@ export function renderTransactionalTemplate(input: TemplateEmailInput): {
     `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;">${escapeHtml(greeting)},</p>`,
     `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;">${escapeHtml(bodyLead)}</p>`,
     ctaHtml,
+    tokenHtml,
     '<p style="margin:32px 0 0;font-size:12px;color:#5E5C54;">Beyond Trends. Beyond Time.</p>',
     '</div>',
     '</body>',
@@ -136,6 +185,7 @@ export function renderTransactionalTemplate(input: TemplateEmailInput): {
     `${greeting},`,
     bodyLead,
     ...(actionUrl ? ['', `${actionLabel || 'Continue'}: ${actionUrl}`] : []),
+    ...(token ? [`Token: ${token}`] : []),
     '',
     'Beyond Trends. Beyond Time.',
   ];
@@ -143,6 +193,7 @@ export function renderTransactionalTemplate(input: TemplateEmailInput): {
   return {
     html,
     text: textLines.join('\n'),
+    ...(actionUrl ? { actionUrl } : {}),
   };
 }
 
@@ -160,7 +211,7 @@ export class LocalCaptureEmailAdapter implements EmailProvider {
     if (options.nodeEnv === 'production') {
       throw new Error('LocalCaptureEmailAdapter is strictly forbidden when NODE_ENV=production');
     }
-    this.captureDir = path.resolve(options.captureDir);
+    this.captureDir = resolveWorkspaceCaptureDir(options.captureDir);
     this.defaultFrom = options.defaultFrom;
     this.logger = createLogger({
       service: '@arven/email:local_capture',
@@ -219,6 +270,10 @@ export class LocalCaptureEmailAdapter implements EmailProvider {
 
   async sendTemplate(input: TemplateEmailInput): Promise<EmailSendResult> {
     const rendered = renderTransactionalTemplate(input);
+    const token =
+      typeof input.variables['token'] === 'string' && input.variables['token'].trim().length > 0
+        ? input.variables['token'].trim()
+        : undefined;
     return this.sendTransactional({
       to: input.to,
       subject: input.subject,
@@ -227,6 +282,9 @@ export class LocalCaptureEmailAdapter implements EmailProvider {
       metadata: {
         template: input.template,
         locale: input.locale ?? 'en',
+        ...(rendered.actionUrl ? { actionUrl: rendered.actionUrl } : {}),
+        ...(token ? { token } : {}),
+        variables: input.variables,
       },
     });
   }

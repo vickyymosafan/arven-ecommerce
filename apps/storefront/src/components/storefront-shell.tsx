@@ -37,8 +37,8 @@ export function StorefrontShell({ children, narrow = false }: StorefrontShellPro
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isActive = (href: string) => {
-    if (href === '/') {
-      return pathname === '/';
+    if (href === '/' || href === '/account') {
+      return pathname === href;
     }
     return pathname === href || pathname.startsWith(`${href}/`);
   };
@@ -48,11 +48,11 @@ export function StorefrontShell({ children, narrow = false }: StorefrontShellPro
       <SkipLink href="#main-content" />
 
       <header className="sticky top-0 z-[var(--z-header)] border-b border-hairline bg-canvas/95 backdrop-blur-sm">
-        <div className="mx-auto flex min-h-16 w-full max-w-[var(--container-max)] items-center justify-between gap-4 px-4 sm:px-6 lg:px-12">
-          <div className="flex items-center gap-4">
+        <div className="mx-auto flex min-h-16 w-full max-w-[var(--container-max)] items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6 lg:px-12">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
             <Link
               href="/"
-              className="inline-flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] pr-2"
+              className="inline-flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] pr-1 sm:pr-2"
             >
               <ArvenWordmark />
               <span className="hidden border-l border-hairline pl-3 text-[11px] font-medium uppercase tracking-[0.08em] text-ink-muted sm:inline">
@@ -61,7 +61,7 @@ export function StorefrontShell({ children, narrow = false }: StorefrontShellPro
             </Link>
           </div>
 
-          <nav aria-label="Primary storefront navigation" className="hidden items-center gap-1 md:flex">
+          <nav aria-label="Primary storefront navigation" className="hidden items-center gap-1 lg:flex">
             {primaryNavLinks.map((item) => {
               const active = isActive(item.href);
               return (
@@ -70,7 +70,7 @@ export function StorefrontShell({ children, narrow = false }: StorefrontShellPro
                   href={item.href}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
-                    'inline-flex min-h-11 items-center rounded-[var(--radius-sm)] px-3 py-2 text-xs font-medium uppercase tracking-[0.06em] transition-colors',
+                    'inline-flex min-h-11 items-center whitespace-nowrap rounded-[var(--radius-sm)] px-3 py-2 text-xs font-medium uppercase tracking-[0.06em] transition-colors',
                     active
                       ? 'bg-panel text-ink border border-control-border'
                       : 'text-ink-secondary hover:bg-subtle hover:text-ink',
@@ -82,7 +82,7 @@ export function StorefrontShell({ children, narrow = false }: StorefrontShellPro
             })}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <ThemeToggle defaultTheme="light" storageKey="arven-storefront-theme" />
             <Button
               type="button"
@@ -91,10 +91,10 @@ export function StorefrontShell({ children, narrow = false }: StorefrontShellPro
               aria-label="Menu"
               aria-expanded={mobileMenuOpen}
               onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden"
+              className="lg:hidden"
             >
               <IconMenu size={18} />
-              <span>Menu</span>
+              <span className="hidden min-[360px]:inline">Menu</span>
             </Button>
           </div>
         </div>

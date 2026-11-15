@@ -26,7 +26,7 @@ function buildTestConfig(emailDir: string): RuntimeConfig {
     NODE_ENV: 'test',
     LOG_LEVEL: 'error',
     DATABASE_URL: 'postgresql://arven:test@127.0.0.1:5432/arven_test',
-    REDIS_URL: 'redis://127.0.0.1:6379',
+    REDIS_URL: 'redis://127.0.0.1:6379/14',
     SESSION_SECRET: 'worker-test-session-secret-0123456789abcdef',
     CSRF_SECRET: 'worker-test-csrf-secret-0123456789abcdef',
     MFA_ENCRYPTION_KEY:
@@ -160,8 +160,8 @@ describe('worker unit & Memurai queue integration', () => {
           eventType: 'auth.verification.requested',
           payload: {
             email: 'client.test@example.com',
-            recipientName: 'Sora <Atelier>',
-            actionUrl: 'https://arven.test/verify?token=opaque-test-token-1234',
+            fullName: 'Sora <Atelier>',
+            token: 'opaque-test-token-1234',
           },
         },
         {
@@ -173,12 +173,17 @@ describe('worker unit & Memurai queue integration', () => {
       const captured = await waitForCapturedJson(emailDir);
       expect(captured.parsed['to']).toBe('client.test@example.com');
       expect(captured.parsed['subject']).toBe('Confirm your ARVEN email address');
+      const metadata = captured.parsed['metadata'] as Record<string, unknown>;
+      expect(metadata['token']).toBe('opaque-test-token-1234');
+      expect(metadata['actionUrl']).toBe(
+        'http://localhost:3000/auth/verify-email?token=opaque-test-token-1234',
+      );
 
       const htmlName = captured.parsed['htmlFile'] as string;
       const htmlContent = await readFile(path.join(emailDir, htmlName), 'utf8');
       expect(htmlContent).toContain('Sora &lt;Atelier&gt;');
       expect(htmlContent).toContain(
-        'https://arven.test/verify?token=opaque-test-token-1234',
+        'http://localhost:3000/auth/verify-email?token=opaque-test-token-1234',
       );
 
       await job.remove().catch(() => undefined);

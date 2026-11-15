@@ -184,15 +184,15 @@ export function AdminShell({
       </aside>
 
       {/* Mobile Top Bar */}
-      <header className="sticky top-0 z-[var(--z-header)] flex min-h-16 items-center justify-between gap-3 border-b border-hairline bg-subtle px-4 lg:hidden">
-        <Link href="/" className="inline-flex min-h-11 items-center gap-2.5">
+      <header className="sticky top-0 z-[var(--z-header)] flex min-h-16 items-center justify-between gap-2 border-b border-hairline bg-subtle px-3 sm:gap-3 sm:px-4 lg:hidden">
+        <Link href="/" className="inline-flex min-w-0 min-h-11 items-center gap-2.5">
           <ArvenWordmark />
-          <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-muted">
+          <span className="hidden font-mono text-[11px] uppercase tracking-[0.08em] text-ink-muted sm:inline">
             Ops
           </span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <ThemeToggle defaultTheme="dark" storageKey="arven-admin-theme" />
           <Button
             type="button"
@@ -203,7 +203,7 @@ export function AdminShell({
             onClick={() => setMobileMenuOpen(true)}
           >
             <IconMenu size={18} />
-            <span>Menu</span>
+            <span className="hidden min-[360px]:inline">Menu</span>
           </Button>
         </div>
       </header>

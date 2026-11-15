@@ -45,7 +45,7 @@ export class NotificationsProcessor extends WorkerHost {
   private readonly logger: ArvenLogger;
 
   constructor(
-    @Inject(WORKER_CONFIG) config: RuntimeConfig,
+    @Inject(WORKER_CONFIG) private readonly config: RuntimeConfig,
     @Inject(WORKER_EMAIL_PROVIDER) private readonly emailProvider: WorkerEmailProvider,
   ) {
     super();
@@ -86,9 +86,25 @@ export class NotificationsProcessor extends WorkerHost {
     const locale: 'en' | 'id' = localeRaw === 'id' ? 'id' : 'en';
 
     const variables: Record<string, unknown> = {
+      appUrl: this.config.APP_URL,
       ...(data.variables ?? {}),
       ...(innerPayload ?? {}),
     };
+
+    const fullName = readStringField(variables, 'fullName');
+    if (fullName && !readStringField(variables, 'recipientName')) {
+      variables['recipientName'] = fullName;
+    }
+
+    const token = readStringField(variables, 'token');
+    if (token && !readStringField(variables, 'actionUrl')) {
+      const appUrl = this.config.APP_URL.replace(/\/$/, '');
+      if (template === 'auth.verification.requested') {
+        variables['actionUrl'] = `${appUrl}/auth/verify-email?token=${encodeURIComponent(token)}`;
+      } else if (template === 'auth.password_reset.requested') {
+        variables['actionUrl'] = `${appUrl}/auth/reset-password?token=${encodeURIComponent(token)}`;
+      }
+    }
 
     const result = await this.emailProvider.sendTemplate({
       to,
