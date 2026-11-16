@@ -1,14 +1,22 @@
 import type {
   AdminCategoryDto,
   AdminCollectionDto,
+  AdminInventoryLevelDto,
+  AdminInventoryLevelsQuery,
+  AdminInventoryMovementDto,
+  AdminInventoryMovementsQuery,
   AdminLoginRequest,
   AdminProductDetailDto,
   AdminProductSummaryDto,
   AdminProductVariantDto,
   AdminProductsQuery,
+  AdminStockMovementResultDto,
+  AdminStockReservationDto,
+  AdminStockReservationsQuery,
   AdminUserSummaryDto,
   AuditLogEntryDto,
   AuthUserSummary,
+  CreateAdminStockMovementRequest,
   CreateCategoryRequest,
   CreateCollectionRequest,
   CreateProductMediaRequest,
@@ -207,11 +215,21 @@ async function parseErrorResponse(response: Response): Promise<AdminApiClientErr
   });
 }
 
+export function generateIdempotencyKey(prefix = 'admin-inv'): string {
+  const sanitizedPrefix = prefix.replace(/[^a-zA-Z0-9._:-]/g, '').slice(0, 32) || 'admin-inv';
+  const uuid =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`;
+  return `${sanitizedPrefix}:${uuid}`;
+}
+
 async function requestAdminEnvelope<T>(
   path: string,
   options: {
     method?: string;
     body?: unknown;
+    extraHeaders?: Record<string, string>;
   } = {},
 ): Promise<RawSuccessEnvelope<T>> {
   const method = (options.method ?? 'GET').toUpperCase();
@@ -220,6 +238,12 @@ async function requestAdminEnvelope<T>(
   const execute = async (forceRefreshCsrf: boolean): Promise<Response> => {
     const headers = new Headers();
     headers.set('Accept', 'application/json');
+
+    if (options.extraHeaders) {
+      for (const [key, value] of Object.entries(options.extraHeaders)) {
+        headers.set(key, value);
+      }
+    }
 
     if (options.body !== undefined) {
       headers.set('Content-Type', 'application/json');
@@ -269,13 +293,19 @@ async function requestAdminEnvelope<T>(
 
 async function requestAdminApi<T>(
   path: string,
-  options: { method?: string; body?: unknown } = {},
+  options: {
+    method?: string;
+    body?: unknown;
+    extraHeaders?: Record<string, string>;
+  } = {},
 ): Promise<T> {
   const envelope = await requestAdminEnvelope<T>(path, options);
   return envelope.data;
 }
 
-function toQueryString(params: Record<string, string | number | undefined>): string {
+function toQueryString(
+  params: Record<string, string | number | boolean | undefined>,
+): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && String(value).trim() !== '') {
@@ -589,6 +619,93 @@ export const adminApi = {
   deleteCollection(id: string): Promise<void> {
     return requestAdminApi<void>(`/api/v1/admin/collections/${encodeURIComponent(id)}`, {
       method: 'DELETE',
+    });
+  },
+  async listInventoryLevels(
+    query: Partial<AdminInventoryLevelsQuery> = {},
+  ): Promise<PaginatedResult<AdminInventoryLevelDto>> {
+    const qs = toQueryString({
+      page: query.page,
+      limit: query.limit,
+      q: query.q,
+      warehouseCode: query.warehouseCode,
+      lowStockOnly: query.lowStockOnly,
+    });
+    const envelope = await requestAdminEnvelope<AdminInventoryLevelDto[]>(
+      `/api/v1/admin/inventory/levels${qs}`,
+    );
+    return {
+      items: envelope.data,
+      meta: {
+        requestId: envelope.meta.requestId,
+        page: envelope.meta.page ?? 1,
+        limit: envelope.meta.limit ?? 20,
+        total: envelope.meta.total ?? envelope.data.length,
+        totalPages: envelope.meta.totalPages ?? 1,
+      },
+    };
+  },
+  async listInventoryMovements(
+    query: Partial<AdminInventoryMovementsQuery> = {},
+  ): Promise<PaginatedResult<AdminInventoryMovementDto>> {
+    const qs = toQueryString({
+      page: query.page,
+      limit: query.limit,
+      variantId: query.variantId,
+      warehouseCode: query.warehouseCode,
+      type: query.type,
+      referenceType: query.referenceType,
+      from: query.from,
+      to: query.to,
+    });
+    const envelope = await requestAdminEnvelope<AdminInventoryMovementDto[]>(
+      `/api/v1/admin/inventory/movements${qs}`,
+    );
+    return {
+      items: envelope.data,
+      meta: {
+        requestId: envelope.meta.requestId,
+        page: envelope.meta.page ?? 1,
+        limit: envelope.meta.limit ?? 20,
+        total: envelope.meta.total ?? envelope.data.length,
+        totalPages: envelope.meta.totalPages ?? 1,
+      },
+    };
+  },
+  async listStockReservations(
+    query: Partial<AdminStockReservationsQuery> = {},
+  ): Promise<PaginatedResult<AdminStockReservationDto>> {
+    const qs = toQueryString({
+      page: query.page,
+      limit: query.limit,
+      status: query.status,
+      variantId: query.variantId,
+      warehouseCode: query.warehouseCode,
+    });
+    const envelope = await requestAdminEnvelope<AdminStockReservationDto[]>(
+      `/api/v1/admin/inventory/reservations${qs}`,
+    );
+    return {
+      items: envelope.data,
+      meta: {
+        requestId: envelope.meta.requestId,
+        page: envelope.meta.page ?? 1,
+        limit: envelope.meta.limit ?? 20,
+        total: envelope.meta.total ?? envelope.data.length,
+        totalPages: envelope.meta.totalPages ?? 1,
+      },
+    };
+  },
+  createStockMovement(
+    input: CreateAdminStockMovementRequest,
+    idempotencyKey = generateIdempotencyKey('admin-inv'),
+  ): Promise<AdminStockMovementResultDto> {
+    return requestAdminApi<AdminStockMovementResultDto>('/api/v1/admin/stock-movements', {
+      method: 'POST',
+      body: input,
+      extraHeaders: {
+        'Idempotency-Key': idempotencyKey,
+      },
     });
   },
   getHealthLive(): Promise<LiveHealthResponse> {

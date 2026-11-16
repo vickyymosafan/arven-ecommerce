@@ -9,8 +9,10 @@ import { RequestContextMiddleware } from './common/http/index.js';
 import { SecurityModule } from './common/security/index.js';
 import { AuditNotificationsModule } from './modules/audit-notifications/audit-notifications.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { CartModule } from './modules/cart/cart.module.js';
 import { CatalogModule } from './modules/catalog/catalog.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { InventoryModule } from './modules/inventory/inventory.module.js';
 import { UsersRolesModule } from './modules/users-roles/users-roles.module.js';
 import { AdaptersModule } from './shared/adapters/adapters.module.js';
 import { ConfigModule } from './shared/config/config.module.js';
@@ -30,8 +32,10 @@ export class AppModule implements NestModule {
         AuditNotificationsModule,
         SecurityModule,
         AuthModule,
+        CartModule,
         CatalogModule,
         HealthModule,
+        InventoryModule,
         UsersRolesModule,
       ],
     };

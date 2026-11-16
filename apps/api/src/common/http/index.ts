@@ -16,3 +16,10 @@ export {
   type PaginatedResponse,
 } from './envelope.interceptor.js';
 export { GlobalExceptionFilter } from './global-exception.filter.js';
+export {
+  IdempotencyService,
+  canonicalJsonStringify,
+  sha256CanonicalPayload,
+  type IdempotencyExecuteParams,
+  type IdempotencyResponseLike,
+} from './idempotency.service.js';

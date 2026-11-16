@@ -276,6 +276,24 @@ export const HTTP_HEADERS = {
 export const CSRF_COOKIE_NAME = 'arven_csrf';
 export const CSRF_PROD_COOKIE_NAME = '__Host-arven_csrf';
 
+export const GUEST_CART_COOKIE_NAME = 'arven_guest_cart';
+export const GUEST_CART_PROD_COOKIE_NAME = '__Host-arven_guest_cart';
+export const DEFAULT_WAREHOUSE_CODE = 'JKT-MAIN-01';
+
+export const CART_POLICY = {
+  GUEST_CART_TTL_DAYS: 30,
+  GUEST_TOKEN_BYTES: 32,
+  MAX_LINE_QUANTITY: 99,
+  MAX_CONFIGURATION_KEYS: 16,
+} as const;
+
+export const IDEMPOTENCY_POLICY = {
+  MIN_KEY_LENGTH: 16,
+  MAX_KEY_LENGTH: 128,
+  TTL_HOURS: 24,
+  IN_PROGRESS_RETRY_AFTER_SECONDS: 2,
+} as const;
+
 export const AUTH_POLICY = {
   PASSWORD_MIN_LENGTH: 12,
   PASSWORD_MAX_LENGTH: 128,

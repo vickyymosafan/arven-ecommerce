@@ -20,7 +20,7 @@ import {
   formatIDR,
   useToast,
 } from '@arven/ui';
-import { ApiClientError, storefrontApi } from '@/lib/api-client';
+import { ApiClientError, notifyCartUpdated, storefrontApi } from '@/lib/api-client';
 
 export function ProductDetailView({ slug }: { slug: string }) {
   const { toast } = useToast();
@@ -33,14 +33,22 @@ export function ProductDetailView({ slug }: { slug: string }) {
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
-  const [selectionConfirmedMessage, setSelectionConfirmedMessage] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [addingToBag, setAddingToBag] = useState(false);
+  const [addedToBagMessage, setAddedToBagMessage] = useState<string | null>(null);
+  const [addToBagError, setAddToBagError] = useState<{
+    message: string;
+    requestId?: string | null;
+  } | null>(null);
   const [reloadNonce, setReloadNonce] = useState(0);
 
   const loadProduct = useCallback(() => {
     setLoading(true);
     setNotFound(false);
     setError(null);
-    setSelectionConfirmedMessage(null);
+    setQuantity(1);
+    setAddedToBagMessage(null);
+    setAddToBagError(null);
     setReloadNonce((n) => n + 1);
   }, []);
 
@@ -53,7 +61,9 @@ export function ProductDetailView({ slug }: { slug: string }) {
         setProduct(data);
         setNotFound(false);
         setError(null);
-        setSelectionConfirmedMessage(null);
+        setQuantity(1);
+        setAddedToBagMessage(null);
+        setAddToBagError(null);
         const initialVariant =
           data.variants.find((v) => v.availableQty > 0) ?? data.variants[0] ?? null;
         setSelectedVariantId(initialVariant?.id ?? null);
@@ -101,8 +111,17 @@ export function ProductDetailView({ slug }: { slug: string }) {
     );
   }, [product, selectedMediaId]);
 
-  const handleConfirmSelection = () => {
+  const maxOrderQuantity = selectedVariant
+    ? Math.max(0, Math.min(10, selectedVariant.availableQty))
+    : 0;
+  const clampedQuantity =
+    maxOrderQuantity > 0 ? Math.min(Math.max(1, quantity), maxOrderQuantity) : 1;
+
+  const handleAddToBag = async () => {
     if (!product || !selectedVariant) return;
+    setAddToBagError(null);
+    setAddedToBagMessage(null);
+
     if (selectedVariant.availableQty <= 0) {
       toast({
         tone: 'warning',
@@ -112,13 +131,29 @@ export function ProductDetailView({ slug }: { slug: string }) {
       return;
     }
 
-    const summary = `Selected ${product.name} (${selectedVariant.sku} / ${selectedVariant.color} / Size ${selectedVariant.size}) at ${formatIDR(selectedVariant.priceIdr)}. Cart and checkout bag allocation opens in Phase 04.`;
-    setSelectionConfirmedMessage(summary);
-    toast({
-      tone: 'success',
-      title: 'Variant specification verified',
-      description: `${selectedVariant.sku} (${selectedVariant.size}, ${selectedVariant.color}) ready at ${formatIDR(selectedVariant.priceIdr)}.`,
-    });
+    setAddingToBag(true);
+    try {
+      const updatedCart = await storefrontApi.addCartItem({
+        variantId: selectedVariant.id,
+        quantity: clampedQuantity,
+      });
+      notifyCartUpdated(updatedCart);
+      const summary = `Added ${clampedQuantity} x ${product.name} (${selectedVariant.sku} / ${selectedVariant.color} / Size ${selectedVariant.size}) to your bag.`;
+      setAddedToBagMessage(summary);
+      toast({
+        tone: 'success',
+        title: 'Added to Bag',
+        description: `${clampedQuantity} x ${selectedVariant.sku} (${selectedVariant.size}, ${selectedVariant.color}) added at ${formatIDR(selectedVariant.priceIdr)}.`,
+      });
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        setAddToBagError({ message: err.message, requestId: err.requestId });
+      } else {
+        setAddToBagError({ message: 'Unable to add this garment to your bag right now.' });
+      }
+    } finally {
+      setAddingToBag(false);
+    }
   };
 
   if (loading) {
@@ -311,9 +346,66 @@ export function ProductDetailView({ slug }: { slug: string }) {
             selectedVariantId={selectedVariant?.id ?? null}
             onSelectVariant={(variant) => {
               setSelectedVariantId(variant.id);
-              setSelectionConfirmedMessage(null);
+              setQuantity(1);
+              setAddedToBagMessage(null);
+              setAddToBagError(null);
             }}
           />
+
+          {/* Quantity Stepper */}
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.06em] text-ink">
+                Quantity
+              </span>
+              {selectedVariant && selectedVariant.availableQty > 0 ? (
+                <span className="font-mono text-xs tabular-nums text-ink-muted">
+                  Max {maxOrderQuantity} per order ({selectedVariant.availableQty} available)
+                </span>
+              ) : (
+                <span className="font-mono text-xs text-ink-muted">Unavailable</span>
+              )}
+            </div>
+            <div className="inline-flex items-center rounded-[var(--radius-sm)] border border-control-border bg-elevated">
+              <button
+                type="button"
+                aria-label="Decrease quantity"
+                disabled={
+                  !selectedVariant ||
+                  selectedVariant.availableQty <= 0 ||
+                  clampedQuantity <= 1 ||
+                  addingToBag
+                }
+                onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center border-r border-control-border text-base font-medium text-ink transition-colors hover:bg-panel disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
+              >
+                -
+              </button>
+              <span
+                aria-live="polite"
+                aria-label={`Selected quantity ${selectedVariant && selectedVariant.availableQty > 0 ? clampedQuantity : 0}`}
+                className="inline-flex min-h-11 min-w-12 items-center justify-center px-3 font-mono text-sm font-medium tabular-nums text-ink"
+              >
+                {selectedVariant && selectedVariant.availableQty > 0 ? clampedQuantity : 0}
+              </span>
+              <button
+                type="button"
+                aria-label="Increase quantity"
+                disabled={
+                  !selectedVariant ||
+                  selectedVariant.availableQty <= 0 ||
+                  clampedQuantity >= maxOrderQuantity ||
+                  addingToBag
+                }
+                onClick={() =>
+                  setQuantity((prev) => Math.min(maxOrderQuantity, Math.max(1, prev + 1)))
+                }
+                className="inline-flex min-h-11 min-w-11 items-center justify-center border-l border-control-border text-base font-medium text-ink transition-colors hover:bg-panel disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
+              >
+                +
+              </button>
+            </div>
+          </div>
 
           {/* Primary Action Bar & Size Guide Trigger */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -322,12 +414,14 @@ export function ProductDetailView({ slug }: { slug: string }) {
               variant="primary"
               size="lg"
               fullWidth
+              isLoading={addingToBag}
+              loadingLabel="Adding to Bag"
               disabled={!selectedVariant || selectedVariant.availableQty <= 0}
-              onClick={handleConfirmSelection}
+              onClick={() => void handleAddToBag()}
             >
               {!selectedVariant || selectedVariant.availableQty <= 0
                 ? 'Currently Out of Stock'
-                : 'Select Variant Specification'}
+                : 'Add to Bag'}
             </Button>
 
             <Button
@@ -340,11 +434,25 @@ export function ProductDetailView({ slug }: { slug: string }) {
             </Button>
           </div>
 
-          {selectionConfirmedMessage ? (
+          {addToBagError ? (
+            <StatusBanner
+              tone="danger"
+              title="Unable to add to bag"
+              description={addToBagError.message}
+              requestId={addToBagError.requestId}
+            />
+          ) : null}
+
+          {addedToBagMessage ? (
             <StatusBanner
               tone="success"
-              title="Specification Locked"
-              description={selectionConfirmedMessage}
+              title="Added to Bag"
+              description={addedToBagMessage}
+              action={
+                <LinkButton href="/cart" variant="secondary" size="sm">
+                  View Bag
+                </LinkButton>
+              }
             />
           ) : null}
 

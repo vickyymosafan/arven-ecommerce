@@ -45,6 +45,11 @@ const adminNavItems: readonly AdminNavItem[] = [
     requiredPermissions: ['product.read', 'product.write'],
   },
   {
+    href: '/inventory',
+    label: 'Inventory',
+    requiredPermissions: ['inventory.read', 'inventory.receive', 'inventory.adjust'],
+  },
+  {
     href: '/users',
     label: 'Users',
     requiredPermissions: ['user.read', 'user.manage.limited', 'user.role.manage'],

@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Suspense, useState, type ReactNode } from 'react';
+import { Suspense, useEffect, useState, type ReactNode } from 'react';
+import type { CartDto } from '@arven/contracts';
 import {
   ArvenWordmark,
   Button,
@@ -13,6 +14,7 @@ import {
   ThemeToggle,
   cn,
 } from '@arven/ui';
+import { CART_UPDATED_EVENT, storefrontApi } from '@/lib/api-client';
 
 interface NavLinkItem {
   href: string;
@@ -24,6 +26,7 @@ const primaryNavLinks: readonly NavLinkItem[] = [
   { href: '/shop', label: 'Shop' },
   { href: '/collections', label: 'Collections' },
   { href: '/search', label: 'Search' },
+  { href: '/cart', label: 'Bag' },
   { href: '/account', label: 'Account' },
   { href: '/auth/login', label: 'Sign In' },
 ];
@@ -47,24 +50,53 @@ function isNavHrefActive(pathname: string | null, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function DesktopNavLinks({ pathname }: { pathname: string | null }) {
+function BagCountPill({ count }: { count: number | null }) {
   return (
-    <nav aria-label="Primary storefront navigation" className="hidden items-center gap-2 lg:flex">
+    <span
+      aria-hidden={count === null}
+      className={cn(
+        'inline-flex h-5 min-w-6 items-center justify-center rounded-[var(--radius-xs)] border px-1.5 font-mono text-[11px] leading-none tabular-nums transition-opacity duration-[var(--duration-fast)]',
+        count === null
+          ? 'border-transparent opacity-0'
+          : count > 0
+            ? 'border-strong-border bg-subtle text-ink'
+            : 'border-hairline bg-subtle text-ink-muted',
+      )}
+    >
+      {count ?? 0}
+    </span>
+  );
+}
+
+function DesktopNavLinks({
+  pathname,
+  bagCount,
+}: {
+  pathname: string | null;
+  bagCount: number | null;
+}) {
+  return (
+    <nav aria-label="Primary storefront navigation" className="hidden items-center gap-1.5 xl:gap-2 lg:flex">
       {primaryNavLinks.map((item) => {
         const active = isNavHrefActive(pathname, item.href);
+        const isBag = item.href === '/cart';
         return (
           <Link
             key={item.href}
             href={item.href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'inline-flex min-h-11 items-center whitespace-nowrap rounded-[var(--radius-sm)] px-3 py-2 text-xs font-medium uppercase tracking-[0.06em] transition-colors',
+              'inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] px-2.5 py-2 text-xs font-medium uppercase tracking-[0.06em] transition-colors xl:px-3',
               active
-                ? 'bg-panel text-ink border border-control-border'
+                ? 'border border-control-border bg-panel text-ink'
                 : 'text-ink-secondary hover:bg-subtle hover:text-ink',
             )}
           >
-            {item.label}
+            <span>{item.label}</span>
+            {isBag ? <BagCountPill count={bagCount} /> : null}
+            {isBag && bagCount !== null ? (
+              <span className="sr-only"> {bagCount === 1 ? 'item' : 'items'}</span>
+            ) : null}
           </Link>
         );
       })}
@@ -72,23 +104,26 @@ function DesktopNavLinks({ pathname }: { pathname: string | null }) {
   );
 }
 
-function LiveDesktopNav() {
+function LiveDesktopNav({ bagCount }: { bagCount: number | null }) {
   const pathname = usePathname();
-  return <DesktopNavLinks pathname={pathname} />;
+  return <DesktopNavLinks pathname={pathname} bagCount={bagCount} />;
 }
 
 function MobileDrawerNavContent({
   onClose,
   pathname,
+  bagCount,
 }: {
   onClose: () => void;
   pathname: string | null;
+  bagCount: number | null;
 }) {
   return (
     <div className="space-y-5">
       <nav aria-label="Mobile storefront navigation" className="flex flex-col gap-2">
         {primaryNavLinks.map((item) => {
           const active = isNavHrefActive(pathname, item.href);
+          const isBag = item.href === '/cart';
           return (
             <Link
               key={item.href}
@@ -96,13 +131,21 @@ function MobileDrawerNavContent({
               aria-current={active ? 'page' : undefined}
               onClick={onClose}
               className={cn(
-                'inline-flex min-h-11 items-center rounded-[var(--radius-sm)] border px-4 py-2.5 text-sm font-medium',
+                'inline-flex min-h-11 items-center justify-between gap-2 rounded-[var(--radius-sm)] border px-4 py-2.5 text-sm font-medium',
                 active
                   ? 'border-strong-border bg-panel text-ink'
                   : 'border-hairline bg-subtle text-ink-secondary hover:border-control-border hover:text-ink',
               )}
             >
-              {item.label}
+              <span>{item.label}</span>
+              {isBag ? (
+                <span className="inline-flex items-center">
+                  <BagCountPill count={bagCount} />
+                  {bagCount !== null ? (
+                    <span className="sr-only"> {bagCount === 1 ? 'item' : 'items'}</span>
+                  ) : null}
+                </span>
+              ) : null}
             </Link>
           );
         })}
@@ -140,13 +183,51 @@ function MobileDrawerNavContent({
   );
 }
 
-function LiveMobileDrawerNavContent({ onClose }: { onClose: () => void }) {
+function LiveMobileDrawerNavContent({
+  onClose,
+  bagCount,
+}: {
+  onClose: () => void;
+  bagCount: number | null;
+}) {
   const pathname = usePathname();
-  return <MobileDrawerNavContent onClose={onClose} pathname={pathname} />;
+  return <MobileDrawerNavContent onClose={onClose} pathname={pathname} bagCount={bagCount} />;
 }
 
 export function StorefrontShell({ children, narrow = false }: StorefrontShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [bagCount, setBagCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const refreshBagCount = () => {
+      void storefrontApi
+        .getCart()
+        .catch(() => null)
+        .then((cart) => {
+          if (!active) return;
+          setBagCount(cart ? cart.totalQuantity : 0);
+        });
+    };
+
+    refreshBagCount();
+
+    const handleCartUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<CartDto | undefined>;
+      if (customEvent.detail && typeof customEvent.detail.totalQuantity === 'number') {
+        setBagCount(customEvent.detail.totalQuantity);
+        return;
+      }
+      refreshBagCount();
+    };
+
+    window.addEventListener(CART_UPDATED_EVENT, handleCartUpdated);
+    return () => {
+      active = false;
+      window.removeEventListener(CART_UPDATED_EVENT, handleCartUpdated);
+    };
+  }, []);
 
   return (
     <div className="flex min-h-dvh flex-col bg-canvas text-ink">
@@ -166,8 +247,8 @@ export function StorefrontShell({ children, narrow = false }: StorefrontShellPro
             </Link>
           </div>
 
-          <Suspense fallback={<DesktopNavLinks pathname={null} />}>
-            <LiveDesktopNav />
+          <Suspense fallback={<DesktopNavLinks pathname={null} bagCount={bagCount} />}>
+            <LiveDesktopNav bagCount={bagCount} />
           </Suspense>
 
           <div className="flex shrink-0 items-center gap-2">
@@ -199,10 +280,14 @@ export function StorefrontShell({ children, narrow = false }: StorefrontShellPro
             <MobileDrawerNavContent
               onClose={() => setMobileMenuOpen(false)}
               pathname={null}
+              bagCount={bagCount}
             />
           }
         >
-          <LiveMobileDrawerNavContent onClose={() => setMobileMenuOpen(false)} />
+          <LiveMobileDrawerNavContent
+            onClose={() => setMobileMenuOpen(false)}
+            bagCount={bagCount}
+          />
         </Suspense>
       </Drawer>
 
@@ -237,6 +322,9 @@ export function StorefrontShell({ children, narrow = false }: StorefrontShellPro
               </Link>
               <Link href="/search" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
                 Search
+              </Link>
+              <Link href="/cart" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
+                Bag
               </Link>
               <Link href="/account" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
                 My Account

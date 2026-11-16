@@ -1,13 +1,21 @@
 import type {
+  AddCartItemRequest,
   AddressResponse,
+  AdminInventoryLevelsQuery,
+  AdminInventoryMovementsQuery,
   AdminLoginRequest,
+  AdminManualMovementTypeInput,
   AdminProductsQuery,
+  AdminStockReservationsQuery,
   ApiErrorEnvelope,
   ApiPaginatedEnvelope,
   ApiSuccessEnvelope,
   AuthUserSummary,
+  CartItemConfiguration,
+  CartStatusInput,
   CollectionStatusInput,
   CreateAddressRequest,
+  CreateAdminStockMovementRequest,
   CreateCategoryRequest,
   CreateCollectionRequest,
   CreateProductMediaRequest,
@@ -17,6 +25,7 @@ import type {
   ForgotPasswordRequest,
   HealthLiveResponse,
   HealthReadyResponse,
+  InventoryMovementTypeInput,
   LoginRequest,
   MediaTypeInput,
   MfaSetupResponse,
@@ -26,9 +35,11 @@ import type {
   PublicProductsQuery,
   RegisterRequest,
   ResetPasswordRequest,
+  StockReservationStatusInput,
   StockStatus,
   TransitionProductStatusRequest,
   UpdateAddressRequest,
+  UpdateCartItemRequest,
   UpdateCategoryRequest,
   UpdateCollectionRequest,
   UpdateProductMediaRequest,
@@ -38,18 +49,27 @@ import type {
   UserProfileResponse,
   UserSessionSummary,
   VerifyEmailRequest,
+  WarehouseStatusInput,
 } from '@arven/validators';
 
 export type {
+  AddCartItemRequest,
   AddressResponse,
+  AdminInventoryLevelsQuery,
+  AdminInventoryMovementsQuery,
   AdminLoginRequest,
+  AdminManualMovementTypeInput,
   AdminProductsQuery,
+  AdminStockReservationsQuery,
   ApiErrorEnvelope,
   ApiPaginatedEnvelope,
   ApiSuccessEnvelope,
   AuthUserSummary,
+  CartItemConfiguration,
+  CartStatusInput,
   CollectionStatusInput,
   CreateAddressRequest,
+  CreateAdminStockMovementRequest,
   CreateCategoryRequest,
   CreateCollectionRequest,
   CreateProductMediaRequest,
@@ -59,6 +79,7 @@ export type {
   ForgotPasswordRequest,
   HealthLiveResponse,
   HealthReadyResponse,
+  InventoryMovementTypeInput,
   LoginRequest,
   MediaTypeInput,
   MfaSetupResponse,
@@ -68,9 +89,11 @@ export type {
   PublicProductsQuery,
   RegisterRequest,
   ResetPasswordRequest,
+  StockReservationStatusInput,
   StockStatus,
   TransitionProductStatusRequest,
   UpdateAddressRequest,
+  UpdateCartItemRequest,
   UpdateCategoryRequest,
   UpdateCollectionRequest,
   UpdateProductMediaRequest,
@@ -80,6 +103,7 @@ export type {
   UserProfileResponse,
   UserSessionSummary,
   VerifyEmailRequest,
+  WarehouseStatusInput,
 };
 
 export { OPENAPI_PATHS, type OpenApiPath } from './generated/openapi-paths.js';
@@ -398,4 +422,140 @@ export interface AdminCollectionDto {
   productIds: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+// =============================================================================
+// Phase 04: Inventory Ledger & Guest/Authenticated Cart DTOs
+// =============================================================================
+
+export interface WarehouseSummaryDto {
+  id: string;
+  code: string;
+  name: string;
+  city: string;
+  province: string;
+  status: WarehouseStatusInput;
+  isDefault: boolean;
+}
+
+export interface AdminInventoryLevelDto {
+  id: string;
+  warehouseId: string;
+  warehouseCode: string;
+  warehouseName: string;
+  variantId: string;
+  productId: string;
+  productSlug: string;
+  productName: string;
+  productStatus: ProductStatusInput;
+  sku: string;
+  color: string;
+  colorHex: string | null;
+  size: string;
+  priceIdr: number;
+  variantIsActive: boolean;
+  quantityOnHand: number;
+  quantityReserved: number;
+  availableQty: number;
+  lowStockThreshold: number;
+  stockStatus: StockStatus;
+  updatedAt: string;
+}
+
+export interface AdminInventoryMovementDto {
+  id: string;
+  warehouseId: string;
+  warehouseCode: string;
+  warehouseName: string;
+  variantId: string;
+  sku: string;
+  productName: string;
+  color: string;
+  size: string;
+  type: InventoryMovementTypeInput;
+  quantityDelta: number;
+  referenceType: string;
+  referenceId: string | null;
+  reason: string | null;
+  actorId: string | null;
+  actorEmail: string | null;
+  createdAt: string;
+}
+
+export interface AdminStockReservationDto {
+  id: string;
+  orderId: string;
+  orderNumber: string | null;
+  warehouseId: string;
+  warehouseCode: string;
+  variantId: string;
+  sku: string;
+  productName: string;
+  color: string;
+  size: string;
+  quantity: number;
+  status: StockReservationStatusInput;
+  expiresAt: string;
+  releasedAt: string | null;
+  committedAt: string | null;
+  createdAt: string;
+}
+
+export interface AdminStockMovementResultDto {
+  movement: AdminInventoryMovementDto;
+  level: AdminInventoryLevelDto;
+}
+
+export type CartAvailabilityIssueCode =
+  | 'PRODUCT_UNAVAILABLE'
+  | 'VARIANT_INACTIVE'
+  | 'OUT_OF_STOCK'
+  | 'INSUFFICIENT_STOCK';
+
+export interface CartItemDto {
+  id: string;
+  variantId: string;
+  productId: string;
+  productSlug: string;
+  productName: string;
+  sku: string;
+  color: string;
+  colorHex: string | null;
+  size: string;
+  unitPriceIdr: number;
+  compareAtIdr: number | null;
+  lineSubtotalIdr: number;
+  quantity: number;
+  availableQty: number;
+  isAvailable: boolean;
+  availabilityStatus: StockStatus;
+  issueCode: CartAvailabilityIssueCode | null;
+  issueMessage: string | null;
+  configuration: CartItemConfiguration;
+  configurationHash: string;
+  primaryImageUrl: string | null;
+  primaryImageAlt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CartDto {
+  id: string | null;
+  status: CartStatusInput;
+  ownerType: 'USER' | 'GUEST' | 'NONE';
+  currency: 'IDR';
+  itemCount: number;
+  totalQuantity: number;
+  subtotalIdr: number;
+  hasUnavailableItems: boolean;
+  items: CartItemDto[];
+  updatedAt: string | null;
+}
+
+export interface MergeCartResultDto {
+  merged: boolean;
+  mergedItemCount: number;
+  adjustedItemCount: number;
+  notices: string[];
+  cart: CartDto;
 }

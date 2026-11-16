@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState, type FormEvent } from 'react';
+import type { CartDto } from '@arven/contracts';
 import { loginRequestSchema } from '@arven/validators';
 import {
   Button,
@@ -15,7 +16,12 @@ import {
   useToast,
 } from '@arven/ui';
 import { StorefrontShell } from '@/components/storefront-shell';
-import { ApiClientError, extractFieldErrors, storefrontApi } from '@/lib/api-client';
+import {
+  ApiClientError,
+  extractFieldErrors,
+  notifyCartUpdated,
+  storefrontApi,
+} from '@/lib/api-client';
 import { sanitizeRedirectPath } from '@/lib/redirect';
 
 function LoginFormContent() {
@@ -60,6 +66,14 @@ function LoginFormContent() {
     setSubmitting(true);
     try {
       await storefrontApi.loginCustomer(parsed.data);
+      let mergedCart: CartDto | undefined;
+      try {
+        const mergeResult = await storefrontApi.mergeGuestCart();
+        mergedCart = mergeResult.cart;
+      } catch {
+        /* ignore when no guest cart exists */
+      }
+      notifyCartUpdated(mergedCart);
       toast({
         tone: 'success',
         title: 'Signed in',

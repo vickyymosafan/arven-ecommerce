@@ -1,18 +1,22 @@
 import type {
+  AddCartItemRequest,
   AddressResponse,
   AuthUserSummary,
+  CartDto,
   CategoryNodeDto,
   CollectionDetailDto,
   CollectionSummaryDto,
   CreateAddressRequest,
   ForgotPasswordRequest,
   LoginRequest,
+  MergeCartResultDto,
   ProductCardDto,
   ProductDetailDto,
   PublicProductsQuery,
   RegisterRequest,
   ResetPasswordRequest,
   UpdateAddressRequest,
+  UpdateCartItemRequest,
   UpdateProfileRequest,
   UserProfileResponse,
   UserSessionSummary,
@@ -235,6 +239,29 @@ async function requestApi<T>(
   return envelope.data;
 }
 
+async function requestVoid(
+  path: string,
+  options: {
+    method?: string;
+    body?: unknown;
+  } = {},
+): Promise<void> {
+  await requestEnvelope<void>(path, options);
+}
+
+export const CART_UPDATED_EVENT = 'arven:cart-updated';
+
+export function notifyCartUpdated(cart?: CartDto): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.dispatchEvent(
+    new CustomEvent<CartDto | undefined>(CART_UPDATED_EVENT, {
+      detail: cart,
+    }),
+  );
+}
+
 function toQueryString(
   params: Record<string, string | number | boolean | undefined>,
 ): string {
@@ -386,5 +413,30 @@ export const storefrontApi = {
   },
   getProductBySlug(slug: string): Promise<ProductDetailDto> {
     return requestApi<ProductDetailDto>(`/api/v1/products/${encodeURIComponent(slug)}`);
+  },
+  getCart(): Promise<CartDto> {
+    return requestApi<CartDto>('/api/v1/cart');
+  },
+  addCartItem(input: AddCartItemRequest): Promise<CartDto> {
+    return requestApi<CartDto>('/api/v1/cart/items', {
+      method: 'POST',
+      body: input,
+    });
+  },
+  updateCartItem(itemId: string, input: UpdateCartItemRequest): Promise<CartDto> {
+    return requestApi<CartDto>(`/api/v1/cart/items/${encodeURIComponent(itemId)}`, {
+      method: 'PATCH',
+      body: input,
+    });
+  },
+  removeCartItem(itemId: string): Promise<void> {
+    return requestVoid(`/api/v1/cart/items/${encodeURIComponent(itemId)}`, {
+      method: 'DELETE',
+    });
+  },
+  mergeGuestCart(): Promise<MergeCartResultDto> {
+    return requestApi<MergeCartResultDto>('/api/v1/cart/merge', {
+      method: 'POST',
+    });
   },
 };
