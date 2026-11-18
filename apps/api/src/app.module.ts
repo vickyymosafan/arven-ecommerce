@@ -11,8 +11,11 @@ import { AuditNotificationsModule } from './modules/audit-notifications/audit-no
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CartModule } from './modules/cart/cart.module.js';
 import { CatalogModule } from './modules/catalog/catalog.module.js';
+import { CheckoutModule } from './modules/checkout/checkout.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { InventoryModule } from './modules/inventory/inventory.module.js';
+import { OrdersModule } from './modules/orders/orders.module.js';
+import { PaymentsModule } from './modules/payments/payments.module.js';
 import { UsersRolesModule } from './modules/users-roles/users-roles.module.js';
 import { AdaptersModule } from './shared/adapters/adapters.module.js';
 import { ConfigModule } from './shared/config/config.module.js';
@@ -34,8 +37,11 @@ export class AppModule implements NestModule {
         AuthModule,
         CartModule,
         CatalogModule,
+        CheckoutModule,
         HealthModule,
         InventoryModule,
+        OrdersModule,
+        PaymentsModule,
         UsersRolesModule,
       ],
     };

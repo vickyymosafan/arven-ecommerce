@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
+import { Suspense, useState, type ReactNode } from 'react';
 import { Button, StatusBanner, cn, useToast } from '@arven/ui';
 import { ApiClientError, storefrontApi } from '@/lib/api-client';
 import { StorefrontShell } from './storefront-shell';
 
 const accountNavItems = [
   { href: '/account', label: 'Profile Overview' },
+  { href: '/account/orders', label: 'Order History' },
   { href: '/account/addresses', label: 'Address Book' },
   { href: '/account/sessions', label: 'Active Sessions' },
 ] as const;
@@ -19,8 +20,42 @@ export interface AccountShellProps {
   children: ReactNode;
 }
 
-export function AccountShell({ title, description, children }: AccountShellProps) {
+function AccountNavLinks({ pathname }: { pathname: string | null }) {
+  return (
+    <nav
+      aria-label="Account sections"
+      className="flex flex-wrap items-center gap-2 border-b border-hairline pb-4"
+    >
+      {accountNavItems.map((item) => {
+        const active =
+          pathname === item.href ||
+          (item.href === '/account/orders' && Boolean(pathname?.startsWith('/account/orders/')));
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-current={active ? 'page' : undefined}
+            className={cn(
+              'inline-flex min-h-11 items-center rounded-[var(--radius-sm)] border px-4 py-2 text-xs font-medium uppercase tracking-[0.06em] transition-colors',
+              active
+                ? 'border-strong-border bg-panel text-ink'
+                : 'border-hairline bg-subtle text-ink-secondary hover:border-control-border hover:text-ink',
+            )}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function LiveAccountNavLinks() {
   const pathname = usePathname();
+  return <AccountNavLinks pathname={pathname} />;
+}
+
+export function AccountShell({ title, description, children }: AccountShellProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [signingOut, setSigningOut] = useState(false);
@@ -77,29 +112,9 @@ export function AccountShell({ title, description, children }: AccountShellProps
 
         {signOutError ? <StatusBanner tone="danger" description={signOutError} /> : null}
 
-        <nav
-          aria-label="Account sections"
-          className="flex flex-wrap items-center gap-2 border-b border-hairline pb-4"
-        >
-          {accountNavItems.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'inline-flex min-h-11 items-center rounded-[var(--radius-sm)] border px-4 py-2 text-xs font-medium uppercase tracking-[0.06em] transition-colors',
-                  active
-                    ? 'border-strong-border bg-panel text-ink'
-                    : 'border-hairline bg-subtle text-ink-secondary hover:border-control-border hover:text-ink',
-                )}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <Suspense fallback={<AccountNavLinks pathname={null} />}>
+          <LiveAccountNavLinks />
+        </Suspense>
 
         <div>{children}</div>
       </div>

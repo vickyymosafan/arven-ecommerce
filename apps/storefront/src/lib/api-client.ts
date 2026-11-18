@@ -2,14 +2,25 @@ import type {
   AddCartItemRequest,
   AddressResponse,
   AuthUserSummary,
+  CancelOrderRequest,
   CartDto,
   CategoryNodeDto,
+  CheckoutQuoteDto,
+  CheckoutQuoteRequest,
   CollectionDetailDto,
   CollectionSummaryDto,
   CreateAddressRequest,
+  CreateOrderRequest,
+  CreateOrderResultDto,
+  CreatePaymentSessionRequest,
   ForgotPasswordRequest,
+  ListOrdersQuery,
   LoginRequest,
   MergeCartResultDto,
+  OrderDetailDto,
+  OrderSummaryDto,
+  PaymentSessionDto,
+  PaymentSummaryDto,
   ProductCardDto,
   ProductDetailDto,
   PublicProductsQuery,
@@ -35,6 +46,8 @@ export interface PaginatedResult<T> {
   items: T[];
   meta: PaginationMeta;
 }
+
+export type PaginatedResponse<T> = PaginatedResult<T>;
 
 export interface AuthSessionResponse {
   user: AuthUserSummary;
@@ -168,12 +181,16 @@ async function parseErrorResponse(response: Response): Promise<ApiClientError> {
   });
 }
 
+interface ApiRequestOptions {
+  method?: string;
+  body?: unknown;
+  idempotencyKey?: string;
+  guestOrderToken?: string;
+}
+
 async function requestEnvelope<T>(
   path: string,
-  options: {
-    method?: string;
-    body?: unknown;
-  } = {},
+  options: ApiRequestOptions = {},
 ): Promise<RawSuccessEnvelope<T>> {
   const method = (options.method ?? 'GET').toUpperCase();
   const mutating = isMutatingMethod(method);
@@ -184,6 +201,14 @@ async function requestEnvelope<T>(
 
     if (options.body !== undefined) {
       headers.set('Content-Type', 'application/json');
+    }
+
+    if (options.idempotencyKey && options.idempotencyKey.trim().length > 0) {
+      headers.set('Idempotency-Key', options.idempotencyKey.trim());
+    }
+
+    if (options.guestOrderToken && options.guestOrderToken.trim().length > 0) {
+      headers.set('X-Guest-Order-Token', options.guestOrderToken.trim());
     }
 
     if (mutating) {
@@ -230,10 +255,7 @@ async function requestEnvelope<T>(
 
 async function requestApi<T>(
   path: string,
-  options: {
-    method?: string;
-    body?: unknown;
-  } = {},
+  options: ApiRequestOptions = {},
 ): Promise<T> {
   const envelope = await requestEnvelope<T>(path, options);
   return envelope.data;
@@ -241,12 +263,69 @@ async function requestApi<T>(
 
 async function requestVoid(
   path: string,
-  options: {
-    method?: string;
-    body?: unknown;
-  } = {},
+  options: ApiRequestOptions = {},
 ): Promise<void> {
   await requestEnvelope<void>(path, options);
+}
+
+export function createIdempotencyKey(): string {
+  if (typeof globalThis.crypto !== 'undefined') {
+    if (typeof globalThis.crypto.randomUUID === 'function') {
+      return globalThis.crypto.randomUUID();
+    }
+    if (typeof globalThis.crypto.getRandomValues === 'function') {
+      const bytes = new Uint8Array(16);
+      globalThis.crypto.getRandomValues(bytes);
+      return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    }
+  }
+  const timestamp = Date.now().toString(36);
+  const randomA = Math.random().toString(36).slice(2, 12);
+  const randomB = Math.random().toString(36).slice(2, 12);
+  return `arven-${timestamp}-${randomA}${randomB}`.slice(0, 64);
+}
+
+const GUEST_ORDER_TOKEN_STORAGE_PREFIX = 'arven:guest-order:';
+
+export function saveGuestOrderToken(orderNumber: string, token: string): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  const normalizedOrder = orderNumber.trim();
+  const normalizedToken = token.trim();
+  if (!normalizedOrder || !normalizedToken) {
+    return;
+  }
+  try {
+    window.sessionStorage.setItem(
+      `${GUEST_ORDER_TOKEN_STORAGE_PREFIX}${normalizedOrder}`,
+      normalizedToken,
+    );
+  } catch {
+    // Ignore storage unavailability
+  }
+}
+
+export function readGuestOrderToken(orderNumber: string): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  const normalizedOrder = orderNumber.trim();
+  if (!normalizedOrder) {
+    return null;
+  }
+  try {
+    const value = window.sessionStorage.getItem(
+      `${GUEST_ORDER_TOKEN_STORAGE_PREFIX}${normalizedOrder}`,
+    );
+    if (!value) {
+      return null;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  } catch {
+    return null;
+  }
 }
 
 export const CART_UPDATED_EVENT = 'arven:cart-updated';
@@ -437,6 +516,83 @@ export const storefrontApi = {
   mergeGuestCart(): Promise<MergeCartResultDto> {
     return requestApi<MergeCartResultDto>('/api/v1/cart/merge', {
       method: 'POST',
+    });
+  },
+  quoteCheckout(input: CheckoutQuoteRequest): Promise<CheckoutQuoteDto> {
+    return requestApi<CheckoutQuoteDto>('/api/v1/checkout/quote', {
+      method: 'POST',
+      body: input,
+    });
+  },
+  async createOrder(
+    input: CreateOrderRequest,
+    idempotencyKey: string,
+  ): Promise<CreateOrderResultDto> {
+    const result = await requestApi<CreateOrderResultDto>('/api/v1/checkout/orders', {
+      method: 'POST',
+      body: input,
+      idempotencyKey,
+    });
+    notifyCartUpdated();
+    return result;
+  },
+  async listMyOrders(
+    query: Partial<ListOrdersQuery> = {},
+  ): Promise<PaginatedResponse<OrderSummaryDto>> {
+    const qs = toQueryString({
+      page: query.page,
+      limit: query.limit,
+      status: query.status,
+    });
+    const envelope = await requestEnvelope<OrderSummaryDto[]>(`/api/v1/orders${qs}`);
+    return {
+      items: envelope.data,
+      meta: {
+        requestId: envelope.meta.requestId,
+        page: envelope.meta.page ?? 1,
+        limit: envelope.meta.limit ?? 20,
+        total: envelope.meta.total ?? envelope.data.length,
+        totalPages: envelope.meta.totalPages ?? 1,
+      },
+    };
+  },
+  getOrderDetail(orderNumber: string, guestToken?: string): Promise<OrderDetailDto> {
+    return requestApi<OrderDetailDto>(`/api/v1/orders/${encodeURIComponent(orderNumber)}`, {
+      guestOrderToken: guestToken,
+    });
+  },
+  cancelOrder(
+    orderId: string,
+    idempotencyKey: string,
+    input: CancelOrderRequest = {},
+    guestToken?: string,
+  ): Promise<OrderDetailDto> {
+    return requestApi<OrderDetailDto>(`/api/v1/orders/${encodeURIComponent(orderId)}/cancel`, {
+      method: 'POST',
+      body: input,
+      idempotencyKey,
+      guestOrderToken: guestToken,
+    });
+  },
+  createPaymentSession(
+    orderId: string,
+    idempotencyKey: string,
+    input: CreatePaymentSessionRequest = {},
+    guestToken?: string,
+  ): Promise<PaymentSessionDto> {
+    return requestApi<PaymentSessionDto>(
+      `/api/v1/payments/${encodeURIComponent(orderId)}/session`,
+      {
+        method: 'POST',
+        body: input,
+        idempotencyKey,
+        guestOrderToken: guestToken,
+      },
+    );
+  },
+  getPaymentSummary(paymentId: string, guestToken?: string): Promise<PaymentSummaryDto> {
+    return requestApi<PaymentSummaryDto>(`/api/v1/payments/${encodeURIComponent(paymentId)}`, {
+      guestOrderToken: guestToken,
     });
   },
 };

@@ -89,6 +89,9 @@ export const runtimeEnvSchema = z
     PUBLIC_ASSET_BASE_URL: z.url().default('http://localhost:4000/local-assets'),
 
     PAYMENT_DRIVER: z.enum(['local_stub', 'midtrans']).default('local_stub'),
+    MIDTRANS_SERVER_KEY: z.string().optional().default(''),
+    MIDTRANS_CLIENT_KEY: z.string().optional().default(''),
+    MIDTRANS_IS_PRODUCTION: booleanStringSchema.default(false),
     SEED_DEV_USERS: booleanStringSchema.default(false),
   })
   .superRefine((cfg, ctx) => {
@@ -181,6 +184,14 @@ export const runtimeEnvSchema = z
         code: 'custom',
         path: ['SMTP_HOST'],
         message: 'SMTP_HOST is required when EMAIL_DRIVER=smtp',
+      });
+    }
+
+    if (cfg.PAYMENT_DRIVER === 'midtrans' && !cfg.MIDTRANS_SERVER_KEY.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['MIDTRANS_SERVER_KEY'],
+        message: 'MIDTRANS_SERVER_KEY is required when PAYMENT_DRIVER=midtrans',
       });
     }
   });

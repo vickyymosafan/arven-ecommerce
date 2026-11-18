@@ -32,6 +32,7 @@ const primaryNavLinks: readonly NavLinkItem[] = [
 ];
 
 const drawerSecondaryLinks: readonly NavLinkItem[] = [
+  { href: '/account/orders', label: 'Order History' },
   { href: '/account/addresses', label: 'Saved Addresses' },
   { href: '/account/sessions', label: 'Active Sessions' },
   { href: '/auth/register', label: 'Create Account' },
@@ -328,6 +329,9 @@ export function StorefrontShell({ children, narrow = false }: StorefrontShellPro
               </Link>
               <Link href="/account" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
                 My Account
+              </Link>
+              <Link href="/account/orders" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
+                Orders
               </Link>
               <Link href="/account/addresses" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
                 Addresses

@@ -2,6 +2,7 @@ export * from './admin.js';
 export * from './auth.js';
 export * from './cart.js';
 export * from './catalog.js';
+export * from './checkout.js';
 export * from './common.js';
 export * from './envelope.js';
 export * from './health.js';

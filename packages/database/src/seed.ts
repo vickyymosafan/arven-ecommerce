@@ -9,6 +9,8 @@ import {
 } from '@arven/config';
 import {
   CollectionStatus,
+  CouponStatus,
+  DiscountType,
   InventoryMovementType,
   MediaType,
   ProductStatus,
@@ -117,8 +119,39 @@ export interface SeedDatabaseResult {
   readonly variantsUpserted: number;
   readonly mediaUpserted: number;
   readonly inventoryLevelsCreated: number;
+  readonly couponsUpserted: number;
   readonly devUsersSeeded: number;
 }
+
+export interface CouponSeedDefinition {
+  readonly code: string;
+  readonly name: string;
+  readonly discountType: DiscountType;
+  readonly discountValue: bigint;
+  readonly maxDiscountIdr: bigint | null;
+  readonly minOrderSubtotalIdr: bigint;
+  readonly usageLimitTotal: number | null;
+  readonly usageLimitPerUser: number | null;
+  readonly status: CouponStatus;
+  readonly startsAt: Date;
+  readonly endsAt: Date;
+}
+
+export const ARVEN_SEED_COUPONS: readonly CouponSeedDefinition[] = [
+  {
+    code: 'WELCOME10',
+    name: 'Welcome 10% Off',
+    discountType: DiscountType.PERCENTAGE,
+    discountValue: 10n,
+    maxDiscountIdr: 500_000n,
+    minOrderSubtotalIdr: 200_000n,
+    usageLimitTotal: null,
+    usageLimitPerUser: 5,
+    status: CouponStatus.ACTIVE,
+    startsAt: new Date('2026-01-01T00:00:00.000Z'),
+    endsAt: new Date('2028-12-31T23:59:59.000Z'),
+  },
+];
 
 function toSvgDataUri(svg: string): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg.trim())}`;
@@ -1403,6 +1436,42 @@ async function seedDevelopmentUsers(
   return count;
 }
 
+async function seedCoupons(tx: PrismaTransactionClient): Promise<number> {
+  let count = 0;
+  for (const coupon of ARVEN_SEED_COUPONS) {
+    await tx.coupon.upsert({
+      where: { code: coupon.code },
+      update: {
+        name: coupon.name,
+        discountType: coupon.discountType,
+        discountValue: coupon.discountValue,
+        maxDiscountIdr: coupon.maxDiscountIdr,
+        minOrderSubtotalIdr: coupon.minOrderSubtotalIdr,
+        usageLimitTotal: coupon.usageLimitTotal,
+        usageLimitPerUser: coupon.usageLimitPerUser,
+        status: coupon.status,
+        startsAt: coupon.startsAt,
+        endsAt: coupon.endsAt,
+      },
+      create: {
+        code: coupon.code,
+        name: coupon.name,
+        discountType: coupon.discountType,
+        discountValue: coupon.discountValue,
+        maxDiscountIdr: coupon.maxDiscountIdr,
+        minOrderSubtotalIdr: coupon.minOrderSubtotalIdr,
+        usageLimitTotal: coupon.usageLimitTotal,
+        usageLimitPerUser: coupon.usageLimitPerUser,
+        status: coupon.status,
+        startsAt: coupon.startsAt,
+        endsAt: coupon.endsAt,
+      },
+    });
+    count += 1;
+  }
+  return count;
+}
+
 export async function seedDatabase(
   prisma: PrismaClient,
   options: SeedDatabaseOptions = {},
@@ -1431,6 +1500,7 @@ export async function seedDatabase(
   return withTransaction(prisma, async (tx) => {
     const rbac = await seedRolesAndPermissions(tx);
     const catalog = await seedCatalogAndInventory(tx);
+    const couponsUpserted = await seedCoupons(tx);
 
     let devUsersSeeded = 0;
     if (devPasswordHash !== null) {
@@ -1448,6 +1518,7 @@ export async function seedDatabase(
       variantsUpserted: catalog.variantsUpserted,
       mediaUpserted: catalog.mediaUpserted,
       inventoryLevelsCreated: catalog.inventoryLevelsCreated,
+      couponsUpserted,
       devUsersSeeded,
     };
   });

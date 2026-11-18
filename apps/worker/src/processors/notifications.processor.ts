@@ -27,6 +27,10 @@ const SUBJECT_BY_EVENT: Readonly<Record<string, string>> = {
   'auth.password_reset.completed': 'Your ARVEN password was updated',
   'auth.mfa.enabled': 'Two-factor authentication enabled',
   'user.registered': 'Welcome to ARVEN',
+  'order.created': 'Your ARVEN order confirmation',
+  'order.ready_to_ship': 'Your ARVEN order is ready to ship',
+  'payment.succeeded': 'Payment received for your ARVEN order',
+  'payment.failed': 'Payment update for your ARVEN order',
 };
 
 function readStringField(

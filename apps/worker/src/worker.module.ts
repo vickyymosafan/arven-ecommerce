@@ -10,7 +10,10 @@ import {
 import { WORKER_CONFIG, WorkerConfigModule } from './config/worker-config.module.js';
 import { OutboxRelayService } from './outbox/outbox-relay.service.js';
 import { WorkerPrismaService } from './prisma/worker-prisma.service.js';
+import { InventoryExpiryProcessor } from './processors/inventory.processor.js';
 import { NotificationsProcessor } from './processors/notifications.processor.js';
+import { OrderProcessor } from './processors/order.processor.js';
+import { PaymentProcessor } from './processors/payment.processor.js';
 
 export function buildBullMqConnectionOptions(redisUrl: string): ConnectionOptions {
   const parsed = new URL(redisUrl);
@@ -54,12 +57,18 @@ export class WorkerModule {
         },
         OutboxRelayService,
         NotificationsProcessor,
+        InventoryExpiryProcessor,
+        PaymentProcessor,
+        OrderProcessor,
       ],
       exports: [
         WorkerPrismaService,
         WORKER_EMAIL_PROVIDER,
         OutboxRelayService,
         NotificationsProcessor,
+        InventoryExpiryProcessor,
+        PaymentProcessor,
+        OrderProcessor,
         BullModule,
       ],
     };

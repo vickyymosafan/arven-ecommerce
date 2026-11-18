@@ -11,25 +11,37 @@ import type {
   ApiPaginatedEnvelope,
   ApiSuccessEnvelope,
   AuthUserSummary,
+  CancelOrderRequest,
   CartItemConfiguration,
   CartStatusInput,
+  CheckoutGuestAddress,
+  CheckoutLineItemInput,
+  CheckoutQuoteRequest,
+  CheckoutShippingSelection,
   CollectionStatusInput,
   CreateAddressRequest,
   CreateAdminStockMovementRequest,
   CreateCategoryRequest,
   CreateCollectionRequest,
+  CreateOrderRequest,
+  CreatePaymentSessionRequest,
   CreateProductMediaRequest,
   CreateProductRequest,
   CreateProductVariantRequest,
   CsrfTokenResponse,
+  DiscountTypeInput,
   ForgotPasswordRequest,
   HealthLiveResponse,
   HealthReadyResponse,
   InventoryMovementTypeInput,
+  ListOrdersQuery,
   LoginRequest,
   MediaTypeInput,
   MfaSetupResponse,
   MfaVerifyRequest,
+  MidtransWebhookPayload,
+  OrderStatusInput,
+  PaymentStatusInput,
   ProductSort,
   ProductStatusInput,
   PublicProductsQuery,
@@ -65,25 +77,37 @@ export type {
   ApiPaginatedEnvelope,
   ApiSuccessEnvelope,
   AuthUserSummary,
+  CancelOrderRequest,
   CartItemConfiguration,
   CartStatusInput,
+  CheckoutGuestAddress,
+  CheckoutLineItemInput,
+  CheckoutQuoteRequest,
+  CheckoutShippingSelection,
   CollectionStatusInput,
   CreateAddressRequest,
   CreateAdminStockMovementRequest,
   CreateCategoryRequest,
   CreateCollectionRequest,
+  CreateOrderRequest,
+  CreatePaymentSessionRequest,
   CreateProductMediaRequest,
   CreateProductRequest,
   CreateProductVariantRequest,
   CsrfTokenResponse,
+  DiscountTypeInput,
   ForgotPasswordRequest,
   HealthLiveResponse,
   HealthReadyResponse,
   InventoryMovementTypeInput,
+  ListOrdersQuery,
   LoginRequest,
   MediaTypeInput,
   MfaSetupResponse,
   MfaVerifyRequest,
+  MidtransWebhookPayload,
+  OrderStatusInput,
+  PaymentStatusInput,
   ProductSort,
   ProductStatusInput,
   PublicProductsQuery,
@@ -558,4 +582,183 @@ export interface MergeCartResultDto {
   adjustedItemCount: number;
   notices: string[];
   cart: CartDto;
+}
+
+// =============================================================================
+// Phase 05: Checkout Quote, Orders & Midtrans Payment DTOs
+// =============================================================================
+
+export interface ShippingRateOptionDto {
+  provider: string;
+  serviceCode: string;
+  serviceName: string;
+  costIdr: number;
+  estimatedMinDays: number;
+  estimatedMaxDays: number;
+}
+
+export interface CheckoutQuoteItemDto {
+  variantId: string;
+  sku: string;
+  productId: string;
+  productSlug: string;
+  productName: string;
+  size: string;
+  color: string;
+  unitPriceIdr: number;
+  quantity: number;
+  discountAllocatedIdr: number;
+  lineTotalIdr: number;
+  availableQuantity: number;
+  primaryImageUrl: string | null;
+}
+
+export interface AppliedCouponDto {
+  code: string;
+  name: string;
+  discountType: DiscountTypeInput;
+  discountValue: number;
+  discountAppliedIdr: number;
+}
+
+export interface CheckoutQuoteDto {
+  currency: 'IDR';
+  warehouseCode: string;
+  totalWeightGrams: number;
+  items: CheckoutQuoteItemDto[];
+  shippingOptions: ShippingRateOptionDto[];
+  selectedShipping: ShippingRateOptionDto | null;
+  subtotalIdr: number;
+  discountTotalIdr: number;
+  shippingTotalIdr: number;
+  taxTotalIdr: number;
+  grandTotalIdr: number;
+  appliedCoupon: AppliedCouponDto | null;
+  quoteExpiresAt: string;
+}
+
+export interface OrderAddressSnapshotDto {
+  recipientName: string;
+  phone: string;
+  line1: string;
+  line2: string | null;
+  subdistrict: string | null;
+  city: string;
+  province: string;
+  postalCode: string;
+  countryCode: string;
+}
+
+export interface OrderItemDto {
+  id: string;
+  variantId: string | null;
+  sku: string;
+  productName: string;
+  size: string;
+  color: string;
+  unitPriceIdr: number;
+  discountAllocatedIdr: number;
+  quantity: number;
+  lineTotalIdr: number;
+  configuration: Record<string, unknown>;
+}
+
+export interface OrderStatusHistoryDto {
+  id: string;
+  fromStatus: OrderStatusInput | null;
+  toStatus: OrderStatusInput;
+  reason: string | null;
+  actorType: string;
+  createdAt: string;
+}
+
+export interface PaymentSummaryDto {
+  id: string;
+  orderId: string;
+  provider: string;
+  providerReference: string;
+  providerTransactionId: string | null;
+  method: string | null;
+  status: PaymentStatusInput;
+  amountIdr: number;
+  currency: 'IDR';
+  snapToken: string | null;
+  redirectUrl: string | null;
+  expiresAt: string;
+  settledAt: string | null;
+  failureReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderSummaryDto {
+  id: string;
+  orderNumber: string;
+  status: OrderStatusInput;
+  currency: 'IDR';
+  itemCount: number;
+  totalQuantity: number;
+  subtotalIdr: number;
+  discountTotalIdr: number;
+  shippingTotalIdr: number;
+  taxTotalIdr: number;
+  grandTotalIdr: number;
+  shippingProvider: string;
+  shippingService: string;
+  paymentExpiresAt: string;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderDetailDto {
+  id: string;
+  orderNumber: string;
+  isGuest: boolean;
+  guestEmail: string | null;
+  status: OrderStatusInput;
+  currency: 'IDR';
+  subtotalIdr: number;
+  discountTotalIdr: number;
+  shippingTotalIdr: number;
+  taxTotalIdr: number;
+  grandTotalIdr: number;
+  shippingProvider: string;
+  shippingService: string;
+  couponCodeSnapshot: string | null;
+  addressSnapshot: OrderAddressSnapshotDto;
+  items: OrderItemDto[];
+  statusHistory: OrderStatusHistoryDto[];
+  latestPayment: PaymentSummaryDto | null;
+  payments: PaymentSummaryDto[];
+  paymentExpiresAt: string;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateOrderResultDto {
+  order: OrderDetailDto;
+  guestToken: string | null;
+}
+
+export interface PaymentSessionDto {
+  paymentId: string;
+  orderId: string;
+  orderNumber: string;
+  provider: string;
+  providerReference: string;
+  status: PaymentStatusInput;
+  amountIdr: number;
+  currency: 'IDR';
+  snapToken: string | null;
+  redirectUrl: string | null;
+  expiresAt: string;
+}
+
+export interface MidtransWebhookAckDto {
+  acknowledged: true;
+  duplicate?: boolean;
+  orderNumber?: string;
+  paymentStatus?: PaymentStatusInput;
 }

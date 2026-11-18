@@ -71,6 +71,7 @@ export function configureApiApp(
       'X-Request-Id',
       'Idempotency-Key',
       'X-Arven-Portal',
+      'X-Guest-Order-Token',
     ],
     exposedHeaders: ['X-Request-Id', 'Idempotent-Replayed'],
   });

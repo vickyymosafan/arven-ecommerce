@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   ARVEN_SEED_CATEGORIES,
   ARVEN_SEED_COLLECTIONS,
+  ARVEN_SEED_COUPONS,
   ARVEN_SEED_PRODUCTS,
+  CouponStatus,
+  DiscountType,
   MediaType,
 } from '../src/index.js';
 
@@ -111,5 +114,29 @@ describe('Phase 03 Enriched Catalog Seed invariants', () => {
     expect(lowStockVariantCount).toBeGreaterThanOrEqual(2);
     expect(compareAtPriceCount).toBeGreaterThanOrEqual(2);
     expect(sizeGuideOverrideCount).toBeGreaterThanOrEqual(1);
+  });
+
+  it('configures promotional coupon WELCOME10 with valid percentage bounds and window constraints', () => {
+    const welcome10 = ARVEN_SEED_COUPONS.find((c) => c.code === 'WELCOME10');
+    expect(welcome10).toBeDefined();
+    expect(welcome10?.discountType).toBe(DiscountType.PERCENTAGE);
+    expect(welcome10?.discountValue).toBe(10n);
+    expect(welcome10?.maxDiscountIdr).toBe(500_000n);
+    expect(welcome10?.minOrderSubtotalIdr).toBe(200_000n);
+    expect(welcome10?.usageLimitTotal).toBeNull();
+    expect(welcome10?.usageLimitPerUser).toBe(5);
+    expect(welcome10?.status).toBe(CouponStatus.ACTIVE);
+    expect(welcome10?.startsAt.toISOString()).toBe('2026-01-01T00:00:00.000Z');
+    expect(welcome10?.endsAt.toISOString()).toBe('2028-12-31T23:59:59.000Z');
+
+    for (const coupon of ARVEN_SEED_COUPONS) {
+      expect(coupon.code).toBe(coupon.code.trim().toUpperCase());
+      expect(coupon.discountValue > 0n).toBe(true);
+      if (coupon.discountType === DiscountType.PERCENTAGE) {
+        expect(coupon.discountValue <= 100n).toBe(true);
+      }
+      expect(coupon.minOrderSubtotalIdr >= 0n).toBe(true);
+      expect(coupon.endsAt.getTime()).toBeGreaterThan(coupon.startsAt.getTime());
+    }
   });
 });

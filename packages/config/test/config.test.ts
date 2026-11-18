@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   BULLMQ_QUEUES,
+  CHECKOUT_POLICY,
   DOMAIN_EVENTS,
+  HTTP_HEADERS,
   PERMISSION_CODES,
   ROLE_CODES,
   ROLE_PERMISSION_MATRIX,
+  SHIPPING_POLICY,
+  SHIPPING_PROVIDERS,
   validatePublicFrontendConfig,
   validateRuntimeConfig,
 } from '../src/index.js';
@@ -44,6 +48,9 @@ const validProdEnv = {
   S3_SECRET_ACCESS_KEY: 'secret_key',
   PUBLIC_ASSET_BASE_URL: 'https://cdn.arven.id',
   PAYMENT_DRIVER: 'midtrans',
+  MIDTRANS_SERVER_KEY: 'SB-Mid-server-test-key',
+  MIDTRANS_CLIENT_KEY: 'SB-Mid-client-test-key',
+  MIDTRANS_IS_PRODUCTION: 'true',
   SEED_DEV_USERS: 'false',
 };
 
@@ -58,6 +65,21 @@ describe('@arven/config constants', () => {
     expect(ROLE_PERMISSION_MATRIX.MANAGER).not.toContain('refund.approve');
     expect(ROLE_PERMISSION_MATRIX.MANAGER).not.toContain('user.role.manage');
     expect(ROLE_PERMISSION_MATRIX.MANAGER).not.toContain('settings.provider.manage');
+  });
+
+  it('exposes Phase 05 guest order header, checkout policy, and shipping policy constants', () => {
+    expect(HTTP_HEADERS.GUEST_ORDER_TOKEN).toBe('x-guest-order-token');
+    expect(CHECKOUT_POLICY).toEqual({
+      QUOTE_TTL_MINUTES: 15,
+      RESERVATION_TTL_MINUTES: 15,
+      RESERVATION_SWEEP_INTERVAL_MS: 60_000,
+      ORDER_NUMBER_PREFIX: 'ARV',
+      MAX_LINE_ITEMS: 50,
+      MAX_GUEST_TOKEN_BYTES: 32,
+    });
+    expect(SHIPPING_PROVIDERS).toEqual(['jne-adapter', 'sicepat-adapter']);
+    expect(SHIPPING_POLICY.DEFAULT_WEIGHT_GRAMS_FALLBACK).toBe(500);
+    expect(SHIPPING_POLICY.COURIER_ADAPTERS).toEqual(['jne-adapter', 'sicepat-adapter']);
   });
 });
 
@@ -107,6 +129,39 @@ describe('@arven/config env validation', () => {
     expect(() =>
       validateRuntimeConfig({ ...validProdEnv, ADMIN_SESSION_COOKIE: 'arven_admin_sid' }),
     ).toThrow(/__Host-/);
+  });
+
+  it('validates Midtrans credentials when PAYMENT_DRIVER=midtrans', () => {
+    const devWithStub = validateRuntimeConfig(validDevEnv);
+    expect(devWithStub.MIDTRANS_SERVER_KEY).toBe('');
+    expect(devWithStub.MIDTRANS_CLIENT_KEY).toBe('');
+    expect(devWithStub.MIDTRANS_IS_PRODUCTION).toBe(false);
+
+    expect(() =>
+      validateRuntimeConfig({
+        ...validDevEnv,
+        PAYMENT_DRIVER: 'midtrans',
+        MIDTRANS_SERVER_KEY: '   ',
+      }),
+    ).toThrow(/MIDTRANS_SERVER_KEY/);
+
+    expect(() =>
+      validateRuntimeConfig({
+        ...validProdEnv,
+        MIDTRANS_SERVER_KEY: '',
+      }),
+    ).toThrow(/MIDTRANS_SERVER_KEY/);
+
+    const devMidtrans = validateRuntimeConfig({
+      ...validDevEnv,
+      PAYMENT_DRIVER: 'midtrans',
+      MIDTRANS_SERVER_KEY: 'SB-Mid-server-dev-key',
+      MIDTRANS_CLIENT_KEY: 'SB-Mid-client-dev-key',
+      MIDTRANS_IS_PRODUCTION: 'false',
+    });
+    expect(devMidtrans.PAYMENT_DRIVER).toBe('midtrans');
+    expect(devMidtrans.MIDTRANS_SERVER_KEY).toBe('SB-Mid-server-dev-key');
+    expect(devMidtrans.MIDTRANS_IS_PRODUCTION).toBe(false);
   });
 
   it('validates public frontend config without server DB credentials', () => {

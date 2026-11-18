@@ -312,7 +312,7 @@ export function CartView() {
                       <div className="space-y-1">
                         <Link
                           href={`/products/${item.productSlug}`}
-                          className="inline-flex min-h-11 items-center font-display text-lg font-normal leading-snug text-ink hover:text-link hover:underline sm:min-h-0"
+                          className="inline-flex min-h-11 items-center py-1 font-display text-lg font-normal leading-snug text-ink hover:text-link hover:underline"
                         >
                           {item.productName}
                         </Link>
@@ -337,7 +337,7 @@ export function CartView() {
                       </div>
 
                       <div className="flex flex-wrap items-baseline gap-2.5 pt-0.5">
-                        <span className="font-mono text-sm font-medium tabular-nums text-ink">
+                        <span className="whitespace-nowrap font-mono text-sm font-medium tabular-nums text-ink">
                           {formatIDR(item.unitPriceIdr)}
                         </span>
                         {hasDiscount && item.compareAtIdr ? (
@@ -381,7 +381,7 @@ export function CartView() {
                       <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-muted">
                         Line Subtotal
                       </p>
-                      <p className="font-mono text-base font-medium tabular-nums text-ink">
+                      <p className="whitespace-nowrap font-mono text-base font-medium tabular-nums text-ink">
                         {formatIDR(item.lineSubtotalIdr)}
                       </p>
                     </div>
@@ -477,14 +477,34 @@ export function CartView() {
               </div>
             </dl>
 
-            <StatusBanner
-              tone="info"
-              title="Checkout Staging"
-              description="Shipping calculation and Midtrans payment steps unlock in Phase 05. Line prices and stock availability remain verified against Jakarta Atelier Main (JKT-MAIN-01)."
-            />
-
             <div className="flex flex-col gap-3 pt-1">
-              <LinkButton href="/shop" variant="primary" size="lg" fullWidth>
+              {cart.hasUnavailableItems ? (
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="lg"
+                    fullWidth
+                    disabled
+                    aria-describedby="cart-checkout-blocked-reason"
+                  >
+                    Proceed to Checkout
+                  </Button>
+                  <p
+                    id="cart-checkout-blocked-reason"
+                    className="text-xs leading-relaxed text-danger-fg"
+                  >
+                    One or more items in your bag are out of stock or exceed warehouse
+                    availability. Adjust quantities or remove flagged items before checkout.
+                  </p>
+                </div>
+              ) : (
+                <LinkButton href="/checkout" variant="primary" size="lg" fullWidth>
+                  Proceed to Checkout
+                </LinkButton>
+              )}
+
+              <LinkButton href="/shop" variant="secondary" size="md" fullWidth>
                 Continue Shopping
               </LinkButton>
 

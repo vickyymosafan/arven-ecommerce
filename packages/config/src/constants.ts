@@ -271,6 +271,7 @@ export const HTTP_HEADERS = {
   PORTAL: 'x-arven-portal',
   IDEMPOTENCY_KEY: 'idempotency-key',
   IDEMPOTENT_REPLAYED: 'idempotent-replayed',
+  GUEST_ORDER_TOKEN: 'x-guest-order-token',
 } as const;
 
 export const CSRF_COOKIE_NAME = 'arven_csrf';
@@ -285,6 +286,25 @@ export const CART_POLICY = {
   GUEST_TOKEN_BYTES: 32,
   MAX_LINE_QUANTITY: 99,
   MAX_CONFIGURATION_KEYS: 16,
+} as const;
+
+export const CHECKOUT_POLICY = {
+  QUOTE_TTL_MINUTES: 15,
+  RESERVATION_TTL_MINUTES: 15,
+  RESERVATION_SWEEP_INTERVAL_MS: 60_000,
+  ORDER_NUMBER_PREFIX: 'ARV',
+  MAX_LINE_ITEMS: 50,
+  MAX_GUEST_TOKEN_BYTES: 32,
+} as const;
+
+export const SHIPPING_PROVIDERS = ['jne-adapter', 'sicepat-adapter'] as const;
+export type ShippingProviderCode = (typeof SHIPPING_PROVIDERS)[number];
+
+export const SHIPPING_POLICY = {
+  DEFAULT_WEIGHT_GRAMS_FALLBACK: 500,
+  COURIER_ADAPTERS: SHIPPING_PROVIDERS,
+  JNE_ADAPTER: 'jne-adapter',
+  SICEPAT_ADAPTER: 'sicepat-adapter',
 } as const;
 
 export const IDEMPOTENCY_POLICY = {
