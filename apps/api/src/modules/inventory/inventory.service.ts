@@ -10,6 +10,7 @@ import {
   Prisma,
   StockReservationStatus,
   WarehouseStatus,
+  type PrismaTransactionClient,
 } from '@arven/database';
 import type {
   AdminInventoryLevelsQuery,
@@ -189,6 +190,15 @@ function mapReservationDto(row: {
     committedAt: row.committedAt ? row.committedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
   };
+}
+
+export interface ReturnStockFromInspectionInput {
+  warehouseId: string;
+  variantId: string;
+  quantity: number;
+  returnId: string;
+  actorId: string | null;
+  reason?: string;
 }
 
 @Injectable()
@@ -681,5 +691,61 @@ export class InventoryService {
         };
       },
     });
+  }
+
+  /**
+   * Atomically increments sellable on-hand stock from an approved return inspection
+   * and appends an immutable RETURN_TO_STOCK ledger entry within the caller transaction.
+   */
+  async returnStockFromInspection(
+    tx: PrismaTransactionClient,
+    input: ReturnStockFromInspectionInput,
+  ): Promise<{ inventoryLevelId: string; movementId: string }> {
+    if (!Number.isInteger(input.quantity) || input.quantity <= 0) {
+      throw new DomainHttpException(
+        HttpStatus.BAD_REQUEST,
+        'VALIDATION_ERROR',
+        'Return restock quantity must be a positive integer',
+        [{ field: 'quantity', issue: 'Quantity must be a positive integer' }],
+      );
+    }
+
+    const updatedLevels = await tx.$queryRaw<Array<{ id: string }>>`
+      INSERT INTO "inventory_levels" ("warehouse_id", "variant_id", "quantity_on_hand", "quantity_reserved")
+      VALUES (${input.warehouseId}::uuid, ${input.variantId}::uuid, ${input.quantity}::int, 0)
+      ON CONFLICT ("warehouse_id", "variant_id")
+      DO UPDATE SET
+        "quantity_on_hand" = "inventory_levels"."quantity_on_hand" + ${input.quantity}::int,
+        "updated_at" = NOW()
+      RETURNING "id"::text AS "id"
+    `;
+
+    const levelRow = updatedLevels[0];
+    if (!levelRow) {
+      throw new DomainHttpException(
+        HttpStatus.CONFLICT,
+        'INVENTORY_RESTOCK_FAILED',
+        'Unable to increment inventory level for return restock',
+      );
+    }
+
+    const movement = await tx.inventoryMovement.create({
+      data: {
+        warehouseId: input.warehouseId,
+        variantId: input.variantId,
+        type: InventoryMovementType.RETURN_TO_STOCK,
+        quantityDelta: input.quantity,
+        referenceType: 'RETURN',
+        referenceId: input.returnId,
+        reason: input.reason ?? 'Return inspection passed',
+        actorId: input.actorId,
+      },
+      select: { id: true },
+    });
+
+    return {
+      inventoryLevelId: levelRow.id,
+      movementId: movement.id,
+    };
   }
 }

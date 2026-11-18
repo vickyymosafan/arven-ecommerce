@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { AdminSalesAnalyticsDto } from '@arven/contracts';
 import {
   PERMISSION_CODES,
   PERMISSION_DESCRIPTIONS,
@@ -19,12 +20,14 @@ import {
   Modal,
   StatusBanner,
   Surface,
+  formatIDR,
   formatWIB,
   useToast,
 } from '@arven/ui';
 import { AdminShell } from '@/components/admin-shell';
 import { AdminApiClientError, adminApi } from '@/lib/api-client';
 import { formatRoleLabel } from '@/lib/format';
+import { getAnalyticsVisibility } from '@/lib/ops-helpers';
 import { useAdminSession } from '@/lib/use-admin-session';
 
 const stepUpSet = new Set<string>(STEP_UP_REQUIRED_PERMISSIONS);
@@ -37,6 +40,64 @@ export default function AdminOverviewPage() {
   const [permQuery, setPermQuery] = useState('');
   const [logoutAllOpen, setLogoutAllOpen] = useState(false);
   const [loggingOutAll, setLoggingOutAll] = useState(false);
+
+  const [analytics, setAnalytics] = useState<AdminSalesAnalyticsDto | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState<{
+    message: string;
+    requestId?: string | null;
+  } | null>(null);
+  const [analyticsNonce, setAnalyticsNonce] = useState(0);
+
+  const analyticsVisibility = useMemo(
+    () =>
+      getAnalyticsVisibility({
+        roles: user?.roles,
+        permissions,
+      }),
+    [permissions, user?.roles],
+  );
+
+  const loadAnalytics = useCallback(() => {
+    if (!user || analyticsVisibility === 'none') {
+      return;
+    }
+    setAnalyticsLoading(true);
+    setAnalyticsError(null);
+    setAnalyticsNonce((n) => n + 1);
+  }, [analyticsVisibility, user]);
+
+  useEffect(() => {
+    if (!user || analyticsVisibility === 'none') {
+      return;
+    }
+
+    let active = true;
+    adminApi
+      .getSalesAnalytics({ days: 30 })
+      .then((data) => {
+        if (!active) return;
+        setAnalytics(data);
+        setAnalyticsError(null);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        if (err instanceof AdminApiClientError) {
+          setAnalyticsError({ message: err.message, requestId: err.requestId });
+        } else {
+          setAnalyticsError({ message: 'Unable to load live sales and operations totals.' });
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setAnalyticsLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [analyticsNonce, analyticsVisibility, user]);
 
   const filteredPermissions = useMemo(() => {
     const q = permQuery.trim().toLowerCase();
@@ -110,6 +171,160 @@ export default function AdminOverviewPage() {
         />
       ) : user ? (
         <div className="space-y-8">
+          <section aria-labelledby="live-kpi-heading" className="space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div className="space-y-1">
+                <h2 id="live-kpi-heading" className="font-display text-2xl font-normal text-ink">
+                  Live Sales &amp; Operations Summary
+                </h2>
+                {analytics ? (
+                  <p className="font-mono text-xs tabular-nums text-ink-muted">
+                    Live server totals as of {formatWIB(analytics.generatedAt, { includeSeconds: true })} (last {analytics.days} days)
+                  </p>
+                ) : (
+                  <p className="text-xs text-ink-muted">
+                    Server-computed totals across orders, settled payments, and open returns.
+                  </p>
+                )}
+              </div>
+              {analytics && analyticsVisibility !== 'none' ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {analytics.limitedView || analyticsVisibility === 'limited' ? (
+                    <Badge tone="info">Volume &amp; SLA View</Badge>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => void loadAnalytics()}
+                    isLoading={analyticsLoading}
+                    loadingLabel="Refreshing"
+                  >
+                    Refresh Totals
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+
+            {analyticsVisibility === 'none' ? (
+              <StatusBanner
+                tone="info"
+                description="Sales KPI summary requires analytics.read or analytics.read.limited permission."
+              />
+            ) : !analytics && !analyticsError ? (
+              <LoadingState label="Loading live sales and operations KPIs" rows={3} />
+            ) : analyticsError ? (
+              <ErrorState
+                title="Unable to load live KPIs"
+                message={analyticsError.message}
+                requestId={analyticsError.requestId}
+                onRetry={() => void loadAnalytics()}
+              />
+            ) : analytics ? (
+              <div className="space-y-4">
+                {analytics.limitedView || analyticsVisibility === 'limited' ? (
+                  <StatusBanner
+                    tone="info"
+                    title="Limited Support Analytics View"
+                    description="Monetary totals (Gross Sales and AOV) are suppressed under analytics.read.limited."
+                  />
+                ) : null}
+
+                {analytics.limitedView || analyticsVisibility === 'limited' ? (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5">
+                      <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
+                        Paid Orders
+                      </p>
+                      <p className="font-mono text-2xl font-medium tabular-nums text-ink">
+                        {analytics.paidOrders}
+                      </p>
+                    </Surface>
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5">
+                      <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
+                        Pending Payment
+                      </p>
+                      <p className="font-mono text-2xl font-medium tabular-nums text-ink">
+                        {analytics.pendingPaymentOrders}
+                      </p>
+                    </Surface>
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5">
+                      <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
+                        Open Returns
+                      </p>
+                      <p className="font-mono text-2xl font-medium tabular-nums text-ink">
+                        {analytics.openReturnsCount}
+                      </p>
+                    </Surface>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5">
+                      <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
+                        Gross Sales
+                      </p>
+                      <p className="font-mono text-2xl font-medium tabular-nums text-ink">
+                        {formatIDR(analytics.grossSalesIdr ?? 0)}
+                      </p>
+                    </Surface>
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5">
+                      <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
+                        Paid Orders
+                      </p>
+                      <p className="font-mono text-2xl font-medium tabular-nums text-ink">
+                        {analytics.paidOrders}
+                      </p>
+                    </Surface>
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5">
+                      <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
+                        AOV
+                      </p>
+                      <p className="font-mono text-2xl font-medium tabular-nums text-ink">
+                        {formatIDR(analytics.averageOrderValueIdr ?? 0)}
+                      </p>
+                    </Surface>
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5">
+                      <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
+                        Pending Payment
+                      </p>
+                      <p className="font-mono text-2xl font-medium tabular-nums text-ink">
+                        {analytics.pendingPaymentOrders}
+                      </p>
+                    </Surface>
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5">
+                      <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
+                        Open Returns
+                      </p>
+                      <p className="font-mono text-2xl font-medium tabular-nums text-ink">
+                        {analytics.openReturnsCount}
+                      </p>
+                    </Surface>
+                  </div>
+                )}
+
+                {analytics.totalOrders === 0 ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-hairline bg-subtle px-4 py-3">
+                    <p className="text-xs text-ink-muted">
+                      No orders recorded in the current 30-day window.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {canAccess(['order.read', 'order.read.limited', 'order.fulfill', 'order.cancel']) ? (
+                        <LinkButton href="/orders" variant="secondary" size="sm">
+                          Open Orders Queue
+                        </LinkButton>
+                      ) : null}
+                      {canAccess(['return.read', 'return.review', 'return.inspect', 'return.approve']) ? (
+                        <LinkButton href="/returns" variant="secondary" size="sm">
+                          Open Returns Queue
+                        </LinkButton>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+
           <div className="grid gap-6 lg:grid-cols-12">
             <Surface variant="elevated" border="hairline" padding="lg" className="space-y-4 lg:col-span-6">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -164,7 +379,7 @@ export default function AdminOverviewPage() {
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <dt className="text-ink-muted">Last TOTP Verification</dt>
-                  <dd className="font-mono text-xs text-ink">
+                  <dd className="font-mono text-xs tabular-nums text-ink">
                     {formatWIB(user.mfaVerifiedAt, { includeSeconds: true })}
                   </dd>
                 </div>
@@ -179,6 +394,81 @@ export default function AdminOverviewPage() {
               />
             </Surface>
           </div>
+
+          <section aria-labelledby="ops-modules-heading" className="space-y-4">
+            <h2 id="ops-modules-heading" className="font-display text-2xl font-normal text-ink">
+              Phase 06 Commerce Operations
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Surface variant="subtle" border="hairline" padding="md" className="flex flex-col justify-between gap-4">
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-semibold text-ink">Orders &amp; Shipments</h3>
+                  <p className="text-xs leading-relaxed text-ink-muted">
+                    Advance fulfillment stages, create carrier shipments, sync tracking events, and initiate refunds.
+                  </p>
+                </div>
+                <LinkButton
+                  href="/orders"
+                  variant="secondary"
+                  size="sm"
+                  aria-disabled={!canAccess(['order.read', 'order.read.limited', 'order.fulfill', 'order.cancel'])}
+                >
+                  Open Orders
+                </LinkButton>
+              </Surface>
+
+              <Surface variant="subtle" border="hairline" padding="md" className="flex flex-col justify-between gap-4">
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-semibold text-ink">Returns &amp; Refunds</h3>
+                  <p className="text-xs leading-relaxed text-ink-muted">
+                    Triage returns, inspect physical receipt for RETURN_TO_STOCK, and authorize dual-step OWNER refunds.
+                  </p>
+                </div>
+                <LinkButton
+                  href="/returns"
+                  variant="secondary"
+                  size="sm"
+                  aria-disabled={!canAccess(['return.read', 'return.review', 'return.inspect', 'return.approve', 'refund.request', 'refund.approve'])}
+                >
+                  Open Returns &amp; Refunds
+                </LinkButton>
+              </Surface>
+
+              <Surface variant="subtle" border="hairline" padding="md" className="flex flex-col justify-between gap-4">
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-semibold text-ink">Promotional Coupons</h3>
+                  <p className="text-xs leading-relaxed text-ink-muted">
+                    Create percentage, fixed IDR, or free-shipping promotions with WIB scheduling windows.
+                  </p>
+                </div>
+                <LinkButton
+                  href="/coupons"
+                  variant="secondary"
+                  size="sm"
+                  aria-disabled={!canAccess(['coupon.read', 'coupon.manage'])}
+                >
+                  Open Coupons
+                </LinkButton>
+              </Surface>
+
+              <Surface variant="subtle" border="hairline" padding="md" className="flex flex-col justify-between gap-4">
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-semibold text-ink">Editorial CMS</h3>
+                  <p className="text-xs leading-relaxed text-ink-muted">
+                    Author Lookbooks, Journal essays, and Storefront Pages with preview and publish gates.
+                  </p>
+                </div>
+                <LinkButton
+                  href="/cms"
+                  variant="secondary"
+                  size="sm"
+                  aria-disabled={!canAccess(['cms.read', 'cms.write', 'cms.publish'])}
+                >
+                  Open CMS
+                </LinkButton>
+              </Surface>
+            </div>
+          </section>
 
           <section aria-labelledby="catalog-modules-heading" className="space-y-4">
             <h2 id="catalog-modules-heading" className="font-display text-2xl font-normal text-ink">

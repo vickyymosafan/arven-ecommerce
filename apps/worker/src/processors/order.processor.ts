@@ -7,11 +7,22 @@ import { WORKER_CONFIG } from '../config/worker-config.module.js';
 import { WorkerPrismaService } from '../prisma/worker-prisma.service.js';
 import {
   enqueueOrderNotification,
+  isUuid,
+  readStringField,
   resolveOrderIdFromJob,
   type OutboxJobEnvelope,
 } from './processor-utils.js';
 
 export type OrderJobData = OutboxJobEnvelope;
+
+const NOTIFIABLE_ORDER_QUEUE_EVENTS = new Set<string>([
+  'order.created',
+  'order.ready_to_ship',
+  'return.requested',
+  'return.approved',
+  'return.rejected',
+  'return.received',
+]);
 
 @Processor(QUEUE_NAMES.ORDER)
 export class OrderProcessor extends WorkerHost {
@@ -37,9 +48,36 @@ export class OrderProcessor extends WorkerHost {
     const eventType = data.eventType ?? job.name;
     const payload =
       data.payload && typeof data.payload === 'object' ? data.payload : undefined;
-    const orderId = resolveOrderIdFromJob(data, payload);
+    let orderId = resolveOrderIdFromJob(data, payload);
+    const returnId =
+      readStringField(payload, 'returnId') ??
+      (data.aggregateType === 'return' && isUuid(data.aggregateId)
+        ? data.aggregateId
+        : undefined);
+    let enrichedPayload: Record<string, unknown> | undefined = payload ? { ...payload } : undefined;
 
-    if (eventType === 'order.created' || eventType === 'order.ready_to_ship') {
+    if (eventType.startsWith('return.') && !orderId && isUuid(returnId)) {
+      const returnRecord = await this.prisma.client.return.findUnique({
+        where: { id: returnId },
+        select: {
+          orderId: true,
+          status: true,
+          reason: true,
+        },
+      });
+      if (returnRecord) {
+        orderId = returnRecord.orderId;
+        enrichedPayload = {
+          ...(enrichedPayload ?? {}),
+          returnId,
+          orderId,
+          returnStatus: returnRecord.status,
+          reason: returnRecord.reason,
+        };
+      }
+    }
+
+    if (NOTIFIABLE_ORDER_QUEUE_EVENTS.has(eventType)) {
       const notificationResult = await enqueueOrderNotification({
         notificationQueue: this.notificationQueue,
         prisma: this.prisma,
@@ -47,7 +85,7 @@ export class OrderProcessor extends WorkerHost {
         ...(data.outboxEventId ? { outboxEventId: data.outboxEventId } : {}),
         ...(job.id !== undefined ? { jobId: String(job.id) } : {}),
         ...(orderId ? { orderId } : {}),
-        ...(payload ? { payload } : {}),
+        ...(enrichedPayload ? { payload: enrichedPayload } : {}),
       });
 
       this.logger.info(
@@ -56,6 +94,7 @@ export class OrderProcessor extends WorkerHost {
           outboxEventId: data.outboxEventId ?? null,
           eventType,
           orderId: orderId ?? null,
+          returnId: returnId ?? null,
           orderNumber: notificationResult.orderNumber ?? null,
           notificationEnqueued: notificationResult.enqueued,
         },

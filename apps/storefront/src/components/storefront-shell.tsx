@@ -25,6 +25,8 @@ const primaryNavLinks: readonly NavLinkItem[] = [
   { href: '/', label: 'Home' },
   { href: '/shop', label: 'Shop' },
   { href: '/collections', label: 'Collections' },
+  { href: '/lookbook', label: 'Lookbook' },
+  { href: '/journal', label: 'Journal' },
   { href: '/search', label: 'Search' },
   { href: '/cart', label: 'Bag' },
   { href: '/account', label: 'Account' },
@@ -33,6 +35,7 @@ const primaryNavLinks: readonly NavLinkItem[] = [
 
 const drawerSecondaryLinks: readonly NavLinkItem[] = [
   { href: '/account/orders', label: 'Order History' },
+  { href: '/account/returns', label: 'Returns' },
   { href: '/account/addresses', label: 'Saved Addresses' },
   { href: '/account/sessions', label: 'Active Sessions' },
   { href: '/auth/register', label: 'Create Account' },
@@ -77,7 +80,7 @@ function DesktopNavLinks({
   bagCount: number | null;
 }) {
   return (
-    <nav aria-label="Primary storefront navigation" className="hidden items-center gap-1.5 xl:gap-2 lg:flex">
+    <nav aria-label="Primary storefront navigation" className="hidden items-center gap-1 xl:gap-2 lg:flex">
       {primaryNavLinks.map((item) => {
         const active = isNavHrefActive(pathname, item.href);
         const isBag = item.href === '/cart';
@@ -87,7 +90,7 @@ function DesktopNavLinks({
             href={item.href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] px-2.5 py-2 text-xs font-medium uppercase tracking-[0.06em] transition-colors xl:px-3',
+              'inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] px-2 py-2 text-xs font-medium uppercase tracking-[0.06em] transition-colors xl:px-3',
               active
                 ? 'border border-control-border bg-panel text-ink'
                 : 'text-ink-secondary hover:bg-subtle hover:text-ink',
@@ -321,6 +324,15 @@ export function StorefrontShell({ children, narrow = false }: StorefrontShellPro
               <Link href="/collections" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
                 Collections
               </Link>
+              <Link href="/lookbook" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
+                Lookbook
+              </Link>
+              <Link href="/journal" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
+                Journal
+              </Link>
+              <Link href="/about" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
+                About
+              </Link>
               <Link href="/search" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
                 Search
               </Link>
@@ -332,6 +344,9 @@ export function StorefrontShell({ children, narrow = false }: StorefrontShellPro
               </Link>
               <Link href="/account/orders" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
                 Orders
+              </Link>
+              <Link href="/account/returns" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
+                Returns
               </Link>
               <Link href="/account/addresses" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
                 Addresses

@@ -1,15 +1,25 @@
 import type {
   AddCartItemRequest,
   AddressResponse,
+  AdminCmsListQuery,
+  AdminCouponsQuery,
+  AdminCreateShipmentRequest,
   AdminInventoryLevelsQuery,
   AdminInventoryMovementsQuery,
   AdminLoginRequest,
   AdminManualMovementTypeInput,
+  AdminOrdersQuery,
   AdminProductsQuery,
+  AdminRefundsQuery,
+  AdminReturnsQuery,
   AdminStockReservationsQuery,
+  AdminTransitionOrderRequest,
+  AnalyticsSalesQuery,
   ApiErrorEnvelope,
   ApiPaginatedEnvelope,
   ApiSuccessEnvelope,
+  ApproveRefundInput,
+  ApproveReturnRequest,
   AuthUserSummary,
   CancelOrderRequest,
   CartItemConfiguration,
@@ -18,17 +28,27 @@ import type {
   CheckoutLineItemInput,
   CheckoutQuoteRequest,
   CheckoutShippingSelection,
+  CmsLookbookSlideInput,
+  CmsPageBlockInput,
+  CmsStatusInput,
   CollectionStatusInput,
+  CouponStatusInput,
   CreateAddressRequest,
   CreateAdminStockMovementRequest,
   CreateCategoryRequest,
+  CreateCmsJournalRequest,
+  CreateCmsLookbookRequest,
+  CreateCmsPageRequest,
   CreateCollectionRequest,
+  CreateCouponRequest,
+  CreateCustomerReturnRequest,
   CreateOrderRequest,
   CreatePaymentSessionRequest,
   CreateProductMediaRequest,
   CreateProductRequest,
   CreateProductVariantRequest,
   CsrfTokenResponse,
+  CustomerReturnItemInput,
   DiscountTypeInput,
   ForgotPasswordRequest,
   HealthLiveResponse,
@@ -45,15 +65,28 @@ import type {
   ProductSort,
   ProductStatusInput,
   PublicProductsQuery,
+  ReceiveReturnItemInput,
+  ReceiveReturnRequest,
+  RefundStatusInput,
   RegisterRequest,
+  RequestRefundInput,
   ResetPasswordRequest,
+  ReturnItemConditionInput,
+  ReturnStatusInput,
+  ReviewReturnRequest,
+  ShipmentStatusInput,
   StockReservationStatusInput,
   StockStatus,
+  TransitionCmsStatusRequest,
   TransitionProductStatusRequest,
   UpdateAddressRequest,
   UpdateCartItemRequest,
   UpdateCategoryRequest,
+  UpdateCmsJournalRequest,
+  UpdateCmsLookbookRequest,
+  UpdateCmsPageRequest,
   UpdateCollectionRequest,
+  UpdateCouponRequest,
   UpdateProductMediaRequest,
   UpdateProductRequest,
   UpdateProductVariantRequest,
@@ -67,15 +100,25 @@ import type {
 export type {
   AddCartItemRequest,
   AddressResponse,
+  AdminCmsListQuery,
+  AdminCouponsQuery,
+  AdminCreateShipmentRequest,
   AdminInventoryLevelsQuery,
   AdminInventoryMovementsQuery,
   AdminLoginRequest,
   AdminManualMovementTypeInput,
+  AdminOrdersQuery,
   AdminProductsQuery,
+  AdminRefundsQuery,
+  AdminReturnsQuery,
   AdminStockReservationsQuery,
+  AdminTransitionOrderRequest,
+  AnalyticsSalesQuery,
   ApiErrorEnvelope,
   ApiPaginatedEnvelope,
   ApiSuccessEnvelope,
+  ApproveRefundInput,
+  ApproveReturnRequest,
   AuthUserSummary,
   CancelOrderRequest,
   CartItemConfiguration,
@@ -84,17 +127,27 @@ export type {
   CheckoutLineItemInput,
   CheckoutQuoteRequest,
   CheckoutShippingSelection,
+  CmsLookbookSlideInput,
+  CmsPageBlockInput,
+  CmsStatusInput,
   CollectionStatusInput,
+  CouponStatusInput,
   CreateAddressRequest,
   CreateAdminStockMovementRequest,
   CreateCategoryRequest,
+  CreateCmsJournalRequest,
+  CreateCmsLookbookRequest,
+  CreateCmsPageRequest,
   CreateCollectionRequest,
+  CreateCouponRequest,
+  CreateCustomerReturnRequest,
   CreateOrderRequest,
   CreatePaymentSessionRequest,
   CreateProductMediaRequest,
   CreateProductRequest,
   CreateProductVariantRequest,
   CsrfTokenResponse,
+  CustomerReturnItemInput,
   DiscountTypeInput,
   ForgotPasswordRequest,
   HealthLiveResponse,
@@ -111,15 +164,28 @@ export type {
   ProductSort,
   ProductStatusInput,
   PublicProductsQuery,
+  ReceiveReturnItemInput,
+  ReceiveReturnRequest,
+  RefundStatusInput,
   RegisterRequest,
+  RequestRefundInput,
   ResetPasswordRequest,
+  ReturnItemConditionInput,
+  ReturnStatusInput,
+  ReviewReturnRequest,
+  ShipmentStatusInput,
   StockReservationStatusInput,
   StockStatus,
+  TransitionCmsStatusRequest,
   TransitionProductStatusRequest,
   UpdateAddressRequest,
   UpdateCartItemRequest,
   UpdateCategoryRequest,
+  UpdateCmsJournalRequest,
+  UpdateCmsLookbookRequest,
+  UpdateCmsPageRequest,
   UpdateCollectionRequest,
+  UpdateCouponRequest,
   UpdateProductMediaRequest,
   UpdateProductRequest,
   UpdateProductVariantRequest,
@@ -761,4 +827,234 @@ export interface MidtransWebhookAckDto {
   duplicate?: boolean;
   orderNumber?: string;
   paymentStatus?: PaymentStatusInput;
+}
+
+// =============================================================================
+// Phase 06: Admin Operations, Shipments, Returns, Refunds, Coupons, CMS & Analytics DTOs
+// =============================================================================
+
+export interface ShipmentEventDto {
+  id: string;
+  shipmentId: string;
+  status: ShipmentStatusInput;
+  rawCode: string | null;
+  description: string;
+  location: string | null;
+  occurredAt: string;
+  createdAt: string;
+}
+
+export interface ShipmentDto {
+  id: string;
+  orderId: string;
+  warehouseId: string;
+  warehouseCode?: string;
+  provider: string;
+  serviceCode: string;
+  providerReference: string | null;
+  trackingNumber: string | null;
+  labelUrl: string | null;
+  status: ShipmentStatusInput;
+  shippedAt: string | null;
+  deliveredAt: string | null;
+  events: ShipmentEventDto[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReturnItemDto {
+  id: string;
+  returnId: string;
+  orderItemId: string;
+  variantId: string | null;
+  sku: string;
+  productName: string;
+  size: string;
+  color: string;
+  unitPriceIdr: number;
+  purchasedQuantity: number;
+  quantity: number;
+  condition: ReturnItemConditionInput | null;
+  restocked: boolean;
+  createdAt: string;
+}
+
+export interface ReturnDetailDto {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  userId: string | null;
+  customerEmail: string | null;
+  piiMasked: boolean;
+  status: ReturnStatusInput;
+  reason: string;
+  customerNotes: string | null;
+  evidenceKeys: string[];
+  adminNotes: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  receivedAt: string | null;
+  items: ReturnItemDto[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RefundDto {
+  id: string;
+  orderId: string;
+  orderNumber?: string;
+  paymentId: string;
+  returnId: string | null;
+  refundKey: string;
+  providerRefundId: string | null;
+  status: RefundStatusInput;
+  amountIdr: number;
+  currency: 'IDR';
+  reason: string;
+  requestedBy: string;
+  requestedByEmail?: string | null;
+  approvedBy: string | null;
+  approvedByEmail?: string | null;
+  gatewayResponse?: Record<string, unknown> | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminOrderSummaryDto extends OrderSummaryDto {
+  isGuest: boolean;
+  customerEmail: string | null;
+  recipientName: string;
+  piiMasked: boolean;
+  latestPaymentStatus: PaymentStatusInput | null;
+  shipmentStatus: ShipmentStatusInput | null;
+  latestTrackingNumber: string | null;
+}
+
+export interface AdminOrderDetailDto extends OrderDetailDto {
+  userId: string | null;
+  customerEmail: string | null;
+  piiMasked: boolean;
+  shipments: ShipmentDto[];
+  returns: ReturnDetailDto[];
+  refunds: RefundDto[];
+}
+
+export interface AdminCouponDto {
+  id: string;
+  code: string;
+  name: string;
+  discountType: DiscountTypeInput;
+  discountValue: number;
+  maxDiscountIdr: number | null;
+  minOrderSubtotalIdr: number;
+  usageLimitTotal: number | null;
+  usageLimitPerUser: number | null;
+  usedCount: number;
+  status: CouponStatusInput;
+  startsAt: string;
+  endsAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CmsPageBlockDto {
+  id?: string;
+  type: string;
+  heading?: string;
+  subheading?: string;
+  body?: string;
+  imageUrl?: string;
+  altText?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+  items?: Array<{ label: string; value: string }>;
+}
+
+export interface CmsPageDto {
+  id: string;
+  slug: string;
+  title: string;
+  blocks: CmsPageBlockDto[] | Record<string, unknown>;
+  status: CmsStatusInput;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CmsLookbookSlideDto {
+  id?: string;
+  title: string;
+  caption?: string;
+  imageUrl: string;
+  altText?: string;
+  productSlug?: string;
+  productId?: string;
+  position?: number;
+}
+
+export interface CmsLookbookDto {
+  id: string;
+  slug: string;
+  title: string;
+  season: string;
+  description: string | null;
+  slides: CmsLookbookSlideDto[];
+  status: CmsStatusInput;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CmsJournalArticleDto {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  body: Record<string, unknown> | Array<Record<string, unknown>>;
+  coverMediaUrl: string | null;
+  authorId: string | null;
+  authorName: string | null;
+  status: CmsStatusInput;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminSalesDailyPointDto {
+  date: string;
+  orderCount: number;
+  paidOrderCount: number;
+  grossSalesIdr: number | null;
+  netSalesIdr: number | null;
+}
+
+export interface AdminOrderStatusCountDto {
+  status: OrderStatusInput;
+  count: number;
+}
+
+export interface AdminSalesAnalyticsDto {
+  days: number;
+  limitedView: boolean;
+  currency: 'IDR';
+  totalOrders: number;
+  paidOrders: number;
+  pendingPaymentOrders: number;
+  fulfilledOrders: number;
+  cancelledOrExpiredOrders: number;
+  openReturnsCount: number;
+  totalReturnsCount: number;
+  pendingRefundRequestsCount: number;
+  grossSalesIdr: number | null;
+  netSalesIdr: number | null;
+  totalRefundedIdr: number | null;
+  averageOrderValueIdr: number | null;
+  paymentSuccessRatePct: number | null;
+  returnRatePct: number | null;
+  statusBreakdown: AdminOrderStatusCountDto[];
+  dailySeries: AdminSalesDailyPointDto[];
+  generatedAt: string;
 }

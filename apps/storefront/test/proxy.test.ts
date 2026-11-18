@@ -52,6 +52,9 @@ describe('Storefront proxy and redirect sanitization', () => {
     expect(response.status).toBe(200);
     const csp = response.headers.get('Content-Security-Policy') ?? '';
     expect(csp).toContain("script-src 'self' 'nonce-");
+    expect(csp).toContain("'sha256-7mu4H06fwDCjmnxxr/xNHyuQC6pLTHr4M2E4jXw5WZs='");
+    expect(csp).not.toContain("'strict-dynamic'");
+    expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
     expect(csp).not.toContain('upgrade-insecure-requests');
     expect(response.headers.get('X-Frame-Options')).toBe('DENY');
     expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');

@@ -1,5 +1,8 @@
 export { InventoryModule } from './inventory.module.js';
-export { InventoryService } from './inventory.service.js';
+export {
+  InventoryService,
+  type ReturnStockFromInspectionInput,
+} from './inventory.service.js';
 export {
   InventoryReservationService,
   type CommitOrderReservationsInput,

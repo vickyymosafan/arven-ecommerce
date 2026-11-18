@@ -14,6 +14,7 @@ import { InventoryExpiryProcessor } from './processors/inventory.processor.js';
 import { NotificationsProcessor } from './processors/notifications.processor.js';
 import { OrderProcessor } from './processors/order.processor.js';
 import { PaymentProcessor } from './processors/payment.processor.js';
+import { ShippingProcessor } from './processors/shipping.processor.js';
 
 export function buildBullMqConnectionOptions(redisUrl: string): ConnectionOptions {
   const parsed = new URL(redisUrl);
@@ -60,6 +61,7 @@ export class WorkerModule {
         InventoryExpiryProcessor,
         PaymentProcessor,
         OrderProcessor,
+        ShippingProcessor,
       ],
       exports: [
         WorkerPrismaService,
@@ -69,6 +71,7 @@ export class WorkerModule {
         InventoryExpiryProcessor,
         PaymentProcessor,
         OrderProcessor,
+        ShippingProcessor,
         BullModule,
       ],
     };

@@ -8,6 +8,7 @@ import {
   type RoleCode,
 } from '@arven/config';
 import {
+  CmsStatus,
   CollectionStatus,
   CouponStatus,
   DiscountType,
@@ -120,6 +121,9 @@ export interface SeedDatabaseResult {
   readonly mediaUpserted: number;
   readonly inventoryLevelsCreated: number;
   readonly couponsUpserted: number;
+  readonly lookbooksUpserted: number;
+  readonly journalArticlesUpserted: number;
+  readonly pagesUpserted: number;
   readonly devUsersSeeded: number;
 }
 
@@ -151,7 +155,105 @@ export const ARVEN_SEED_COUPONS: readonly CouponSeedDefinition[] = [
     startsAt: new Date('2026-01-01T00:00:00.000Z'),
     endsAt: new Date('2028-12-31T23:59:59.000Z'),
   },
+  {
+    code: 'FIRSTLOOK',
+    name: 'First Look Archive Credit',
+    discountType: DiscountType.FIXED_AMOUNT,
+    discountValue: 150_000n,
+    maxDiscountIdr: null,
+    minOrderSubtotalIdr: 1_000_000n,
+    usageLimitTotal: 500,
+    usageLimitPerUser: 1,
+    status: CouponStatus.ACTIVE,
+    startsAt: new Date('2026-01-01T00:00:00.000Z'),
+    endsAt: new Date('2028-12-31T23:59:59.000Z'),
+  },
+  {
+    code: 'ARVEN15',
+    name: 'Seasonal Privilege 15% Off',
+    discountType: DiscountType.PERCENTAGE,
+    discountValue: 15n,
+    maxDiscountIdr: 300_000n,
+    minOrderSubtotalIdr: 500_000n,
+    usageLimitTotal: 1000,
+    usageLimitPerUser: 2,
+    status: CouponStatus.ACTIVE,
+    startsAt: new Date('2026-01-01T00:00:00.000Z'),
+    endsAt: new Date('2028-12-31T23:59:59.000Z'),
+  },
+  {
+    code: 'FREESHIP',
+    name: 'Complimentary Courier Delivery',
+    discountType: DiscountType.FREE_SHIPPING,
+    discountValue: 50_000n,
+    maxDiscountIdr: null,
+    minOrderSubtotalIdr: 750_000n,
+    usageLimitTotal: null,
+    usageLimitPerUser: 3,
+    status: CouponStatus.ACTIVE,
+    startsAt: new Date('2026-01-01T00:00:00.000Z'),
+    endsAt: new Date('2028-12-31T23:59:59.000Z'),
+  },
 ];
+
+export interface LookbookSlideSeedDefinition {
+  readonly id: string;
+  readonly title: string;
+  readonly caption: string;
+  readonly imageUrl: string;
+  readonly altText: string;
+  readonly productSlug: string;
+  readonly position: number;
+}
+
+export interface LookbookSeedDefinition {
+  readonly slug: string;
+  readonly title: string;
+  readonly season: string;
+  readonly description: string;
+  readonly status: CmsStatus;
+  readonly publishedAt: Date | null;
+  readonly slides: readonly LookbookSlideSeedDefinition[];
+}
+
+export interface JournalBodyBlockSeedDefinition {
+  readonly type: 'paragraph' | 'heading' | 'quote';
+  readonly heading?: string;
+  readonly text: string;
+}
+
+export interface JournalArticleSeedDefinition {
+  readonly slug: string;
+  readonly title: string;
+  readonly excerpt: string;
+  readonly body: readonly JournalBodyBlockSeedDefinition[];
+  readonly coverMediaUrl: string;
+  readonly status: CmsStatus;
+  readonly publishedAt: Date | null;
+}
+
+export interface PageBlockSeedDefinition {
+  readonly id: string;
+  readonly type: string;
+  readonly heading?: string;
+  readonly subheading?: string;
+  readonly body?: string;
+  readonly imageUrl?: string;
+  readonly altText?: string;
+  readonly ctaLabel?: string;
+  readonly ctaHref?: string;
+  readonly items?: ReadonlyArray<{ readonly label: string; readonly value: string }>;
+}
+
+export interface PageSeedDefinition {
+  readonly slug: string;
+  readonly title: string;
+  readonly seoTitle: string;
+  readonly seoDescription: string;
+  readonly status: CmsStatus;
+  readonly publishedAt: Date | null;
+  readonly blocks: readonly PageBlockSeedDefinition[];
+}
 
 function toSvgDataUri(svg: string): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg.trim())}`;
@@ -345,6 +447,379 @@ function buildProductSeedMedia(opts: {
     },
   ];
 }
+
+function buildEditorialCmsSvg(opts: {
+  readonly eyebrow: string;
+  readonly title: string;
+  readonly subtitle: string;
+  readonly bgHex: string;
+  readonly panelHex: string;
+  readonly accentHex: string;
+  readonly textHex: string;
+  readonly ratio?: 'portrait' | 'landscape';
+}): string {
+  const safeEyebrow = escapeXml(opts.eyebrow);
+  const safeTitle = escapeXml(opts.title);
+  const safeSubtitle = escapeXml(opts.subtitle);
+  const isPortrait = (opts.ratio ?? 'portrait') === 'portrait';
+  const width = isPortrait ? 900 : 1440;
+  const height = isPortrait ? 1200 : 900;
+  const frameWidth = width - 112;
+  const frameHeight = height - 112;
+
+  return toSvgDataUri(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${safeTitle}">
+  <rect width="${width}" height="${height}" fill="${opts.bgHex}" />
+  <rect x="56" y="56" width="${frameWidth}" height="${frameHeight}" fill="${opts.panelHex}" stroke="${opts.accentHex}" stroke-width="1.2" />
+  <line x1="56" y1="168" x2="${width - 56}" y2="168" stroke="${opts.accentHex}" stroke-width="0.9" opacity="0.55" />
+  <line x1="56" y1="${height - 170}" x2="${width - 56}" y2="${height - 170}" stroke="${opts.accentHex}" stroke-width="0.9" opacity="0.55" />
+  <rect x="${Math.round(width * 0.22)}" y="${Math.round(height * 0.24)}" width="${Math.round(width * 0.56)}" height="${Math.round(height * 0.44)}" fill="none" stroke="${opts.accentHex}" stroke-width="1.5" opacity="0.65" />
+  <circle cx="${Math.round(width * 0.5)}" cy="${Math.round(height * 0.46)}" r="${Math.round(Math.min(width, height) * 0.14)}" fill="none" stroke="${opts.textHex}" stroke-width="1.2" opacity="0.35" />
+  <text x="96" y="118" fill="${opts.accentHex}" font-family="sans-serif" font-size="15" letter-spacing="5">${safeEyebrow}</text>
+  <text x="96" y="${height - 112}" fill="${opts.textHex}" font-family="serif" font-size="34" letter-spacing="1">${safeTitle}</text>
+  <text x="96" y="${height - 76}" fill="${opts.textHex}" opacity="0.78" font-family="sans-serif" font-size="16" letter-spacing="1">${safeSubtitle}</text>
+</svg>`);
+}
+
+export const ARVEN_SEED_LOOKBOOKS: readonly LookbookSeedDefinition[] = [
+  {
+    slug: 'monolith-aw26',
+    title: 'Monolith AW26',
+    season: 'AW26',
+    description:
+      'Architectural winter tailoring in virgin wool, charcoal graphite, and quiet calfskin proportions built for composed urban transition.',
+    status: CmsStatus.PUBLISHED,
+    publishedAt: new Date('2026-03-01T00:00:00.000Z'),
+    slides: [
+      {
+        id: 'monolith-aw26-01',
+        title: 'Look 01: Boxy Wool Architecture',
+        caption:
+          'Double-faced virgin wool overshirt layered over crisp tonal shirting with matte horn closures.',
+        imageUrl: buildEditorialCmsSvg({
+          eyebrow: 'ARVEN LOOKBOOK // MONOLITH AW26',
+          title: 'Look 01: Boxy Wool Overshirt',
+          subtitle: '80% Virgin Wool, 20% Polyamide in Obsidian',
+          bgHex: '#17191B',
+          panelHex: '#35383A',
+          accentHex: '#C5A572',
+          textHex: '#F8F7F3',
+          ratio: 'portrait',
+        }),
+        altText: 'Monolith AW26 Look 01 featuring Atelier Boxy Wool Overshirt in Obsidian',
+        productSlug: 'atelier-boxy-wool-overshirt',
+        position: 0,
+      },
+      {
+        id: 'monolith-aw26-02',
+        title: 'Look 02: Fluid Double-Pleat Drape',
+        caption:
+          'Wide-leg tailored trouser cut in structured wool blend for unbroken vertical movement.',
+        imageUrl: buildEditorialCmsSvg({
+          eyebrow: 'ARVEN LOOKBOOK // MONOLITH AW26',
+          title: 'Look 02: Wide-Leg Tailored Trouser',
+          subtitle: 'Double-pleated silhouette in Graphite and Deep Stone',
+          bgHex: '#35383A',
+          panelHex: '#17191B',
+          accentHex: '#C5A572',
+          textHex: '#F8F7F3',
+          ratio: 'portrait',
+        }),
+        altText: 'Monolith AW26 Look 02 featuring Form Wide-Leg Tailored Trouser in Graphite',
+        productSlug: 'form-wide-leg-tailored-trouser',
+        position: 1,
+      },
+      {
+        id: 'monolith-aw26-03',
+        title: 'Look 03: Low-Profile Court Discipline',
+        caption:
+          'Full-grain calfskin sneaker anchored on a stitched natural rubber cup sole.',
+        imageUrl: buildEditorialCmsSvg({
+          eyebrow: 'ARVEN LOOKBOOK // MONOLITH AW26',
+          title: 'Look 03: Minimalist Leather Sneaker',
+          subtitle: 'Full-Grain Calfskin Upper in Cream and Charcoal',
+          bgHex: '#E9E4DA',
+          panelHex: '#F8F7F3',
+          accentHex: '#5E5C54',
+          textHex: '#17191B',
+          ratio: 'portrait',
+        }),
+        altText: 'Monolith AW26 Look 03 featuring Movement Minimalist Leather Sneaker in Cream',
+        productSlug: 'movement-minimalist-leather-sneaker',
+        position: 2,
+      },
+    ],
+  },
+  {
+    slug: 'archival-linen-ss26',
+    title: 'Archival Linen & Poplin SS26',
+    season: 'SS26',
+    description:
+      'Breathable tropical tailoring pairing high-twist cotton poplin, 280 gsm combed jersey, and vegetable-tanned carry goods.',
+    status: CmsStatus.PUBLISHED,
+    publishedAt: new Date('2026-03-15T00:00:00.000Z'),
+    slides: [
+      {
+        id: 'archival-ss26-01',
+        title: 'Look 01: Concealed Placket Poplin',
+        caption:
+          'High-twist long-staple cotton poplin cut in a generous oversized frame for Jakarta warmth.',
+        imageUrl: buildEditorialCmsSvg({
+          eyebrow: 'ARVEN LOOKBOOK // ARCHIVAL SS26',
+          title: 'Look 01: Oversized Poplin Shirt',
+          subtitle: 'Long-staple crisp cotton poplin in Ivory',
+          bgHex: '#F8F7F3',
+          panelHex: '#E9E4DA',
+          accentHex: '#C5A572',
+          textHex: '#17191B',
+          ratio: 'portrait',
+        }),
+        altText: 'Archival SS26 Look 01 featuring Atelier Oversized Poplin Shirt in Ivory',
+        productSlug: 'atelier-oversized-poplin-shirt',
+        position: 0,
+      },
+      {
+        id: 'archival-ss26-02',
+        title: 'Look 02: Dense Combed Uniformity',
+        caption:
+          '280 gsm organic combed cotton tee with structured rib collar and relaxed drop shoulder.',
+        imageUrl: buildEditorialCmsSvg({
+          eyebrow: 'ARVEN LOOKBOOK // ARCHIVAL SS26',
+          title: 'Look 02: Heavyweight Crew Tee',
+          subtitle: '280 gsm organic jersey in Charcoal and Ivory',
+          bgHex: '#E9E4DA',
+          panelHex: '#F8F7F3',
+          accentHex: '#5E5C54',
+          textHex: '#17191B',
+          ratio: 'portrait',
+        }),
+        altText: 'Archival SS26 Look 02 featuring Essentials Heavyweight Crew Tee',
+        productSlug: 'essentials-heavyweight-crew-tee',
+        position: 1,
+      },
+      {
+        id: 'archival-ss26-03',
+        title: 'Look 03: Vegetable-Tanned Geometry',
+        caption:
+          'Structured calfskin crossbody with tonal hand-painted edges and detachable webbing strap.',
+        imageUrl: buildEditorialCmsSvg({
+          eyebrow: 'ARVEN LOOKBOOK // ARCHIVAL SS26',
+          title: 'Look 03: Structured Calfskin Crossbody',
+          subtitle: 'Vegetable-tanned leather in Deep Stone and Warm Bronze',
+          bgHex: '#17191B',
+          panelHex: '#35383A',
+          accentHex: '#C5A572',
+          textHex: '#F8F7F3',
+          ratio: 'portrait',
+        }),
+        altText: 'Archival SS26 Look 03 featuring Form Structured Calfskin Crossbody',
+        productSlug: 'form-structured-calfskin-crossbody',
+        position: 2,
+      },
+    ],
+  },
+];
+
+export const ARVEN_SEED_JOURNAL_ARTICLES: readonly JournalArticleSeedDefinition[] = [
+  {
+    slug: 'the-architecture-of-daily-uniforms',
+    title: 'The Architecture of Daily Uniforms',
+    excerpt:
+      'Why disciplined proportion, matte hardware, and repeatable tonal blocks outlast seasonal ornament.',
+    coverMediaUrl: buildEditorialCmsSvg({
+      eyebrow: 'ARVEN JOURNAL // ESSAY 01',
+      title: 'The Architecture of Daily Uniforms',
+      subtitle: 'Notes on quiet permanence and repeatable silhouettes',
+      bgHex: '#17191B',
+      panelHex: '#35383A',
+      accentHex: '#C5A572',
+      textHex: '#F8F7F3',
+      ratio: 'landscape',
+    }),
+    status: CmsStatus.PUBLISHED,
+    publishedAt: new Date('2026-03-05T00:00:00.000Z'),
+    body: [
+      {
+        type: 'heading',
+        heading: 'Proportion Before Ornament',
+        text: 'Proportion Before Ornament',
+      },
+      {
+        type: 'paragraph',
+        text: 'Every ARVEN block begins with silhouette geometry rather than seasonal decoration. By calibrating shoulder drop, rise depth, and sleeve pitch across seasons, pieces issued years apart layer cleanly without visual friction.',
+      },
+      {
+        type: 'quote',
+        text: 'A durable wardrobe is an editorial system where every garment earns its permanence.',
+      },
+      {
+        type: 'paragraph',
+        text: 'From 280 gsm combed organic cotton jersey to double-faced virgin wool, fabric weight is matched deliberately to how a garment hangs in motion.',
+      },
+    ],
+  },
+  {
+    slug: 'material-study-high-twist-poplin-and-virgin-wool',
+    title: 'Material Study: High-Twist Poplin and Virgin Wool',
+    excerpt:
+      'Examining yarn twist, breathability, and recovery across ARVEN signature woven textiles.',
+    coverMediaUrl: buildEditorialCmsSvg({
+      eyebrow: 'ARVEN JOURNAL // MATERIAL STUDY',
+      title: 'High-Twist Poplin & Virgin Wool',
+      subtitle: 'Surface tension, recovery, and tactile longevity',
+      bgHex: '#E9E4DA',
+      panelHex: '#F8F7F3',
+      accentHex: '#5E5C54',
+      textHex: '#17191B',
+      ratio: 'landscape',
+    }),
+    status: CmsStatus.PUBLISHED,
+    publishedAt: new Date('2026-03-12T00:00:00.000Z'),
+    body: [
+      {
+        type: 'heading',
+        heading: 'Crisp Recovery in High-Twist Cotton',
+        text: 'Crisp Recovery in High-Twist Cotton',
+      },
+      {
+        type: 'paragraph',
+        text: 'High-twist long-staple cotton yarns resist creasing naturally while preserving a dry handfeel against the skin. Our Atelier Oversized Poplin Shirt uses a tightly spun plain weave that maintains clean lines from morning transit through evening.',
+      },
+      {
+        type: 'heading',
+        heading: 'Double-Faced Wool Construction',
+        text: 'Double-Faced Wool Construction',
+      },
+      {
+        type: 'paragraph',
+        text: 'In our outerwear program, unlined double-faced wool keeps internal seams sleek and lightweight while insulating naturally.',
+      },
+    ],
+  },
+  {
+    slug: 'jakarta-atelier-notes-tailoring-for-tropical-humidity',
+    title: 'Jakarta Atelier Notes: Tailoring for Tropical Humidity',
+    excerpt:
+      'Balancing structured wide-leg drapery and breathable weaves for equatorial city movement.',
+    coverMediaUrl: buildEditorialCmsSvg({
+      eyebrow: 'ARVEN JOURNAL // ATELIER NOTES',
+      title: 'Tailoring for Tropical Humidity',
+      subtitle: 'Airflow, drape, and unlined pattern engineering',
+      bgHex: '#35383A',
+      panelHex: '#17191B',
+      accentHex: '#C5A572',
+      textHex: '#F8F7F3',
+      ratio: 'landscape',
+    }),
+    status: CmsStatus.PUBLISHED,
+    publishedAt: new Date('2026-03-20T00:00:00.000Z'),
+    body: [
+      {
+        type: 'paragraph',
+        text: 'Designing contemporary luxury apparel in Jakarta requires respecting heat and humidity without sacrificing architectural form. Rather than clinging silhouettes, generous ease around the chest and leg promotes continuous airflow.',
+      },
+      {
+        type: 'quote',
+        text: 'Space between textile and body is what gives tailored clothing both comfort and presence.',
+      },
+      {
+        type: 'paragraph',
+        text: 'Each trouser and shirt block is tested in humid transit conditions before receiving final pattern approval.',
+      },
+    ],
+  },
+  {
+    slug: 'autumn-winter-2026-studio-preview-notes',
+    title: 'Autumn Winter 2026 Studio Preview Notes',
+    excerpt:
+      'Internal studio direction and unprinted fabric trials ahead of the next seasonal release.',
+    coverMediaUrl: buildEditorialCmsSvg({
+      eyebrow: 'ARVEN JOURNAL // STUDIO PREVIEW',
+      title: 'AW26 Studio Preview Notes',
+      subtitle: 'Internal editorial draft awaiting release window',
+      bgHex: '#F8F7F3',
+      panelHex: '#E9E4DA',
+      accentHex: '#C5A572',
+      textHex: '#17191B',
+      ratio: 'landscape',
+    }),
+    status: CmsStatus.PREVIEW,
+    publishedAt: null,
+    body: [
+      {
+        type: 'paragraph',
+        text: 'Preview manuscript documenting upcoming heavyweight merino trials, obsidian hardware prototypes, and tonal leather dyeing tests.',
+      },
+    ],
+  },
+];
+
+export const ARVEN_SEED_PAGES: readonly PageSeedDefinition[] = [
+  {
+    slug: 'about',
+    title: 'About ARVEN',
+    seoTitle: 'About ARVEN | Contemporary Luxury Apparel House',
+    seoDescription:
+      'Discover ARVEN: architectural silhouettes, disciplined materials, and enduring essentials crafted in Jakarta.',
+    status: CmsStatus.PUBLISHED,
+    publishedAt: new Date('2026-01-15T00:00:00.000Z'),
+    blocks: [
+      {
+        id: 'about-hero',
+        type: 'hero',
+        heading: 'Beyond Trends. Beyond Time.',
+        subheading: 'Architectural contemporary apparel engineered for quiet permanence.',
+        body: 'Founded in Jakarta, ARVEN builds disciplined daily uniforms rooted in natural fibers, honest construction, and enduring tonal restraint.',
+        ctaLabel: 'Explore Collections',
+        ctaHref: '/collections',
+      },
+      {
+        id: 'about-philosophy',
+        type: 'editorial_text',
+        heading: 'Design Philosophy',
+        body: 'We reject disposable seasonal cycles in favor of cohesive garment systems. Every seam allowance, button pitch, and textile GSM is calibrated so each edition pairs cleanly with prior archive releases.',
+      },
+      {
+        id: 'about-pillars',
+        type: 'callout',
+        heading: 'House Standards',
+        items: [
+          { label: 'Materials', value: 'Combed organic cotton, virgin wool, vegetable-tanned calfskin' },
+          { label: 'Atelier', value: 'Pattern development and quality inspection in Jakarta Selatan' },
+          { label: 'Longevity', value: 'Reinforced stress seams and repair-minded construction' },
+        ],
+        ctaLabel: 'View Lookbooks',
+        ctaHref: '/lookbook',
+      },
+    ],
+  },
+  {
+    slug: 'craftsmanship',
+    title: 'Craftsmanship & Materials',
+    seoTitle: 'Craftsmanship & Materials | ARVEN',
+    seoDescription:
+      'Inside the ARVEN material specification, mill partnerships, and garment finishing standards.',
+    status: CmsStatus.PUBLISHED,
+    publishedAt: new Date('2026-01-20T00:00:00.000Z'),
+    blocks: [
+      {
+        id: 'craft-hero',
+        type: 'hero',
+        heading: 'Measured Textile Discipline',
+        subheading: 'Every piece begins at the yarn and weave level.',
+        body: 'Our sourcing prioritizes traceable long-staple cotton, responsible virgin wool blends, and vegetable-tanned hides selected for patina over time.',
+        ctaLabel: 'Shop the Catalog',
+        ctaHref: '/shop',
+      },
+      {
+        id: 'craft-finishing',
+        type: 'editorial_text',
+        heading: 'Hardware & Seam Finishing',
+        body: 'Matte horn buttons, tonal edge paint, and single-needle French seams ensure garments look composed from both exterior and interior inspection.',
+      },
+    ],
+  },
+];
 
 export const ARVEN_ROLE_DEFINITIONS: Readonly<Record<RoleCode, RoleSeedDefinition>> = {
   OWNER: {
@@ -1472,6 +1947,99 @@ async function seedCoupons(tx: PrismaTransactionClient): Promise<number> {
   return count;
 }
 
+async function seedCmsContent(tx: PrismaTransactionClient): Promise<{
+  readonly lookbooksUpserted: number;
+  readonly journalArticlesUpserted: number;
+  readonly pagesUpserted: number;
+}> {
+  let lookbooksUpserted = 0;
+  for (const lookbook of ARVEN_SEED_LOOKBOOKS) {
+    const slidesJson = lookbook.slides as unknown as Prisma.InputJsonValue;
+    await tx.lookbook.upsert({
+      where: { slug: lookbook.slug },
+      update: {
+        title: lookbook.title,
+        season: lookbook.season,
+        description: lookbook.description,
+        slides: slidesJson,
+        status: lookbook.status,
+        publishedAt: lookbook.publishedAt,
+        deletedAt: null,
+      },
+      create: {
+        slug: lookbook.slug,
+        title: lookbook.title,
+        season: lookbook.season,
+        description: lookbook.description,
+        slides: slidesJson,
+        status: lookbook.status,
+        publishedAt: lookbook.publishedAt,
+      },
+    });
+    lookbooksUpserted += 1;
+  }
+
+  let journalArticlesUpserted = 0;
+  for (const article of ARVEN_SEED_JOURNAL_ARTICLES) {
+    const bodyJson = article.body as unknown as Prisma.InputJsonValue;
+    await tx.journalArticle.upsert({
+      where: { slug: article.slug },
+      update: {
+        title: article.title,
+        excerpt: article.excerpt,
+        body: bodyJson,
+        coverMediaUrl: article.coverMediaUrl,
+        status: article.status,
+        publishedAt: article.publishedAt,
+        deletedAt: null,
+      },
+      create: {
+        slug: article.slug,
+        title: article.title,
+        excerpt: article.excerpt,
+        body: bodyJson,
+        coverMediaUrl: article.coverMediaUrl,
+        status: article.status,
+        publishedAt: article.publishedAt,
+      },
+    });
+    journalArticlesUpserted += 1;
+  }
+
+  let pagesUpserted = 0;
+  for (const page of ARVEN_SEED_PAGES) {
+    const blocksJson = page.blocks as unknown as Prisma.InputJsonValue;
+    await tx.page.upsert({
+      where: { slug: page.slug },
+      update: {
+        title: page.title,
+        blocks: blocksJson,
+        seoTitle: page.seoTitle,
+        seoDescription: page.seoDescription,
+        status: page.status,
+        publishedAt: page.publishedAt,
+        deletedAt: null,
+      },
+      create: {
+        slug: page.slug,
+        title: page.title,
+        blocks: blocksJson,
+        seoTitle: page.seoTitle,
+        seoDescription: page.seoDescription,
+        status: page.status,
+        publishedAt: page.publishedAt,
+      },
+    });
+    pagesUpserted += 1;
+  }
+
+  return {
+    lookbooksUpserted,
+    journalArticlesUpserted,
+    pagesUpserted,
+  };
+}
+
 export async function seedDatabase(
   prisma: PrismaClient,
   options: SeedDatabaseOptions = {},
@@ -1501,6 +2069,7 @@ export async function seedDatabase(
     const rbac = await seedRolesAndPermissions(tx);
     const catalog = await seedCatalogAndInventory(tx);
     const couponsUpserted = await seedCoupons(tx);
+    const cms = await seedCmsContent(tx);
 
     let devUsersSeeded = 0;
     if (devPasswordHash !== null) {
@@ -1519,6 +2088,9 @@ export async function seedDatabase(
       mediaUpserted: catalog.mediaUpserted,
       inventoryLevelsCreated: catalog.inventoryLevelsCreated,
       couponsUpserted,
+      lookbooksUpserted: cms.lookbooksUpserted,
+      journalArticlesUpserted: cms.journalArticlesUpserted,
+      pagesUpserted: cms.pagesUpserted,
       devUsersSeeded,
     };
   });

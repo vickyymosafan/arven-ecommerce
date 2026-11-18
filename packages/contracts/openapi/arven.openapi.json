@@ -98,6 +98,33 @@
         ]
       }
     },
+    "/api/v1/admin/analytics/sales": {
+      "get": {
+        "operationId": "AdminAnalyticsController_getSalesAnalytics",
+        "parameters": [
+          {
+            "name": "days",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 30,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 90
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get server-computed sales & operations analytics (monetary fields suppressed for analytics.read.limited)",
+        "tags": [
+          "Admin Analytics"
+        ]
+      }
+    },
     "/api/v1/csrf-token": {
       "get": {
         "operationId": "CsrfController_getCsrfToken",
@@ -2288,6 +2315,1624 @@
         ]
       }
     },
+    "/api/v1/cms/pages/{slug}": {
+      "get": {
+        "operationId": "CmsPublicController_getPageBySlug",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 150,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get a published CMS page by slug",
+        "tags": [
+          "CMS"
+        ]
+      }
+    },
+    "/api/v1/cms/lookbooks": {
+      "get": {
+        "operationId": "CmsPublicController_listLookbooks",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List published editorial lookbooks",
+        "tags": [
+          "CMS"
+        ]
+      }
+    },
+    "/api/v1/cms/lookbooks/{slug}": {
+      "get": {
+        "operationId": "CmsPublicController_getLookbookBySlug",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 150,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get a published lookbook by slug",
+        "tags": [
+          "CMS"
+        ]
+      }
+    },
+    "/api/v1/cms/journal": {
+      "get": {
+        "operationId": "CmsPublicController_listJournal",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List published editorial journal articles",
+        "tags": [
+          "CMS"
+        ]
+      }
+    },
+    "/api/v1/cms/journal/{slug}": {
+      "get": {
+        "operationId": "CmsPublicController_getJournalBySlug",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 150,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get a published journal article by slug",
+        "tags": [
+          "CMS"
+        ]
+      }
+    },
+    "/api/v1/admin/cms/pages": {
+      "get": {
+        "operationId": "AdminCmsController_listPages",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "PREVIEW",
+                "PUBLISHED",
+                "ARCHIVED"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List CMS pages (including DRAFT/PREVIEW/ARCHIVED)",
+        "tags": [
+          "Admin CMS"
+        ]
+      },
+      "post": {
+        "operationId": "AdminCmsController_createPage",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 150,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 200
+                  },
+                  "blocks": {
+                    "anyOf": [
+                      {
+                        "minItems": 1,
+                        "maxItems": 50,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            },
+                            "type": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 64
+                            },
+                            "heading": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 220
+                            },
+                            "subheading": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 320
+                            },
+                            "body": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 10000
+                            },
+                            "imageUrl": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 65535
+                            },
+                            "altText": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 255
+                            },
+                            "ctaLabel": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            },
+                            "ctaHref": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "items": {
+                              "maxItems": 30,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "label": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 120
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  }
+                                },
+                                "required": [
+                                  "label",
+                                  "value"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "type"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    ]
+                  },
+                  "seoTitle": {
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  },
+                  "seoDescription": {
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 320
+                  }
+                },
+                "required": [
+                  "slug",
+                  "title",
+                  "blocks"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create a DRAFT CMS page",
+        "tags": [
+          "Admin CMS"
+        ]
+      }
+    },
+    "/api/v1/admin/cms/pages/{id}": {
+      "get": {
+        "operationId": "AdminCmsController_getPageById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get CMS page by ID",
+        "tags": [
+          "Admin CMS"
+        ]
+      },
+      "patch": {
+        "operationId": "AdminCmsController_updatePage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 150,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 200
+                  },
+                  "blocks": {
+                    "anyOf": [
+                      {
+                        "minItems": 1,
+                        "maxItems": 50,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            },
+                            "type": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 64
+                            },
+                            "heading": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 220
+                            },
+                            "subheading": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 320
+                            },
+                            "body": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 10000
+                            },
+                            "imageUrl": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 65535
+                            },
+                            "altText": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 255
+                            },
+                            "ctaLabel": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            },
+                            "ctaHref": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            "items": {
+                              "maxItems": 30,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "label": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 120
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  }
+                                },
+                                "required": [
+                                  "label",
+                                  "value"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "type"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    ]
+                  },
+                  "seoTitle": {
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  },
+                  "seoDescription": {
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 320
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update CMS page fields",
+        "tags": [
+          "Admin CMS"
+        ]
+      },
+      "delete": {
+        "operationId": "AdminCmsController_deletePage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Soft delete a CMS page",
+        "tags": [
+          "Admin CMS"
+        ]
+      }
+    },
+    "/api/v1/admin/cms/pages/{id}/transition": {
+      "post": {
+        "operationId": "AdminCmsController_transitionPage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "toStatus": {
+                    "type": "string",
+                    "enum": [
+                      "DRAFT",
+                      "PREVIEW",
+                      "PUBLISHED",
+                      "ARCHIVED"
+                    ]
+                  }
+                },
+                "required": [
+                  "toStatus"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Transition CMS page status (cms.write for DRAFT/PREVIEW, cms.publish for PUBLISHED/ARCHIVED)",
+        "tags": [
+          "Admin CMS"
+        ]
+      }
+    },
+    "/api/v1/admin/cms/lookbooks": {
+      "get": {
+        "operationId": "AdminCmsController_listLookbooks",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "PREVIEW",
+                "PUBLISHED",
+                "ARCHIVED"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List editorial lookbooks",
+        "tags": [
+          "Admin CMS"
+        ]
+      },
+      "post": {
+        "operationId": "AdminCmsController_createLookbook",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 150,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 220
+                  },
+                  "season": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 64
+                  },
+                  "description": {
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "slides": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 80
+                        },
+                        "title": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "caption": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "imageUrl": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 65535
+                        },
+                        "altText": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255
+                        },
+                        "productSlug": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 150,
+                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                        },
+                        "productId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "position": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 500
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "imageUrl"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "slug",
+                  "title",
+                  "season",
+                  "slides"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create a DRAFT editorial lookbook",
+        "tags": [
+          "Admin CMS"
+        ]
+      }
+    },
+    "/api/v1/admin/cms/lookbooks/{id}": {
+      "get": {
+        "operationId": "AdminCmsController_getLookbookById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get lookbook by ID",
+        "tags": [
+          "Admin CMS"
+        ]
+      },
+      "patch": {
+        "operationId": "AdminCmsController_updateLookbook",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 150,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 220
+                  },
+                  "season": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 64
+                  },
+                  "description": {
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "slides": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 80
+                        },
+                        "title": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "caption": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "imageUrl": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 65535
+                        },
+                        "altText": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255
+                        },
+                        "productSlug": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 150,
+                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                        },
+                        "productId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "position": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 500
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "imageUrl"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update editorial lookbook fields",
+        "tags": [
+          "Admin CMS"
+        ]
+      },
+      "delete": {
+        "operationId": "AdminCmsController_deleteLookbook",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Soft delete an editorial lookbook",
+        "tags": [
+          "Admin CMS"
+        ]
+      }
+    },
+    "/api/v1/admin/cms/lookbooks/{id}/transition": {
+      "post": {
+        "operationId": "AdminCmsController_transitionLookbook",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "toStatus": {
+                    "type": "string",
+                    "enum": [
+                      "DRAFT",
+                      "PREVIEW",
+                      "PUBLISHED",
+                      "ARCHIVED"
+                    ]
+                  }
+                },
+                "required": [
+                  "toStatus"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Transition lookbook status (cms.write for DRAFT/PREVIEW, cms.publish for PUBLISHED/ARCHIVED)",
+        "tags": [
+          "Admin CMS"
+        ]
+      }
+    },
+    "/api/v1/admin/cms/journal": {
+      "get": {
+        "operationId": "AdminCmsController_listJournal",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "PREVIEW",
+                "PUBLISHED",
+                "ARCHIVED"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List editorial journal articles",
+        "tags": [
+          "Admin CMS"
+        ]
+      },
+      "post": {
+        "operationId": "AdminCmsController_createJournal",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 150,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 220
+                  },
+                  "excerpt": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 1000
+                  },
+                  "body": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": {}
+                      },
+                      {
+                        "minItems": 1,
+                        "maxItems": 100,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      }
+                    ]
+                  },
+                  "coverMediaUrl": {
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 65535
+                  }
+                },
+                "required": [
+                  "slug",
+                  "title",
+                  "excerpt",
+                  "body"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create a DRAFT editorial journal article",
+        "tags": [
+          "Admin CMS"
+        ]
+      }
+    },
+    "/api/v1/admin/cms/journal/{id}": {
+      "get": {
+        "operationId": "AdminCmsController_getJournalById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get journal article by ID",
+        "tags": [
+          "Admin CMS"
+        ]
+      },
+      "patch": {
+        "operationId": "AdminCmsController_updateJournal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 150,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 220
+                  },
+                  "excerpt": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 1000
+                  },
+                  "body": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": {}
+                      },
+                      {
+                        "minItems": 1,
+                        "maxItems": 100,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      }
+                    ]
+                  },
+                  "coverMediaUrl": {
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 65535
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update editorial journal article fields",
+        "tags": [
+          "Admin CMS"
+        ]
+      },
+      "delete": {
+        "operationId": "AdminCmsController_deleteJournal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Soft delete an editorial journal article",
+        "tags": [
+          "Admin CMS"
+        ]
+      }
+    },
+    "/api/v1/admin/cms/journal/{id}/transition": {
+      "post": {
+        "operationId": "AdminCmsController_transitionJournal",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "toStatus": {
+                    "type": "string",
+                    "enum": [
+                      "DRAFT",
+                      "PREVIEW",
+                      "PUBLISHED",
+                      "ARCHIVED"
+                    ]
+                  }
+                },
+                "required": [
+                  "toStatus"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Transition journal article status (cms.write for DRAFT/PREVIEW, cms.publish for PUBLISHED/ARCHIVED)",
+        "tags": [
+          "Admin CMS"
+        ]
+      }
+    },
+    "/api/v1/admin/coupons": {
+      "get": {
+        "operationId": "AdminCouponsController_listCoupons",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "ACTIVE",
+                "PAUSED",
+                "EXPIRED",
+                "ARCHIVED"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List promotional coupons with filtering and pagination",
+        "tags": [
+          "Admin Coupons"
+        ]
+      },
+      "post": {
+        "operationId": "AdminCouponsController_createCoupon",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 64,
+                    "pattern": "^[A-Z0-9_-]+$"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 160
+                  },
+                  "discountType": {
+                    "type": "string",
+                    "enum": [
+                      "PERCENTAGE",
+                      "FIXED_AMOUNT",
+                      "FREE_SHIPPING"
+                    ]
+                  },
+                  "discountValue": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  },
+                  "maxDiscountIdr": {
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  },
+                  "minOrderSubtotalIdr": {
+                    "default": 0,
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "usageLimitTotal": {
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  },
+                  "usageLimitPerUser": {
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  },
+                  "status": {
+                    "default": "DRAFT",
+                    "type": "string",
+                    "enum": [
+                      "DRAFT",
+                      "ACTIVE",
+                      "PAUSED"
+                    ]
+                  },
+                  "startsAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  },
+                  "endsAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  }
+                },
+                "required": [
+                  "code",
+                  "name",
+                  "discountType",
+                  "discountValue",
+                  "minOrderSubtotalIdr",
+                  "status",
+                  "startsAt",
+                  "endsAt"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create a new promotional coupon",
+        "tags": [
+          "Admin Coupons"
+        ]
+      }
+    },
+    "/api/v1/admin/coupons/{id}": {
+      "patch": {
+        "operationId": "AdminCouponsController_updateCoupon",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 64,
+                    "pattern": "^[A-Z0-9_-]+$"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 160
+                  },
+                  "discountType": {
+                    "type": "string",
+                    "enum": [
+                      "PERCENTAGE",
+                      "FIXED_AMOUNT",
+                      "FREE_SHIPPING"
+                    ]
+                  },
+                  "discountValue": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  },
+                  "maxDiscountIdr": {
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  },
+                  "minOrderSubtotalIdr": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "usageLimitTotal": {
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  },
+                  "usageLimitPerUser": {
+                    "nullable": true,
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "DRAFT",
+                      "ACTIVE",
+                      "PAUSED",
+                      "EXPIRED",
+                      "ARCHIVED"
+                    ]
+                  },
+                  "startsAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  },
+                  "endsAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update a promotional coupon with cross-field validation",
+        "tags": [
+          "Admin Coupons"
+        ]
+      },
+      "delete": {
+        "operationId": "AdminCouponsController_deleteCoupon",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Archive a promotional coupon",
+        "tags": [
+          "Admin Coupons"
+        ]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_getLive",
@@ -2768,6 +4413,172 @@
         ]
       }
     },
+    "/api/v1/admin/orders": {
+      "get": {
+        "operationId": "AdminOrdersController_listOrders",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING_PAYMENT",
+                "PAID",
+                "PROCESSING",
+                "READY_TO_SHIP",
+                "SHIPPED",
+                "DELIVERED",
+                "COMPLETED",
+                "CANCELLED",
+                "EXPIRED",
+                "REFUND_PENDING",
+                "PARTIALLY_REFUNDED",
+                "REFUNDED",
+                "RETURN_REQUESTED",
+                "RETURN_APPROVED",
+                "RETURNED"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List paginated orders for admin operations (with SUPPORT PII masking)",
+        "tags": [
+          "Admin Orders"
+        ]
+      }
+    },
+    "/api/v1/admin/orders/{id}": {
+      "get": {
+        "operationId": "AdminOrdersController_getOrderById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get full admin order detail (with SUPPORT PII masking & gateway redaction)",
+        "tags": [
+          "Admin Orders"
+        ]
+      }
+    },
+    "/api/v1/admin/orders/{id}/transition": {
+      "post": {
+        "operationId": "AdminOrdersController_transitionOrder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "toStatus": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING_PAYMENT",
+                      "PAID",
+                      "PROCESSING",
+                      "READY_TO_SHIP",
+                      "SHIPPED",
+                      "DELIVERED",
+                      "COMPLETED",
+                      "CANCELLED",
+                      "EXPIRED",
+                      "REFUND_PENDING",
+                      "PARTIALLY_REFUNDED",
+                      "REFUNDED",
+                      "RETURN_REQUESTED",
+                      "RETURN_APPROVED",
+                      "RETURNED"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
+                },
+                "required": [
+                  "toStatus"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Transition order fulfillment or cancel status with strict RBAC and stock release",
+        "tags": [
+          "Admin Orders"
+        ]
+      }
+    },
     "/api/v1/payments/{orderId}/session": {
       "post": {
         "operationId": "PaymentsController_createSession",
@@ -2926,6 +4737,666 @@
         "summary": "Process cryptographically verified payment gateway webhooks (Midtrans)",
         "tags": [
           "Payments"
+        ]
+      }
+    },
+    "/api/v1/admin/refunds": {
+      "get": {
+        "operationId": "AdminRefundsController_listRefunds",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "REQUESTED",
+                "APPROVED",
+                "PROCESSING",
+                "SUCCEEDED",
+                "FAILED",
+                "REJECTED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List dual-step refund requests (with SUPPORT gateway payload redaction)",
+        "tags": [
+          "Admin Refunds"
+        ]
+      }
+    },
+    "/api/v1/admin/orders/{id}/refunds/request": {
+      "post": {
+        "operationId": "AdminRefundsController_requestRefund",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amountIdr": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 500
+                  },
+                  "returnId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "amountIdr",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Step 1 of dual-step refund: request refund bound to settled order payment",
+        "tags": [
+          "Admin Refunds"
+        ]
+      }
+    },
+    "/api/v1/admin/refunds/{id}/approve": {
+      "post": {
+        "operationId": "AdminRefundsController_approveRefund",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "default": {
+                  "decision": "APPROVE"
+                },
+                "type": "object",
+                "properties": {
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "APPROVE",
+                      "REJECT"
+                    ]
+                  },
+                  "notes": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "decision"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Step 2 of dual-step refund: OWNER-exclusive MFA step-up approval and gateway payout",
+        "tags": [
+          "Admin Refunds"
+        ]
+      }
+    },
+    "/api/v1/orders/{id}/returns": {
+      "post": {
+        "operationId": "ReturnsController_createReturn",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 120
+                  },
+                  "customerNotes": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "items": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "orderItemId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "orderItemId",
+                        "quantity"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "reason",
+                  "items"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Submit a customer or guest return request for a DELIVERED order",
+        "tags": [
+          "Returns"
+        ]
+      }
+    },
+    "/api/v1/returns": {
+      "get": {
+        "operationId": "ReturnsController_listCustomerReturns",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List return requests submitted by the authenticated customer",
+        "tags": [
+          "Returns"
+        ]
+      }
+    },
+    "/api/v1/returns/{id}": {
+      "get": {
+        "operationId": "ReturnsController_getReturnById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get return detail for verified owner, guest token holder, or authorized admin",
+        "tags": [
+          "Returns"
+        ]
+      }
+    },
+    "/api/v1/admin/returns": {
+      "get": {
+        "operationId": "AdminReturnsController_listReturns",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "REQUESTED",
+                "UNDER_REVIEW",
+                "APPROVED",
+                "REJECTED",
+                "RECEIVED",
+                "REFUNDED",
+                "CLOSED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List paginated return requests (with SUPPORT PII masking)",
+        "tags": [
+          "Admin Returns"
+        ]
+      }
+    },
+    "/api/v1/admin/returns/{id}": {
+      "get": {
+        "operationId": "AdminReturnsController_getReturnById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get return detail by ID (with SUPPORT PII masking)",
+        "tags": [
+          "Admin Returns"
+        ]
+      }
+    },
+    "/api/v1/admin/returns/{id}/review": {
+      "post": {
+        "operationId": "AdminReturnsController_reviewReturn",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "default": {},
+                "type": "object",
+                "properties": {
+                  "notes": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Triage a REQUESTED return into UNDER_REVIEW",
+        "tags": [
+          "Admin Returns"
+        ]
+      }
+    },
+    "/api/v1/admin/returns/{id}/approve": {
+      "post": {
+        "operationId": "AdminReturnsController_approveReturn",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "APPROVE",
+                      "REJECT"
+                    ]
+                  },
+                  "adminNotes": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "decision"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Approve or reject an UNDER_REVIEW return claim",
+        "tags": [
+          "Admin Returns"
+        ]
+      }
+    },
+    "/api/v1/admin/returns/{id}/receive": {
+      "post": {
+        "operationId": "AdminReturnsController_receiveReturn",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "warehouseCode": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 32
+                  },
+                  "adminNotes": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "items": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "returnItemId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "condition": {
+                          "type": "string",
+                          "enum": [
+                            "UNOPENED",
+                            "GOOD",
+                            "DAMAGED",
+                            "DEFECTIVE"
+                          ]
+                        },
+                        "restock": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "returnItemId",
+                        "condition",
+                        "restock"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "items"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Physically receive and inspect an APPROVED return, atomically triggering RETURN_TO_STOCK for UNOPENED/GOOD items",
+        "tags": [
+          "Admin Returns"
+        ]
+      }
+    },
+    "/api/v1/admin/orders/{id}/shipments": {
+      "post": {
+        "operationId": "AdminShippingController_createShipment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "jne-adapter",
+                      "sicepat-adapter"
+                    ]
+                  },
+                  "serviceCode": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "warehouseCode": {
+                    "default": "JKT-MAIN-01",
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 32
+                  }
+                },
+                "required": [
+                  "provider",
+                  "serviceCode",
+                  "warehouseCode"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create carrier shipment, dispatch order, and emit shipment.dispatched outbox event",
+        "tags": [
+          "Admin Shipping"
+        ]
+      }
+    },
+    "/api/v1/admin/shipments/{id}/sync-tracking": {
+      "post": {
+        "operationId": "AdminShippingController_syncTracking",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Synchronize carrier tracking events and advance shipment/order delivery state",
+        "tags": [
+          "Admin Shipping"
         ]
       }
     },

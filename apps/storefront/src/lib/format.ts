@@ -1,5 +1,5 @@
 import type { BadgeTone } from '@arven/ui';
-import type { OrderStatusInput, PaymentStatusInput } from '@arven/contracts';
+import type { OrderStatusInput, PaymentStatusInput, ReturnStatusInput } from '@arven/contracts';
 
 export { formatIDR, formatWIB } from '@arven/ui';
 
@@ -50,4 +50,51 @@ export function getPaymentStatusMeta(
     label: formatOrderStatusLabel(status),
     tone: 'neutral',
   };
+}
+
+const RETURN_STATUS_BADGE_MAP: Record<ReturnStatusInput, { label: string; tone: BadgeTone }> = {
+  REQUESTED: { label: 'Requested', tone: 'warning' },
+  UNDER_REVIEW: { label: 'Under Review', tone: 'info' },
+  APPROVED: { label: 'Approved', tone: 'info' },
+  REJECTED: { label: 'Rejected', tone: 'danger' },
+  RECEIVED: { label: 'Received & Inspected', tone: 'success' },
+  REFUNDED: { label: 'Refunded', tone: 'success' },
+  CLOSED: { label: 'Closed', tone: 'neutral' },
+};
+
+export function getReturnStatusMeta(
+  status: ReturnStatusInput,
+): { label: string; tone: BadgeTone } {
+  return RETURN_STATUS_BADGE_MAP[status] ?? {
+    label: formatOrderStatusLabel(status),
+    tone: 'neutral',
+  };
+}
+
+export const CUSTOMER_RETURN_REASONS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: 'SIZE_FIT', label: 'Size or Fit Adjustment' },
+  { value: 'DEFECTIVE_ITEM', label: 'Defective Craftsmanship or Stitching' },
+  { value: 'WRONG_ITEM', label: 'Wrong Garment or Size Delivered' },
+  { value: 'DAMAGED_IN_TRANSIT', label: 'Damaged During Transit' },
+  { value: 'OTHER', label: 'Other Reason' },
+];
+
+export function isOrderReturnEligible(status: OrderStatusInput): boolean {
+  return status === 'DELIVERED';
+}
+
+export function isOrderReturnInProgress(status: OrderStatusInput): boolean {
+  return (
+    status === 'RETURN_REQUESTED' ||
+    status === 'RETURN_APPROVED' ||
+    status === 'RETURNED'
+  );
+}
+
+export function clampReturnQuantity(requested: number, purchasedQuantity: number): number {
+  if (!Number.isFinite(requested) || !Number.isInteger(requested)) {
+    return 1;
+  }
+  const maxQty = Math.max(1, purchasedQuantity);
+  return Math.min(maxQty, Math.max(1, requested));
 }

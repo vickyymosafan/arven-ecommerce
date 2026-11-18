@@ -19,11 +19,20 @@ function generateNonce(): string {
   return btoa(binary);
 }
 
+// Pre-rendered Next.js 16 cacheComponents shells emit fixed runtime timing & Fizz Suspense boundary markers without per-request nonces.
+const NEXT_CACHE_COMPONENTS_INLINE_HASHES = [
+  "'sha256-7mu4H06fwDCjmnxxr/xNHyuQC6pLTHr4M2E4jXw5WZs='",
+  "'sha256-kyaKBybsHvqmdq5RcfhCZ+crfD0hW2GQeUy0Bp1fWNg='",
+  "'sha256-ot4uWMULOgQERJVeW+1RS4LiQazeh9VYa+IzbwCX43U='",
+  "'sha256-D9S5KXsSSajKKVF3Jf+B22EHGKgFWMmaLff5rY6FNZc='",
+].join(' ');
+
 function buildContentSecurityPolicy(nonce: string, isHttps: boolean): string {
   const isDev = process.env['NODE_ENV'] === 'development';
+  // Avoid 'strict-dynamic' so 'self' remains active for pre-rendered /_next/static/chunks scripts in cacheComponents shells.
   const scriptSrc = isDev
-    ? `'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`
-    : `'self' 'nonce-${nonce}' 'strict-dynamic'`;
+    ? `'self' 'nonce-${nonce}' ${NEXT_CACHE_COMPONENTS_INLINE_HASHES} 'unsafe-eval'`
+    : `'self' 'nonce-${nonce}' ${NEXT_CACHE_COMPONENTS_INLINE_HASHES}`;
   const connectSrc = isDev
     ? "'self' ws://127.0.0.1:* ws://localhost:*"
     : "'self'";
@@ -89,11 +98,17 @@ export function proxy(request: NextRequest) {
     });
   }
 
+  const nonce = generateNonce();
+  const isHttps =
+    request.nextUrl.protocol === 'https:' ||
+    request.headers.get('x-forwarded-proto') === 'https';
+  const csp = buildContentSecurityPolicy(nonce, isHttps);
+
   // Canonicalize legacy top-level auth URLs to /auth/*
   const compatTarget = COMPAT_AUTH_REDIRECTS[pathname];
   if (compatTarget) {
     const redirectUrl = new URL(`${compatTarget}${search}`, request.url);
-    return NextResponse.redirect(redirectUrl, 307);
+    return applySecurityHeaders(NextResponse.redirect(redirectUrl, 307), csp);
   }
 
   // Optimistic session cookie pre-check on protected customer account routes
@@ -102,15 +117,9 @@ export function proxy(request: NextRequest) {
       const safeNext = sanitizeRedirectPath(`${pathname}${search}`, '/account');
       const loginUrl = new URL('/auth/login', request.url);
       loginUrl.searchParams.set('next', safeNext);
-      return NextResponse.redirect(loginUrl, 307);
+      return applySecurityHeaders(NextResponse.redirect(loginUrl, 307), csp);
     }
   }
-
-  const nonce = generateNonce();
-  const isHttps =
-    request.nextUrl.protocol === 'https:' ||
-    request.headers.get('x-forwarded-proto') === 'https';
-  const csp = buildContentSecurityPolicy(nonce, isHttps);
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);

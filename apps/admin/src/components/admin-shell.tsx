@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
-import type { PermissionCode } from '@arven/config';
 import type { AuthUserSummary } from '@arven/contracts';
 import {
   ArvenWordmark,
@@ -20,52 +19,7 @@ import {
 } from '@arven/ui';
 import { AdminApiClientError, adminApi } from '@/lib/api-client';
 import { formatRoleLabel } from '@/lib/format';
-
-interface AdminNavItem {
-  href: string;
-  label: string;
-  requiredPermissions?: readonly PermissionCode[];
-}
-
-const adminNavItems: readonly AdminNavItem[] = [
-  { href: '/', label: 'Overview' },
-  {
-    href: '/catalog/products',
-    label: 'Products',
-    requiredPermissions: ['product.read', 'product.write', 'product.publish'],
-  },
-  {
-    href: '/catalog/categories',
-    label: 'Categories',
-    requiredPermissions: ['product.read', 'product.write'],
-  },
-  {
-    href: '/catalog/collections',
-    label: 'Collections',
-    requiredPermissions: ['product.read', 'product.write'],
-  },
-  {
-    href: '/inventory',
-    label: 'Inventory',
-    requiredPermissions: ['inventory.read', 'inventory.receive', 'inventory.adjust'],
-  },
-  {
-    href: '/users',
-    label: 'Users',
-    requiredPermissions: ['user.read', 'user.manage.limited', 'user.role.manage'],
-  },
-  {
-    href: '/roles',
-    label: 'Roles & Permissions',
-    requiredPermissions: ['user.read', 'user.role.manage'],
-  },
-  {
-    href: '/audit-logs',
-    label: 'Audit Logs',
-    requiredPermissions: ['audit.read', 'audit.read.scoped'],
-  },
-  { href: '/ops/runtime', label: 'Runtime Health' },
-];
+import { filterAdminNavItems, isAdminNavActive } from '@/lib/ops-helpers';
 
 export interface AdminShellProps {
   title: string;
@@ -90,17 +44,10 @@ export function AdminShell({
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
 
-  const permissions = new Set(user?.permissions ?? []);
-  const isOwner = Boolean(user?.roles.includes('OWNER'));
-
-  const visibleNavItems = adminNavItems.filter((item) => {
-    if (!item.requiredPermissions || item.requiredPermissions.length === 0) {
-      return true;
-    }
-    if (!user || isOwner) {
-      return true;
-    }
-    return item.requiredPermissions.some((code) => permissions.has(code));
+  const visibleNavItems = filterAdminNavItems({
+    roles: user?.roles,
+    permissions: user?.permissions,
+    authenticated: Boolean(user),
   });
 
   const handleSignOut = async () => {
@@ -128,10 +75,7 @@ export function AdminShell({
   const renderNavLinks = (onNavigate?: () => void) => (
     <nav aria-label="Operations console navigation" className="flex flex-col gap-1.5">
       {visibleNavItems.map((item) => {
-        const active =
-          item.href === '/'
-            ? pathname === '/'
-            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const active = isAdminNavActive(pathname, item.href);
         return (
           <Link
             key={item.href}

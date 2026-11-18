@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import type { OrderDetailDto } from '@arven/contracts';
+import { createCustomerReturnSchema } from '@arven/validators';
 import {
   Badge,
   Button,
+  Checkbox,
   Divider,
   ErrorState,
   FormField,
@@ -14,8 +16,11 @@ import {
   Input,
   LinkButton,
   LoadingState,
+  Modal,
+  Select,
   StatusBanner,
   Surface,
+  Textarea,
   buttonClassName,
   formatIDR,
   formatWIB,
@@ -24,9 +29,13 @@ import {
 import { AccountShell } from '@/components/account-shell';
 import { ApiClientError, createIdempotencyKey, storefrontApi } from '@/lib/api-client';
 import {
+  CUSTOMER_RETURN_REASONS,
+  clampReturnQuantity,
   formatOrderStatusLabel,
   getOrderStatusMeta,
   getPaymentStatusMeta,
+  isOrderReturnEligible,
+  isOrderReturnInProgress,
 } from '@/lib/format';
 
 export interface OrderDetailViewProps {
@@ -54,6 +63,20 @@ export function OrderDetailView({ orderNumber }: OrderDetailViewProps) {
     message: string;
     requestId?: string | null;
   } | null>(null);
+
+  // Customer Return Request Modal State
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [selectedReturnItems, setSelectedReturnItems] = useState<
+    Record<string, { selected: boolean; quantity: number }>
+  >({});
+  const [returnReason, setReturnReason] = useState('SIZE_FIT');
+  const [returnNotes, setReturnNotes] = useState('');
+  const [returnIdempotencyKey, setReturnIdempotencyKey] = useState('');
+  const [returnError, setReturnError] = useState<{
+    message: string;
+    requestId?: string | null;
+  } | null>(null);
+  const [submittingReturn, setSubmittingReturn] = useState(false);
 
   const retryLoad = useCallback(() => {
     setLoading(true);
@@ -141,6 +164,97 @@ export function OrderDetailView({ orderNumber }: OrderDetailViewProps) {
       }
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const openReturnModal = () => {
+    if (!order) return;
+    const initialSelection: Record<string, { selected: boolean; quantity: number }> = {};
+    order.items.forEach((item, index) => {
+      initialSelection[item.id] = {
+        selected: index === 0,
+        quantity: 1,
+      };
+    });
+    setSelectedReturnItems(initialSelection);
+    setReturnReason('SIZE_FIT');
+    setReturnNotes('');
+    setReturnError(null);
+    setReturnIdempotencyKey(createIdempotencyKey());
+    setReturnModalOpen(true);
+  };
+
+  const handleSubmitReturn = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!order || !isOrderReturnEligible(order.status)) {
+      return;
+    }
+    setReturnError(null);
+
+    const items = order.items
+      .filter((item) => selectedReturnItems[item.id]?.selected)
+      .map((item) => ({
+        orderItemId: item.id,
+        quantity: clampReturnQuantity(
+          selectedReturnItems[item.id]?.quantity ?? 1,
+          item.quantity,
+        ),
+      }));
+
+    if (items.length === 0) {
+      setReturnError({ message: 'Select at least one garment item to return.' });
+      return;
+    }
+
+    const trimmedNotes = returnNotes.trim();
+    if (trimmedNotes.length < 3) {
+      setReturnError({
+        message: 'Please provide return details (at least 3 characters) for our atelier review.',
+      });
+      return;
+    }
+
+    const parsed = createCustomerReturnSchema.safeParse({
+      reason: returnReason,
+      customerNotes: trimmedNotes,
+      items,
+    });
+
+    if (!parsed.success) {
+      setReturnError({
+        message: parsed.error.issues[0]?.message ?? 'Please review the return request fields.',
+      });
+      return;
+    }
+
+    setSubmittingReturn(true);
+    try {
+      await storefrontApi.createCustomerReturn(
+        order.id,
+        parsed.data,
+        returnIdempotencyKey,
+      );
+      setReturnModalOpen(false);
+      toast({
+        tone: 'success',
+        title: 'Return request submitted',
+        description: `Track inspection and refund updates for ${order.orderNumber} in My Returns.`,
+      });
+      router.push('/account/returns');
+    } catch (err) {
+      if (err instanceof ApiClientError && err.status === 401) {
+        router.replace(
+          `/auth/login?next=${encodeURIComponent(`/account/orders/${orderNumber}`)}`,
+        );
+        return;
+      }
+      if (err instanceof ApiClientError) {
+        setReturnError({ message: err.message, requestId: err.requestId });
+      } else {
+        setReturnError({ message: 'Unable to submit return request right now.' });
+      }
+    } finally {
+      setSubmittingReturn(false);
     }
   };
 
@@ -297,6 +411,43 @@ export function OrderDetailView({ orderNumber }: OrderDetailViewProps) {
                       </form>
                     </Surface>
                   ) : null}
+                </div>
+              ) : null}
+
+              {isOrderReturnEligible(order.status) ? (
+                <div className="flex flex-wrap items-center justify-between gap-4 border-t border-hairline pt-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-ink">Delivered Order Return Window</p>
+                    <p className="text-xs text-ink-muted">
+                      Eligible unworn pieces may be submitted for return inspection and refund.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="md"
+                    className="min-h-11"
+                    onClick={openReturnModal}
+                  >
+                    Request Return
+                  </Button>
+                </div>
+              ) : isOrderReturnInProgress(order.status) ? (
+                <div className="flex flex-wrap items-center justify-between gap-4 border-t border-hairline pt-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-ink">Return Request Active</p>
+                    <p className="text-xs text-ink-muted">
+                      Review current return triage, physical receipt status, and refund progress.
+                    </p>
+                  </div>
+                  <LinkButton
+                    href="/account/returns"
+                    variant="secondary"
+                    size="md"
+                    className="min-h-11"
+                  >
+                    View Return Status
+                  </LinkButton>
                 </div>
               ) : null}
             </Surface>
@@ -505,6 +656,155 @@ export function OrderDetailView({ orderNumber }: OrderDetailViewProps) {
           </div>
         )}
       </div>
+
+      {/* Customer Return Request Modal */}
+      <Modal
+        isOpen={returnModalOpen}
+        onClose={() => setReturnModalOpen(false)}
+        title={order ? `Request Return: ${order.orderNumber}` : 'Request Return'}
+        description="Select eligible delivered pieces, choose return quantities, and describe the condition."
+        size="lg"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={submittingReturn}
+              onClick={() => setReturnModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="customer-return-request-form"
+              variant="primary"
+              isLoading={submittingReturn}
+              loadingLabel="Submitting Return Request..."
+            >
+              Submit Return Request
+            </Button>
+          </>
+        }
+      >
+        {order ? (
+          <form
+            id="customer-return-request-form"
+            onSubmit={handleSubmitReturn}
+            noValidate
+            className="space-y-5"
+          >
+            {returnError ? (
+              <StatusBanner
+                tone="danger"
+                title="Return request could not be submitted"
+                description={returnError.message}
+                requestId={returnError.requestId}
+              />
+            ) : null}
+
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.06em] text-ink">
+                1. Select Items to Return
+              </p>
+              <div className="space-y-3">
+                {order.items.map((item) => {
+                  const selection = selectedReturnItems[item.id] ?? {
+                    selected: false,
+                    quantity: 1,
+                  };
+                  const qtyOptions = Array.from(
+                    { length: item.quantity },
+                    (_, i) => i + 1,
+                  );
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-sm)] border border-control-border bg-subtle p-4 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--arven-focus-ring)] has-[:focus-visible]:outline-offset-2"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <Checkbox
+                          id={`return-item-check-${item.id}`}
+                          label={item.productName}
+                          description={`SKU: ${item.sku} | ${item.color} / Size ${item.size} | Purchased Qty: ${item.quantity}`}
+                          checked={selection.selected}
+                          onChange={(event) => {
+                            const checked = event.target.checked;
+                            setSelectedReturnItems((prev) => ({
+                              ...prev,
+                              [item.id]: {
+                                selected: checked,
+                                quantity: prev[item.id]?.quantity ?? 1,
+                              },
+                            }));
+                          }}
+                        />
+                      </div>
+
+                      <div className="w-28 shrink-0">
+                        <FormField id={`return-item-qty-${item.id}`} label="Return Qty">
+                          <Select
+                            id={`return-item-qty-${item.id}`}
+                            disabled={!selection.selected}
+                            value={String(selection.quantity)}
+                            onChange={(event) => {
+                              const nextQty = Number.parseInt(event.target.value, 10) || 1;
+                              setSelectedReturnItems((prev) => ({
+                                ...prev,
+                                [item.id]: {
+                                  selected: prev[item.id]?.selected ?? true,
+                                  quantity: clampReturnQuantity(nextQty, item.quantity),
+                                },
+                              }));
+                            }}
+                            className="font-mono tabular-nums"
+                          >
+                            {qtyOptions.map((qty) => (
+                              <option key={qty} value={String(qty)}>
+                                {qty}
+                              </option>
+                            ))}
+                          </Select>
+                        </FormField>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <FormField id="customer-return-reason" label="2. Return Reason" required>
+              <Select
+                id="customer-return-reason"
+                value={returnReason}
+                onChange={(event) => setReturnReason(event.target.value)}
+              >
+                {CUSTOMER_RETURN_REASONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+
+            <FormField
+              id="customer-return-notes"
+              label="3. Condition & Return Notes"
+              hint="Describe sizing feedback, packaging seal state, or any defect observed."
+              required
+            >
+              <Textarea
+                id="customer-return-notes"
+                rows={3}
+                value={returnNotes}
+                onChange={(event) => setReturnNotes(event.target.value)}
+                placeholder="Garment unworn with original atelier tags intact; requesting size exchange/refund."
+                required
+              />
+            </FormField>
+          </form>
+        ) : null}
+      </Modal>
     </AccountShell>
   );
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Cormorant_Garamond, JetBrains_Mono, Plus_Jakarta_Sans } from 'next/font/google';
+import { Cormorant_Garamond, IBM_Plex_Mono, Plus_Jakarta_Sans } from 'next/font/google';
 import { connection } from 'next/server';
 import { Suspense, type ReactNode } from 'react';
 import { ToastProvider } from '@arven/ui';
@@ -19,7 +19,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   display: 'swap',
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const ibmPlexMono = IBM_Plex_Mono({
   subsets: ['latin'],
   weight: ['400', '500'],
   variable: '--font-mono',
@@ -46,7 +46,7 @@ export default function AdminRootLayout({ children }: { children: ReactNode }) {
       lang="en"
       data-theme="dark"
       suppressHydrationWarning
-      className={`${cormorantGaramond.variable} ${plusJakartaSans.variable} ${jetbrainsMono.variable}`}
+      className={`${cormorantGaramond.variable} ${plusJakartaSans.variable} ${ibmPlexMono.variable}`}
     >
       <body className="min-h-dvh bg-canvas text-ink font-sans antialiased">
         <Suspense fallback={null}>

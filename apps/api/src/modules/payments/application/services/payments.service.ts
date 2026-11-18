@@ -5,19 +5,34 @@ import type {
   MidtransWebhookAckDto,
   PaymentSessionDto,
   PaymentSummaryDto,
+  RefundDto,
 } from '@arven/contracts';
-import { OrderStatus, PaymentStatus } from '@arven/database';
+import {
+  OrderStatus,
+  PaymentStatus,
+  Prisma,
+  RefundStatus,
+  ReturnStatus,
+} from '@arven/database';
 import type {
+  AdminRefundsQuery,
+  ApproveRefundInput,
   CreatePaymentSessionRequest,
   MidtransWebhookPayload,
   PaymentStatusInput,
+  RequestRefundInput,
 } from '@arven/validators';
 import {
   DomainHttpException,
   IdempotencyService,
   type IdempotencyResponseLike,
+  type PaginatedResponse,
 } from '../../../../common/http/index.js';
-import { extractClientIp, type HttpRequestLike } from '../../../../common/security/index.js';
+import {
+  extractClientIp,
+  type AuthenticatedActor,
+  type HttpRequestLike,
+} from '../../../../common/security/index.js';
 import {
   PAYMENT_PROVIDER,
   type PaymentProvider,
@@ -30,7 +45,12 @@ import { OutboxWriterService } from '../../../audit-notifications/outbox-writer.
 import { InventoryReservationService } from '../../../inventory/inventory-reservation.service.js';
 import { OrderAccessService, OrdersMapper } from '../../../orders/index.js';
 import {
+  RETURN_ELIGIBLE_STATUSES_FOR_REFUND,
+  SETTLED_PAYMENT_STATUSES_FOR_REFUND,
   assertOrderEligibleForPaymentSession,
+  assertOrderEligibleForRefund,
+  assertRefundAmountWithinCeiling,
+  assertRefundRequestPendingApproval,
   evaluateWebhookTransition,
   isReusablePendingPayment,
 } from '../../domain/entities/payment.entity.js';
@@ -631,5 +651,567 @@ export class PaymentsService {
       orderNumber: txOutcome.orderNumber,
       paymentStatus: txOutcome.paymentStatus,
     };
+  }
+
+  async listAdminRefunds(
+    actor: AuthenticatedActor,
+    query: AdminRefundsQuery,
+  ): Promise<PaginatedResponse<RefundDto>> {
+    const redactGateway =
+      !actor.permissions.includes('order.read') &&
+      !actor.permissions.includes('refund.approve');
+    const { rows, total } = await this.paymentsRepo.findManyRefundsAdmin({
+      status: query.status as RefundStatus | undefined,
+      page: query.page,
+      limit: query.limit,
+    });
+
+    return {
+      items: rows.map((row) =>
+        this.paymentsMapper.toRefundDto(row, { redactGateway }),
+      ),
+      page: query.page,
+      limit: query.limit,
+      total,
+    };
+  }
+
+  async requestRefund(params: {
+    req: HttpRequestLike;
+    res: IdempotencyResponseLike;
+    actor: AuthenticatedActor;
+    orderId: string;
+    body: RequestRefundInput;
+  }): Promise<RefundDto> {
+    const { req, res, actor, orderId, body } = params;
+    const idempotencyKey = readIdempotencyKeyHeader(req);
+    const redactGateway =
+      !actor.permissions.includes('order.read') &&
+      !actor.permissions.includes('refund.approve');
+
+    return this.idempotencyService.execute<RefundDto>({
+      idempotencyKey,
+      actorScope: `admin:${actor.userId}`,
+      route: `POST:/api/v1/admin/orders/${orderId}/refunds/request`,
+      requestPayload: {
+        orderId,
+        amountIdr: body.amountIdr,
+        reason: body.reason,
+        returnId: body.returnId ?? null,
+      },
+      res,
+      successStatus: HttpStatus.CREATED,
+      run: async (tx) => {
+        const lockedOrder = await this.paymentsRepo.lockOrderForRefund(tx, orderId);
+        if (!lockedOrder) {
+          throw new DomainHttpException(
+            HttpStatus.NOT_FOUND,
+            'ORDER_NOT_FOUND',
+            'Order not found',
+          );
+        }
+
+        const lockedPayments = await this.paymentsRepo.lockPaymentsForOrder(
+          tx,
+          lockedOrder.id,
+        );
+        const settledPayments = lockedPayments.filter((p) =>
+          (SETTLED_PAYMENT_STATUSES_FOR_REFUND as readonly string[]).includes(p.status),
+        );
+        const totalPaidIdr = settledPayments.reduce((sum, p) => sum + p.amountIdr, 0);
+
+        try {
+          assertOrderEligibleForRefund(lockedOrder.status, totalPaidIdr);
+        } catch (error) {
+          if (error instanceof PaymentsDomainError) {
+            throw new DomainHttpException(
+              error.statusCode,
+              error.code,
+              error.message,
+              error.details,
+            );
+          }
+          throw error;
+        }
+
+        const targetPayment = settledPayments[0]!;
+
+        if (body.returnId) {
+          const returnRecord = await tx.return.findUnique({
+            where: { id: body.returnId },
+            select: { id: true, orderId: true, status: true },
+          });
+          if (!returnRecord || returnRecord.orderId !== lockedOrder.id) {
+            throw new DomainHttpException(
+              HttpStatus.NOT_FOUND,
+              'RETURN_NOT_FOUND',
+              'Linked return record was not found for this order',
+            );
+          }
+          if (
+            !(RETURN_ELIGIBLE_STATUSES_FOR_REFUND as readonly string[]).includes(
+              returnRecord.status,
+            )
+          ) {
+            throw new DomainHttpException(
+              HttpStatus.CONFLICT,
+              'INVALID_RETURN_STATE',
+              `Linked return in status ${returnRecord.status} is not eligible for refund`,
+            );
+          }
+        }
+
+        const committedRefundsIdr =
+          await this.paymentsRepo.sumCommittedRefundsForOrder(tx, lockedOrder.id);
+
+        try {
+          assertRefundAmountWithinCeiling(
+            body.amountIdr,
+            totalPaidIdr,
+            committedRefundsIdr,
+          );
+        } catch (error) {
+          if (error instanceof PaymentsDomainError) {
+            throw new DomainHttpException(
+              error.statusCode,
+              error.code,
+              error.message,
+              error.details,
+            );
+          }
+          throw error;
+        }
+
+        const keyDigest = createHash('sha256')
+          .update(`${lockedOrder.id}:${actor.userId}:${idempotencyKey}`)
+          .digest('hex')
+          .slice(0, 16)
+          .toUpperCase();
+        const refundKey = `RF-${lockedOrder.orderNumber}-${keyDigest}`;
+
+        const created = await tx.refund.create({
+          data: {
+            orderId: lockedOrder.id,
+            paymentId: targetPayment.id,
+            returnId: body.returnId ?? null,
+            refundKey,
+            status: RefundStatus.REQUESTED,
+            amountIdr: BigInt(body.amountIdr),
+            currency: 'IDR',
+            reason: body.reason,
+            requestedBy: actor.userId,
+            approvedBy: null,
+          },
+          include: {
+            order: { select: { orderNumber: true } },
+            requester: { select: { email: true } },
+            approver: { select: { email: true } },
+          },
+        });
+
+        await this.auditLog.record(
+          {
+            actorId: actor.userId,
+            actorRole: actor.roles[0] ?? 'ADMIN',
+            action: 'refund.requested',
+            resource: 'refund',
+            resourceId: created.id,
+            ipAddress: extractClientIp(req),
+            afterState: {
+              orderId: lockedOrder.id,
+              paymentId: targetPayment.id,
+              returnId: body.returnId ?? null,
+              refundKey,
+              amountIdr: body.amountIdr,
+              reason: body.reason,
+              requestedBy: actor.userId,
+              status: RefundStatus.REQUESTED,
+            },
+          },
+          tx,
+        );
+
+        return this.paymentsMapper.toRefundDto(created, { redactGateway });
+      },
+    });
+  }
+
+  async approveRefund(params: {
+    req: HttpRequestLike;
+    res: IdempotencyResponseLike;
+    actor: AuthenticatedActor;
+    refundId: string;
+    body: ApproveRefundInput;
+  }): Promise<RefundDto> {
+    const { req, res, actor, refundId, body } = params;
+    const idempotencyKey = readIdempotencyKeyHeader(req);
+
+    return this.idempotencyService.execute<RefundDto>({
+      idempotencyKey,
+      actorScope: `admin:${actor.userId}`,
+      route: `POST:/api/v1/admin/refunds/${refundId}/approve`,
+      requestPayload: {
+        refundId,
+        decision: body.decision,
+        notes: body.notes ?? null,
+      },
+      res,
+      successStatus: HttpStatus.OK,
+      run: async (tx) => {
+        const lockedRefund = await this.paymentsRepo.lockRefundForApproval(
+          tx,
+          refundId,
+        );
+        if (!lockedRefund) {
+          throw new DomainHttpException(
+            HttpStatus.NOT_FOUND,
+            'REFUND_NOT_FOUND',
+            'Refund request not found',
+          );
+        }
+
+        try {
+          assertRefundRequestPendingApproval(lockedRefund.status);
+        } catch (error) {
+          if (error instanceof PaymentsDomainError) {
+            throw new DomainHttpException(
+              error.statusCode,
+              error.code,
+              error.message,
+              error.details,
+            );
+          }
+          throw error;
+        }
+
+        const lockedOrder = await this.paymentsRepo.lockOrderForRefund(
+          tx,
+          lockedRefund.orderId,
+        );
+        if (!lockedOrder) {
+          throw new DomainHttpException(
+            HttpStatus.NOT_FOUND,
+            'ORDER_NOT_FOUND',
+            'Parent order not found',
+          );
+        }
+
+        const lockedPayments = await this.paymentsRepo.lockPaymentsForOrder(
+          tx,
+          lockedOrder.id,
+        );
+        const targetPayment = lockedPayments.find(
+          (p) => p.id === lockedRefund.paymentId,
+        );
+        if (!targetPayment) {
+          throw new DomainHttpException(
+            HttpStatus.NOT_FOUND,
+            'PAYMENT_NOT_FOUND',
+            'Parent payment not found',
+          );
+        }
+
+        if (body.decision === 'REJECT') {
+          const rejected = await tx.refund.update({
+            where: { id: lockedRefund.id },
+            data: {
+              status: RefundStatus.REJECTED,
+              approvedBy: actor.userId,
+              gatewayResponse: {
+                rejectedNotes: body.notes ?? null,
+              } as Prisma.InputJsonValue,
+            },
+            include: {
+              order: { select: { orderNumber: true } },
+              requester: { select: { email: true } },
+              approver: { select: { email: true } },
+            },
+          });
+
+          await this.auditLog.record(
+            {
+              actorId: actor.userId,
+              actorRole: actor.roles[0] ?? 'OWNER',
+              action: 'refund.rejected',
+              resource: 'refund',
+              resourceId: lockedRefund.id,
+              ipAddress: extractClientIp(req),
+              beforeState: {
+                status: lockedRefund.status,
+              },
+              afterState: {
+                status: RefundStatus.REJECTED,
+                orderId: lockedOrder.id,
+                amountIdr: lockedRefund.amountIdr,
+                requestedBy: lockedRefund.requestedBy,
+                approvedBy: actor.userId,
+                notes: body.notes ?? null,
+              },
+            },
+            tx,
+          );
+
+          return this.paymentsMapper.toRefundDto(rejected, { redactGateway: false });
+        }
+
+        const settledPayments = lockedPayments.filter((p) =>
+          (SETTLED_PAYMENT_STATUSES_FOR_REFUND as readonly string[]).includes(p.status),
+        );
+        const totalPaidIdr = settledPayments.reduce((sum, p) => sum + p.amountIdr, 0);
+        const otherCommittedRefundsIdr =
+          await this.paymentsRepo.sumCommittedRefundsForOrder(
+            tx,
+            lockedOrder.id,
+            lockedRefund.id,
+          );
+
+        try {
+          assertOrderEligibleForRefund(lockedOrder.status, totalPaidIdr);
+          assertRefundAmountWithinCeiling(
+            lockedRefund.amountIdr,
+            totalPaidIdr,
+            otherCommittedRefundsIdr,
+          );
+        } catch (error) {
+          if (error instanceof PaymentsDomainError) {
+            throw new DomainHttpException(
+              error.statusCode,
+              error.code,
+              error.message,
+              error.details,
+            );
+          }
+          throw error;
+        }
+
+        const providerResult = await this.paymentProvider.refund({
+          paymentId: targetPayment.id,
+          providerReference: targetPayment.providerReference,
+          refundKey: lockedRefund.refundKey,
+          amountIdr: lockedRefund.amountIdr,
+          reason: lockedRefund.reason,
+        });
+
+        const gatewayPayload = JSON.parse(
+          JSON.stringify(providerResult.rawPayload),
+        ) as Prisma.InputJsonValue;
+
+        if (providerResult.status === 'FAILED') {
+          const failed = await tx.refund.update({
+            where: { id: lockedRefund.id },
+            data: {
+              status: RefundStatus.FAILED,
+              approvedBy: actor.userId,
+              providerRefundId: providerResult.providerRefundId,
+              gatewayResponse: gatewayPayload,
+            },
+            include: {
+              order: { select: { orderNumber: true } },
+              requester: { select: { email: true } },
+              approver: { select: { email: true } },
+            },
+          });
+
+          await this.auditLog.record(
+            {
+              actorId: actor.userId,
+              actorRole: actor.roles[0] ?? 'OWNER',
+              action: 'refund.failed',
+              resource: 'refund',
+              resourceId: lockedRefund.id,
+              ipAddress: extractClientIp(req),
+              beforeState: { status: lockedRefund.status },
+              afterState: {
+                status: RefundStatus.FAILED,
+                orderId: lockedOrder.id,
+                amountIdr: lockedRefund.amountIdr,
+                requestedBy: lockedRefund.requestedBy,
+                approvedBy: actor.userId,
+                providerRefundId: providerResult.providerRefundId,
+              },
+            },
+            tx,
+          );
+
+          return this.paymentsMapper.toRefundDto(failed, { redactGateway: false });
+        }
+
+        if (providerResult.status === 'PROCESSING') {
+          const processing = await tx.refund.update({
+            where: { id: lockedRefund.id },
+            data: {
+              status: RefundStatus.PROCESSING,
+              approvedBy: actor.userId,
+              providerRefundId: providerResult.providerRefundId,
+              gatewayResponse: gatewayPayload,
+            },
+            include: {
+              order: { select: { orderNumber: true } },
+              requester: { select: { email: true } },
+              approver: { select: { email: true } },
+            },
+          });
+
+          await tx.payment.update({
+            where: { id: targetPayment.id },
+            data: { status: PaymentStatus.REFUND_PENDING },
+          });
+          await tx.order.update({
+            where: { id: lockedOrder.id },
+            data: { status: OrderStatus.REFUND_PENDING },
+          });
+          await tx.orderStatusHistory.create({
+            data: {
+              orderId: lockedOrder.id,
+              fromStatus: lockedOrder.status as OrderStatus,
+              toStatus: OrderStatus.REFUND_PENDING,
+              reason: lockedRefund.reason,
+              actorId: actor.userId,
+              actorType: 'ADMIN',
+            },
+          });
+
+          await this.auditLog.record(
+            {
+              actorId: actor.userId,
+              actorRole: actor.roles[0] ?? 'OWNER',
+              action: 'refund.approved',
+              resource: 'refund',
+              resourceId: lockedRefund.id,
+              ipAddress: extractClientIp(req),
+              beforeState: {
+                status: lockedRefund.status,
+                orderStatus: lockedOrder.status,
+                paymentStatus: targetPayment.status,
+              },
+              afterState: {
+                status: RefundStatus.PROCESSING,
+                orderId: lockedOrder.id,
+                returnId: lockedRefund.returnId,
+                amountIdr: lockedRefund.amountIdr,
+                requestedBy: lockedRefund.requestedBy,
+                approvedBy: actor.userId,
+                providerRefundId: providerResult.providerRefundId,
+                orderStatus: OrderStatus.REFUND_PENDING,
+                paymentStatus: PaymentStatus.REFUND_PENDING,
+              },
+            },
+            tx,
+          );
+
+          return this.paymentsMapper.toRefundDto(processing, { redactGateway: false });
+        }
+
+        const now = new Date();
+        const priorSucceededTotal =
+          await this.paymentsRepo.sumSucceededRefundsForOrder(tx, lockedOrder.id);
+        const nextSucceededTotal = priorSucceededTotal + lockedRefund.amountIdr;
+        const isFullRefund = nextSucceededTotal >= totalPaidIdr;
+        const targetOrderStatus = isFullRefund
+          ? OrderStatus.REFUNDED
+          : OrderStatus.PARTIALLY_REFUNDED;
+        const targetPaymentStatus = isFullRefund
+          ? PaymentStatus.REFUNDED
+          : PaymentStatus.PARTIALLY_REFUNDED;
+
+        const succeeded = await tx.refund.update({
+          where: { id: lockedRefund.id },
+          data: {
+            status: RefundStatus.SUCCEEDED,
+            approvedBy: actor.userId,
+            providerRefundId: providerResult.providerRefundId,
+            gatewayResponse: gatewayPayload,
+            completedAt: now,
+          },
+          include: {
+            order: { select: { orderNumber: true } },
+            requester: { select: { email: true } },
+            approver: { select: { email: true } },
+          },
+        });
+
+        await tx.payment.update({
+          where: { id: targetPayment.id },
+          data: { status: targetPaymentStatus },
+        });
+
+        await tx.order.update({
+          where: { id: lockedOrder.id },
+          data: { status: targetOrderStatus },
+        });
+
+        await tx.orderStatusHistory.create({
+          data: {
+            orderId: lockedOrder.id,
+            fromStatus: lockedOrder.status as OrderStatus,
+            toStatus: targetOrderStatus,
+            reason: `Refund approved: ${lockedRefund.reason}`,
+            actorId: actor.userId,
+            actorType: 'ADMIN',
+          },
+        });
+
+        if (lockedRefund.returnId) {
+          await tx.return.updateMany({
+            where: {
+              id: lockedRefund.returnId,
+              status: { in: [ReturnStatus.APPROVED, ReturnStatus.RECEIVED] },
+            },
+            data: {
+              status: ReturnStatus.REFUNDED,
+            },
+          });
+        }
+
+        await this.outboxWriter.enqueue(
+          {
+            aggregateType: 'refund',
+            aggregateId: lockedRefund.id,
+            eventType: PAYMENT_EVENT_TYPES.REFUND_COMPLETED,
+            payload: {
+              refundId: lockedRefund.id,
+              orderId: lockedOrder.id,
+              orderNumber: lockedOrder.orderNumber,
+              paymentId: targetPayment.id,
+              returnId: lockedRefund.returnId,
+              amountIdr: lockedRefund.amountIdr,
+              requestedBy: lockedRefund.requestedBy,
+              approvedBy: actor.userId,
+            },
+          },
+          tx,
+        );
+
+        await this.auditLog.record(
+          {
+            actorId: actor.userId,
+            actorRole: actor.roles[0] ?? 'OWNER',
+            action: 'refund.approved',
+            resource: 'refund',
+            resourceId: lockedRefund.id,
+            ipAddress: extractClientIp(req),
+            beforeState: {
+              status: lockedRefund.status,
+              orderStatus: lockedOrder.status,
+              paymentStatus: targetPayment.status,
+            },
+            afterState: {
+              status: RefundStatus.SUCCEEDED,
+              orderId: lockedOrder.id,
+              returnId: lockedRefund.returnId,
+              amountIdr: lockedRefund.amountIdr,
+              requestedBy: lockedRefund.requestedBy,
+              approvedBy: actor.userId,
+              providerRefundId: providerResult.providerRefundId,
+              orderStatus: targetOrderStatus,
+              paymentStatus: targetPaymentStatus,
+            },
+          },
+          tx,
+        );
+
+        return this.paymentsMapper.toRefundDto(succeeded, { redactGateway: false });
+      },
+    });
   }
 }

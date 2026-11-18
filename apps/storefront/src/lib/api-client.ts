@@ -7,9 +7,13 @@ import type {
   CategoryNodeDto,
   CheckoutQuoteDto,
   CheckoutQuoteRequest,
+  CmsJournalArticleDto,
+  CmsLookbookDto,
+  CmsPageDto,
   CollectionDetailDto,
   CollectionSummaryDto,
   CreateAddressRequest,
+  CreateCustomerReturnRequest,
   CreateOrderRequest,
   CreateOrderResultDto,
   CreatePaymentSessionRequest,
@@ -26,6 +30,7 @@ import type {
   PublicProductsQuery,
   RegisterRequest,
   ResetPasswordRequest,
+  ReturnDetailDto,
   UpdateAddressRequest,
   UpdateCartItemRequest,
   UpdateProfileRequest,
@@ -383,11 +388,13 @@ export const storefrontApi = {
       body: input,
     });
   },
-  loginCustomer(input: LoginRequest): Promise<AuthSessionResponse> {
-    return requestApi<AuthSessionResponse>('/api/v1/auth/login', {
+  async loginCustomer(input: LoginRequest): Promise<AuthSessionResponse> {
+    const result = await requestApi<AuthSessionResponse>('/api/v1/auth/login', {
       method: 'POST',
       body: input,
     });
+    clearCsrfTokenCache();
+    return result;
   },
   async logout(): Promise<{ loggedOut: boolean }> {
     const result = await requestApi<{ loggedOut: boolean }>('/api/v1/auth/logout', {
@@ -592,6 +599,84 @@ export const storefrontApi = {
   },
   getPaymentSummary(paymentId: string, guestToken?: string): Promise<PaymentSummaryDto> {
     return requestApi<PaymentSummaryDto>(`/api/v1/payments/${encodeURIComponent(paymentId)}`, {
+      guestOrderToken: guestToken,
+    });
+  },
+  async getCmsLookbooks(
+    query: { page?: number; limit?: number } = {},
+  ): Promise<PaginatedResult<CmsLookbookDto>> {
+    const qs = toQueryString({ page: query.page, limit: query.limit });
+    const envelope = await requestEnvelope<CmsLookbookDto[]>(`/api/v1/cms/lookbooks${qs}`);
+    return {
+      items: envelope.data,
+      meta: {
+        requestId: envelope.meta.requestId,
+        page: envelope.meta.page ?? 1,
+        limit: envelope.meta.limit ?? 20,
+        total: envelope.meta.total ?? envelope.data.length,
+        totalPages: envelope.meta.totalPages ?? 1,
+      },
+    };
+  },
+  getCmsLookbookBySlug(slug: string): Promise<CmsLookbookDto> {
+    return requestApi<CmsLookbookDto>(`/api/v1/cms/lookbooks/${encodeURIComponent(slug)}`);
+  },
+  async getCmsJournal(
+    query: { page?: number; limit?: number } = {},
+  ): Promise<PaginatedResult<CmsJournalArticleDto>> {
+    const qs = toQueryString({ page: query.page, limit: query.limit });
+    const envelope = await requestEnvelope<CmsJournalArticleDto[]>(`/api/v1/cms/journal${qs}`);
+    return {
+      items: envelope.data,
+      meta: {
+        requestId: envelope.meta.requestId,
+        page: envelope.meta.page ?? 1,
+        limit: envelope.meta.limit ?? 20,
+        total: envelope.meta.total ?? envelope.data.length,
+        totalPages: envelope.meta.totalPages ?? 1,
+      },
+    };
+  },
+  getCmsJournalBySlug(slug: string): Promise<CmsJournalArticleDto> {
+    return requestApi<CmsJournalArticleDto>(`/api/v1/cms/journal/${encodeURIComponent(slug)}`);
+  },
+  getCmsPageBySlug(slug: string): Promise<CmsPageDto> {
+    return requestApi<CmsPageDto>(`/api/v1/cms/pages/${encodeURIComponent(slug)}`);
+  },
+  createCustomerReturn(
+    orderId: string,
+    input: CreateCustomerReturnRequest,
+    idempotencyKey: string,
+    guestToken?: string,
+  ): Promise<ReturnDetailDto> {
+    return requestApi<ReturnDetailDto>(
+      `/api/v1/orders/${encodeURIComponent(orderId)}/returns`,
+      {
+        method: 'POST',
+        body: input,
+        idempotencyKey,
+        guestOrderToken: guestToken,
+      },
+    );
+  },
+  async listMyReturns(
+    query: { page?: number; limit?: number } = {},
+  ): Promise<PaginatedResult<ReturnDetailDto>> {
+    const qs = toQueryString({ page: query.page, limit: query.limit });
+    const envelope = await requestEnvelope<ReturnDetailDto[]>(`/api/v1/returns${qs}`);
+    return {
+      items: envelope.data,
+      meta: {
+        requestId: envelope.meta.requestId,
+        page: envelope.meta.page ?? 1,
+        limit: envelope.meta.limit ?? 20,
+        total: envelope.meta.total ?? envelope.data.length,
+        totalPages: envelope.meta.totalPages ?? 1,
+      },
+    };
+  },
+  getReturnById(returnId: string, guestToken?: string): Promise<ReturnDetailDto> {
+    return requestApi<ReturnDetailDto>(`/api/v1/returns/${encodeURIComponent(returnId)}`, {
       guestOrderToken: guestToken,
     });
   },

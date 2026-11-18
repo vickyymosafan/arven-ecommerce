@@ -3,6 +3,7 @@ import {
   OrderStatus,
   PaymentStatus,
   Prisma,
+  RefundStatus,
   type PrismaTransactionClient,
 } from '@arven/database';
 import { PrismaService } from '../../../../shared/prisma/prisma.service.js';
@@ -11,6 +12,7 @@ import type {
   LockedOrderForPaymentSession,
   LockedPaymentAndOrderRow,
 } from '../../domain/ports/payments.ports.js';
+import type { RefundWithRelations } from '../mappers/payments.mapper.js';
 
 interface LockedOrderSqlRow {
   id: string;
@@ -429,5 +431,195 @@ export class PrismaPaymentsRepository {
         failureReason: params.reason,
       },
     });
+  }
+
+  async findManyRefundsAdmin(params: {
+    status?: RefundStatus;
+    page: number;
+    limit: number;
+  }): Promise<{ rows: RefundWithRelations[]; total: number }> {
+    const where: Prisma.RefundWhereInput = {
+      ...(params.status ? { status: params.status } : {}),
+    };
+    const skip = (params.page - 1) * params.limit;
+
+    const [rows, total] = await Promise.all([
+      this.prisma.client.refund.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip,
+        take: params.limit,
+        include: {
+          order: { select: { orderNumber: true } },
+          requester: { select: { email: true } },
+          approver: { select: { email: true } },
+        },
+      }),
+      this.prisma.client.refund.count({ where }),
+    ]);
+
+    return { rows, total };
+  }
+
+  async findRefundDetailById(
+    refundId: string,
+    tx?: PrismaTransactionClient,
+  ): Promise<RefundWithRelations | null> {
+    const db = tx ?? this.prisma.client;
+    return db.refund.findUnique({
+      where: { id: refundId },
+      include: {
+        order: { select: { orderNumber: true } },
+        requester: { select: { email: true } },
+        approver: { select: { email: true } },
+      },
+    });
+  }
+
+  async lockOrderForRefund(
+    tx: PrismaTransactionClient,
+    orderId: string,
+  ): Promise<{ id: string; orderNumber: string; status: string } | null> {
+    const rows = await tx.$queryRaw<
+      Array<{ id: string; orderNumber: string; status: string }>
+    >`
+      SELECT
+        "id"::text AS "id",
+        "order_number" AS "orderNumber",
+        "status"::text AS "status"
+      FROM "orders"
+      WHERE "id" = ${orderId}::uuid
+      FOR UPDATE
+    `;
+    return rows[0] ?? null;
+  }
+
+  async lockPaymentsForOrder(
+    tx: PrismaTransactionClient,
+    orderId: string,
+  ): Promise<
+    Array<{
+      id: string;
+      status: string;
+      amountIdr: number;
+      providerReference: string;
+    }>
+  > {
+    const rows = await tx.$queryRaw<
+      Array<{
+        id: string;
+        status: string;
+        amountIdr: bigint;
+        providerReference: string;
+      }>
+    >`
+      SELECT
+        "id"::text AS "id",
+        "status"::text AS "status",
+        "amount_idr" AS "amountIdr",
+        "provider_reference" AS "providerReference"
+      FROM "payments"
+      WHERE "order_id" = ${orderId}::uuid
+      ORDER BY "created_at" DESC
+      FOR UPDATE
+    `;
+    return rows.map((row) => ({
+      id: row.id,
+      status: row.status,
+      amountIdr: Number(row.amountIdr),
+      providerReference: row.providerReference,
+    }));
+  }
+
+  async lockRefundForApproval(
+    tx: PrismaTransactionClient,
+    refundId: string,
+  ): Promise<{
+    id: string;
+    orderId: string;
+    paymentId: string;
+    returnId: string | null;
+    refundKey: string;
+    status: string;
+    amountIdr: number;
+    reason: string;
+    requestedBy: string;
+  } | null> {
+    const rows = await tx.$queryRaw<
+      Array<{
+        id: string;
+        orderId: string;
+        paymentId: string;
+        returnId: string | null;
+        refundKey: string;
+        status: string;
+        amountIdr: bigint;
+        reason: string;
+        requestedBy: string;
+      }>
+    >`
+      SELECT
+        "id"::text AS "id",
+        "order_id"::text AS "orderId",
+        "payment_id"::text AS "paymentId",
+        "return_id"::text AS "returnId",
+        "refund_key" AS "refundKey",
+        "status"::text AS "status",
+        "amount_idr" AS "amountIdr",
+        "reason",
+        "requested_by"::text AS "requestedBy"
+      FROM "refunds"
+      WHERE "id" = ${refundId}::uuid
+      FOR UPDATE
+    `;
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+    return {
+      ...row,
+      amountIdr: Number(row.amountIdr),
+    };
+  }
+
+  async sumCommittedRefundsForOrder(
+    tx: PrismaTransactionClient,
+    orderId: string,
+    excludeRefundId?: string,
+  ): Promise<number> {
+    const agg = await tx.refund.aggregate({
+      where: {
+        orderId,
+        ...(excludeRefundId ? { id: { not: excludeRefundId } } : {}),
+        status: {
+          in: [
+            RefundStatus.REQUESTED,
+            RefundStatus.APPROVED,
+            RefundStatus.PROCESSING,
+            RefundStatus.SUCCEEDED,
+          ],
+        },
+      },
+      _sum: {
+        amountIdr: true,
+      },
+    });
+    return Number(agg._sum.amountIdr ?? 0n);
+  }
+
+  async sumSucceededRefundsForOrder(
+    tx: PrismaTransactionClient,
+    orderId: string,
+  ): Promise<number> {
+    const agg = await tx.refund.aggregate({
+      where: {
+        orderId,
+        status: RefundStatus.SUCCEEDED,
+      },
+      _sum: {
+        amountIdr: true,
+      },
+    });
+    return Number(agg._sum.amountIdr ?? 0n);
   }
 }

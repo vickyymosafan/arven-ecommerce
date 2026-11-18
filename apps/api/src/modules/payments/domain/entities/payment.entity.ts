@@ -116,3 +116,80 @@ export function evaluateWebhookTransition(params: {
 
   return 'NOOP';
 }
+
+export const REFUND_ELIGIBLE_ORDER_STATUSES = [
+  'PAID',
+  'PROCESSING',
+  'READY_TO_SHIP',
+  'SHIPPED',
+  'DELIVERED',
+  'COMPLETED',
+  'RETURN_APPROVED',
+  'RETURNED',
+  'PARTIALLY_REFUNDED',
+] as const;
+
+export const SETTLED_PAYMENT_STATUSES_FOR_REFUND = [
+  'SETTLEMENT',
+  'PARTIALLY_REFUNDED',
+  'REFUND_PENDING',
+] as const;
+
+export const RETURN_ELIGIBLE_STATUSES_FOR_REFUND = ['APPROVED', 'RECEIVED'] as const;
+
+export function assertOrderEligibleForRefund(
+  orderStatus: string,
+  totalPaidIdr: number,
+): void {
+  if (!(REFUND_ELIGIBLE_ORDER_STATUSES as readonly string[]).includes(orderStatus)) {
+    throw new PaymentsDomainError(
+      409,
+      'INVALID_STATE_TRANSITION',
+      `Order in status ${orderStatus} is not eligible for refund`,
+      [{ field: 'orderStatus', issue: `Order status ${orderStatus} cannot be refunded` }],
+    );
+  }
+  if (totalPaidIdr <= 0) {
+    throw new PaymentsDomainError(
+      409,
+      'PAYMENT_NOT_SETTLED',
+      'Order does not have a settled payment eligible for refund',
+    );
+  }
+}
+
+export function assertRefundAmountWithinCeiling(
+  requestedAmountIdr: number,
+  totalPaidIdr: number,
+  committedRefundsIdr: number,
+): void {
+  const remainingRefundable = totalPaidIdr - committedRefundsIdr;
+  if (
+    !Number.isInteger(requestedAmountIdr) ||
+    requestedAmountIdr < 1 ||
+    requestedAmountIdr > remainingRefundable
+  ) {
+    throw new PaymentsDomainError(
+      422,
+      'REFUND_AMOUNT_EXCEEDS_PAID',
+      `Refund amount (${requestedAmountIdr}) exceeds remaining refundable balance (${Math.max(0, remainingRefundable)})`,
+      [
+        {
+          field: 'amountIdr',
+          issue: `Maximum refundable IDR amount is ${Math.max(0, remainingRefundable)}`,
+        },
+      ],
+    );
+  }
+}
+
+export function assertRefundRequestPendingApproval(refundStatus: string): void {
+  if (refundStatus !== 'REQUESTED') {
+    throw new PaymentsDomainError(
+      409,
+      'INVALID_STATE_TRANSITION',
+      `Refund in status ${refundStatus} cannot be approved or rejected`,
+      [{ field: 'status', issue: `Expected REQUESTED, got ${refundStatus}` }],
+    );
+  }
+}

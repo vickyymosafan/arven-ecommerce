@@ -1,34 +1,66 @@
 import type {
   AdminCategoryDto,
+  AdminCmsListQuery,
   AdminCollectionDto,
+  AdminCouponDto,
+  AdminCouponsQuery,
+  AdminCreateShipmentRequest,
   AdminInventoryLevelDto,
   AdminInventoryLevelsQuery,
   AdminInventoryMovementDto,
   AdminInventoryMovementsQuery,
   AdminLoginRequest,
+  AdminOrderDetailDto,
+  AdminOrderSummaryDto,
+  AdminOrdersQuery,
   AdminProductDetailDto,
   AdminProductSummaryDto,
   AdminProductVariantDto,
   AdminProductsQuery,
+  AdminRefundsQuery,
+  AdminReturnsQuery,
+  AdminSalesAnalyticsDto,
   AdminStockMovementResultDto,
   AdminStockReservationDto,
   AdminStockReservationsQuery,
+  AdminTransitionOrderRequest,
   AdminUserSummaryDto,
+  AnalyticsSalesQuery,
+  ApproveRefundInput,
+  ApproveReturnRequest,
   AuditLogEntryDto,
   AuthUserSummary,
+  CmsJournalArticleDto,
+  CmsLookbookDto,
+  CmsPageDto,
   CreateAdminStockMovementRequest,
   CreateCategoryRequest,
+  CreateCmsJournalRequest,
+  CreateCmsLookbookRequest,
+  CreateCmsPageRequest,
   CreateCollectionRequest,
+  CreateCouponRequest,
   CreateProductMediaRequest,
   CreateProductRequest,
   CreateProductVariantRequest,
   MfaSetupResponse,
   MfaVerifyRequest,
   ProductMediaDto,
+  ReceiveReturnRequest,
+  RefundDto,
+  RequestRefundInput,
+  ReturnDetailDto,
+  ReviewReturnRequest,
   RoleSummaryDto,
+  ShipmentDto,
+  TransitionCmsStatusRequest,
   TransitionProductStatusRequest,
   UpdateCategoryRequest,
+  UpdateCmsJournalRequest,
+  UpdateCmsLookbookRequest,
+  UpdateCmsPageRequest,
   UpdateCollectionRequest,
+  UpdateCouponRequest,
   UpdateProductMediaRequest,
   UpdateProductRequest,
   UpdateProductVariantRequest,
@@ -333,11 +365,13 @@ export const adminApi = {
   getMe(): Promise<AdminAuthMeResponse> {
     return requestAdminApi<AdminAuthMeResponse>('/api/v1/auth/me');
   },
-  loginAdmin(input: AdminLoginRequest): Promise<AdminLoginResponse> {
-    return requestAdminApi<AdminLoginResponse>('/api/v1/auth/admin/login', {
+  async loginAdmin(input: AdminLoginRequest): Promise<AdminLoginResponse> {
+    const result = await requestAdminApi<AdminLoginResponse>('/api/v1/auth/admin/login', {
       method: 'POST',
       body: input,
     });
+    clearAdminCsrfTokenCache();
+    return result;
   },
   setupMfa(): Promise<MfaSetupResponse> {
     return requestAdminApi<MfaSetupResponse>('/api/v1/auth/mfa/setup', {
@@ -707,6 +741,398 @@ export const adminApi = {
         'Idempotency-Key': idempotencyKey,
       },
     });
+  },
+  getSalesAnalytics(query: Partial<AnalyticsSalesQuery> = {}): Promise<AdminSalesAnalyticsDto> {
+    const qs = toQueryString({ days: query.days });
+    return requestAdminApi<AdminSalesAnalyticsDto>(`/api/v1/admin/analytics/sales${qs}`);
+  },
+  async listOrders(
+    query: Partial<AdminOrdersQuery> = {},
+  ): Promise<PaginatedResult<AdminOrderSummaryDto>> {
+    const qs = toQueryString({
+      page: query.page,
+      limit: query.limit,
+      status: query.status,
+      q: query.q,
+    });
+    const envelope = await requestAdminEnvelope<AdminOrderSummaryDto[]>(
+      `/api/v1/admin/orders${qs}`,
+    );
+    return {
+      items: envelope.data,
+      meta: {
+        requestId: envelope.meta.requestId,
+        page: envelope.meta.page ?? 1,
+        limit: envelope.meta.limit ?? 20,
+        total: envelope.meta.total ?? envelope.data.length,
+        totalPages: envelope.meta.totalPages ?? 1,
+      },
+    };
+  },
+  getOrderById(id: string): Promise<AdminOrderDetailDto> {
+    return requestAdminApi<AdminOrderDetailDto>(
+      `/api/v1/admin/orders/${encodeURIComponent(id)}`,
+    );
+  },
+  transitionOrder(
+    id: string,
+    input: AdminTransitionOrderRequest,
+    idempotencyKey = generateIdempotencyKey('admin-ord'),
+  ): Promise<AdminOrderDetailDto> {
+    return requestAdminApi<AdminOrderDetailDto>(
+      `/api/v1/admin/orders/${encodeURIComponent(id)}/transition`,
+      {
+        method: 'POST',
+        body: input,
+        extraHeaders: {
+          'Idempotency-Key': idempotencyKey,
+        },
+      },
+    );
+  },
+  createShipment(
+    orderId: string,
+    input: AdminCreateShipmentRequest,
+    idempotencyKey = generateIdempotencyKey('admin-shp'),
+  ): Promise<ShipmentDto> {
+    return requestAdminApi<ShipmentDto>(
+      `/api/v1/admin/orders/${encodeURIComponent(orderId)}/shipments`,
+      {
+        method: 'POST',
+        body: input,
+        extraHeaders: {
+          'Idempotency-Key': idempotencyKey,
+        },
+      },
+    );
+  },
+  syncShipmentTracking(shipmentId: string): Promise<ShipmentDto> {
+    return requestAdminApi<ShipmentDto>(
+      `/api/v1/admin/shipments/${encodeURIComponent(shipmentId)}/sync-tracking`,
+      {
+        method: 'POST',
+      },
+    );
+  },
+  async listReturns(
+    query: Partial<AdminReturnsQuery> = {},
+  ): Promise<PaginatedResult<ReturnDetailDto>> {
+    const qs = toQueryString({
+      page: query.page,
+      limit: query.limit,
+      status: query.status,
+    });
+    const envelope = await requestAdminEnvelope<ReturnDetailDto[]>(
+      `/api/v1/admin/returns${qs}`,
+    );
+    return {
+      items: envelope.data,
+      meta: {
+        requestId: envelope.meta.requestId,
+        page: envelope.meta.page ?? 1,
+        limit: envelope.meta.limit ?? 20,
+        total: envelope.meta.total ?? envelope.data.length,
+        totalPages: envelope.meta.totalPages ?? 1,
+      },
+    };
+  },
+  getReturnById(id: string): Promise<ReturnDetailDto> {
+    return requestAdminApi<ReturnDetailDto>(
+      `/api/v1/admin/returns/${encodeURIComponent(id)}`,
+    );
+  },
+  reviewReturn(id: string, input: ReviewReturnRequest = {}): Promise<ReturnDetailDto> {
+    return requestAdminApi<ReturnDetailDto>(
+      `/api/v1/admin/returns/${encodeURIComponent(id)}/review`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    );
+  },
+  approveReturn(id: string, input: ApproveReturnRequest): Promise<ReturnDetailDto> {
+    return requestAdminApi<ReturnDetailDto>(
+      `/api/v1/admin/returns/${encodeURIComponent(id)}/approve`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    );
+  },
+  receiveReturn(
+    id: string,
+    input: ReceiveReturnRequest,
+    idempotencyKey = generateIdempotencyKey('admin-ret'),
+  ): Promise<ReturnDetailDto> {
+    return requestAdminApi<ReturnDetailDto>(
+      `/api/v1/admin/returns/${encodeURIComponent(id)}/receive`,
+      {
+        method: 'POST',
+        body: input,
+        extraHeaders: {
+          'Idempotency-Key': idempotencyKey,
+        },
+      },
+    );
+  },
+  async listRefunds(
+    query: Partial<AdminRefundsQuery> = {},
+  ): Promise<PaginatedResult<RefundDto>> {
+    const qs = toQueryString({
+      page: query.page,
+      limit: query.limit,
+      status: query.status,
+    });
+    const envelope = await requestAdminEnvelope<RefundDto[]>(
+      `/api/v1/admin/refunds${qs}`,
+    );
+    return {
+      items: envelope.data,
+      meta: {
+        requestId: envelope.meta.requestId,
+        page: envelope.meta.page ?? 1,
+        limit: envelope.meta.limit ?? 20,
+        total: envelope.meta.total ?? envelope.data.length,
+        totalPages: envelope.meta.totalPages ?? 1,
+      },
+    };
+  },
+  requestRefund(
+    orderId: string,
+    input: RequestRefundInput,
+    idempotencyKey = generateIdempotencyKey('admin-rfd'),
+  ): Promise<RefundDto> {
+    return requestAdminApi<RefundDto>(
+      `/api/v1/admin/orders/${encodeURIComponent(orderId)}/refunds/request`,
+      {
+        method: 'POST',
+        body: input,
+        extraHeaders: {
+          'Idempotency-Key': idempotencyKey,
+        },
+      },
+    );
+  },
+  approveRefund(
+    refundId: string,
+    input: ApproveRefundInput,
+    idempotencyKey = generateIdempotencyKey('admin-rfd-app'),
+  ): Promise<RefundDto> {
+    return requestAdminApi<RefundDto>(
+      `/api/v1/admin/refunds/${encodeURIComponent(refundId)}/approve`,
+      {
+        method: 'POST',
+        body: input,
+        extraHeaders: {
+          'Idempotency-Key': idempotencyKey,
+        },
+      },
+    );
+  },
+  async listCoupons(
+    query: Partial<AdminCouponsQuery> = {},
+  ): Promise<PaginatedResult<AdminCouponDto>> {
+    const qs = toQueryString({
+      page: query.page,
+      limit: query.limit,
+      status: query.status,
+      q: query.q,
+    });
+    const envelope = await requestAdminEnvelope<AdminCouponDto[]>(
+      `/api/v1/admin/coupons${qs}`,
+    );
+    return {
+      items: envelope.data,
+      meta: {
+        requestId: envelope.meta.requestId,
+        page: envelope.meta.page ?? 1,
+        limit: envelope.meta.limit ?? 20,
+        total: envelope.meta.total ?? envelope.data.length,
+        totalPages: envelope.meta.totalPages ?? 1,
+      },
+    };
+  },
+  createCoupon(input: CreateCouponRequest): Promise<AdminCouponDto> {
+    return requestAdminApi<AdminCouponDto>('/api/v1/admin/coupons', {
+      method: 'POST',
+      body: input,
+    });
+  },
+  updateCoupon(id: string, input: UpdateCouponRequest): Promise<AdminCouponDto> {
+    return requestAdminApi<AdminCouponDto>(
+      `/api/v1/admin/coupons/${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+        body: input,
+      },
+    );
+  },
+  deleteCoupon(id: string): Promise<void> {
+    return requestAdminApi<void>(`/api/v1/admin/coupons/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+  async listCmsPages(
+    query: Partial<AdminCmsListQuery> = {},
+  ): Promise<PaginatedResult<CmsPageDto>> {
+    const qs = toQueryString({
+      page: query.page,
+      limit: query.limit,
+      status: query.status,
+      q: query.q,
+    });
+    const envelope = await requestAdminEnvelope<CmsPageDto[]>(
+      `/api/v1/admin/cms/pages${qs}`,
+    );
+    return {
+      items: envelope.data,
+      meta: {
+        requestId: envelope.meta.requestId,
+        page: envelope.meta.page ?? 1,
+        limit: envelope.meta.limit ?? 20,
+        total: envelope.meta.total ?? envelope.data.length,
+        totalPages: envelope.meta.totalPages ?? 1,
+      },
+    };
+  },
+  createCmsPage(input: CreateCmsPageRequest): Promise<CmsPageDto> {
+    return requestAdminApi<CmsPageDto>('/api/v1/admin/cms/pages', {
+      method: 'POST',
+      body: input,
+    });
+  },
+  updateCmsPage(id: string, input: UpdateCmsPageRequest): Promise<CmsPageDto> {
+    return requestAdminApi<CmsPageDto>(
+      `/api/v1/admin/cms/pages/${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+        body: input,
+      },
+    );
+  },
+  deleteCmsPage(id: string): Promise<void> {
+    return requestAdminApi<void>(`/api/v1/admin/cms/pages/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+  transitionCmsPage(id: string, input: TransitionCmsStatusRequest): Promise<CmsPageDto> {
+    return requestAdminApi<CmsPageDto>(
+      `/api/v1/admin/cms/pages/${encodeURIComponent(id)}/transition`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    );
+  },
+  async listCmsLookbooks(
+    query: Partial<AdminCmsListQuery> = {},
+  ): Promise<PaginatedResult<CmsLookbookDto>> {
+    const qs = toQueryString({
+      page: query.page,
+      limit: query.limit,
+      status: query.status,
+      q: query.q,
+    });
+    const envelope = await requestAdminEnvelope<CmsLookbookDto[]>(
+      `/api/v1/admin/cms/lookbooks${qs}`,
+    );
+    return {
+      items: envelope.data,
+      meta: {
+        requestId: envelope.meta.requestId,
+        page: envelope.meta.page ?? 1,
+        limit: envelope.meta.limit ?? 20,
+        total: envelope.meta.total ?? envelope.data.length,
+        totalPages: envelope.meta.totalPages ?? 1,
+      },
+    };
+  },
+  createCmsLookbook(input: CreateCmsLookbookRequest): Promise<CmsLookbookDto> {
+    return requestAdminApi<CmsLookbookDto>('/api/v1/admin/cms/lookbooks', {
+      method: 'POST',
+      body: input,
+    });
+  },
+  updateCmsLookbook(id: string, input: UpdateCmsLookbookRequest): Promise<CmsLookbookDto> {
+    return requestAdminApi<CmsLookbookDto>(
+      `/api/v1/admin/cms/lookbooks/${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+        body: input,
+      },
+    );
+  },
+  deleteCmsLookbook(id: string): Promise<void> {
+    return requestAdminApi<void>(`/api/v1/admin/cms/lookbooks/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+  transitionCmsLookbook(
+    id: string,
+    input: TransitionCmsStatusRequest,
+  ): Promise<CmsLookbookDto> {
+    return requestAdminApi<CmsLookbookDto>(
+      `/api/v1/admin/cms/lookbooks/${encodeURIComponent(id)}/transition`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    );
+  },
+  async listCmsJournal(
+    query: Partial<AdminCmsListQuery> = {},
+  ): Promise<PaginatedResult<CmsJournalArticleDto>> {
+    const qs = toQueryString({
+      page: query.page,
+      limit: query.limit,
+      status: query.status,
+      q: query.q,
+    });
+    const envelope = await requestAdminEnvelope<CmsJournalArticleDto[]>(
+      `/api/v1/admin/cms/journal${qs}`,
+    );
+    return {
+      items: envelope.data,
+      meta: {
+        requestId: envelope.meta.requestId,
+        page: envelope.meta.page ?? 1,
+        limit: envelope.meta.limit ?? 20,
+        total: envelope.meta.total ?? envelope.data.length,
+        totalPages: envelope.meta.totalPages ?? 1,
+      },
+    };
+  },
+  createCmsJournal(input: CreateCmsJournalRequest): Promise<CmsJournalArticleDto> {
+    return requestAdminApi<CmsJournalArticleDto>('/api/v1/admin/cms/journal', {
+      method: 'POST',
+      body: input,
+    });
+  },
+  updateCmsJournal(id: string, input: UpdateCmsJournalRequest): Promise<CmsJournalArticleDto> {
+    return requestAdminApi<CmsJournalArticleDto>(
+      `/api/v1/admin/cms/journal/${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+        body: input,
+      },
+    );
+  },
+  deleteCmsJournal(id: string): Promise<void> {
+    return requestAdminApi<void>(`/api/v1/admin/cms/journal/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+  transitionCmsJournal(
+    id: string,
+    input: TransitionCmsStatusRequest,
+  ): Promise<CmsJournalArticleDto> {
+    return requestAdminApi<CmsJournalArticleDto>(
+      `/api/v1/admin/cms/journal/${encodeURIComponent(id)}/transition`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    );
   },
   getHealthLive(): Promise<LiveHealthResponse> {
     return requestAdminApi<LiveHealthResponse>('/api/v1/health/live');

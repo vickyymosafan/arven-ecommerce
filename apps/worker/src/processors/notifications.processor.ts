@@ -21,7 +21,7 @@ export interface NotificationJobData {
   variables?: Record<string, unknown>;
 }
 
-const SUBJECT_BY_EVENT: Readonly<Record<string, string>> = {
+export const SUBJECT_BY_EVENT: Readonly<Record<string, string>> = {
   'auth.verification.requested': 'Confirm your ARVEN email address',
   'auth.password_reset.requested': 'Reset your ARVEN password',
   'auth.password_reset.completed': 'Your ARVEN password was updated',
@@ -31,6 +31,13 @@ const SUBJECT_BY_EVENT: Readonly<Record<string, string>> = {
   'order.ready_to_ship': 'Your ARVEN order is ready to ship',
   'payment.succeeded': 'Payment received for your ARVEN order',
   'payment.failed': 'Payment update for your ARVEN order',
+  'shipment.dispatched': 'Your ARVEN order has shipped',
+  'shipment.delivered': 'Your ARVEN order has been delivered',
+  'return.requested': 'We received your ARVEN return request',
+  'return.approved': 'Your ARVEN return request was approved',
+  'return.rejected': 'Update on your ARVEN return request',
+  'return.received': 'Your ARVEN return package was received',
+  'refund.completed': 'Your ARVEN refund has been completed',
 };
 
 function readStringField(

@@ -8,6 +8,8 @@ import { WORKER_CONFIG } from '../config/worker-config.module.js';
 import { WorkerPrismaService } from '../prisma/worker-prisma.service.js';
 import {
   enqueueOrderNotification,
+  isUuid,
+  readStringField,
   resolveOrderIdFromJob,
   type OutboxJobEnvelope,
 } from './processor-utils.js';
@@ -88,8 +90,46 @@ export class PaymentProcessor extends WorkerHost implements OnModuleInit {
       return { acknowledged: true, eventType };
     }
 
-    if (eventType === 'payment.succeeded' || eventType === 'payment.failed') {
-      const orderId = resolveOrderIdFromJob(data, payload);
+    if (
+      eventType === 'payment.succeeded' ||
+      eventType === 'payment.failed' ||
+      eventType === 'refund.completed'
+    ) {
+      let orderId = resolveOrderIdFromJob(data, payload);
+      const refundId =
+        readStringField(payload, 'refundId') ??
+        (data.aggregateType === 'refund' && isUuid(data.aggregateId)
+          ? data.aggregateId
+          : undefined);
+      let enrichedPayload: Record<string, unknown> | undefined = payload
+        ? { ...payload }
+        : undefined;
+
+      if (eventType === 'refund.completed' && isUuid(refundId) && (!orderId || !enrichedPayload?.['amountIdr'])) {
+        const refund = await this.prisma.client.refund.findUnique({
+          where: { id: refundId },
+          select: {
+            orderId: true,
+            amountIdr: true,
+            status: true,
+            providerRefundId: true,
+          },
+        });
+        if (refund) {
+          orderId = orderId ?? refund.orderId;
+          enrichedPayload = {
+            ...(enrichedPayload ?? {}),
+            refundId,
+            orderId,
+            amountIdr: enrichedPayload?.['amountIdr'] ?? refund.amountIdr.toString(),
+            refundStatus: refund.status,
+            ...(refund.providerRefundId
+              ? { providerRefundId: refund.providerRefundId }
+              : {}),
+          };
+        }
+      }
+
       const notificationResult = await enqueueOrderNotification({
         notificationQueue: this.notificationQueue,
         prisma: this.prisma,
@@ -97,7 +137,7 @@ export class PaymentProcessor extends WorkerHost implements OnModuleInit {
         ...(data.outboxEventId ? { outboxEventId: data.outboxEventId } : {}),
         ...(job.id !== undefined ? { jobId: String(job.id) } : {}),
         ...(orderId ? { orderId } : {}),
-        ...(payload ? { payload } : {}),
+        ...(enrichedPayload ? { payload: enrichedPayload } : {}),
       });
 
       this.logger.info(
@@ -106,6 +146,7 @@ export class PaymentProcessor extends WorkerHost implements OnModuleInit {
           outboxEventId: data.outboxEventId ?? null,
           eventType,
           orderId: orderId ?? null,
+          refundId: refundId ?? null,
           orderNumber: notificationResult.orderNumber ?? null,
           notificationEnqueued: notificationResult.enqueued,
         },

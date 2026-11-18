@@ -2,6 +2,7 @@ export const PAYMENT_EVENT_TYPES = {
   PAYMENT_PENDING: 'payment.pending',
   PAYMENT_SUCCEEDED: 'payment.succeeded',
   PAYMENT_FAILED: 'payment.failed',
+  REFUND_COMPLETED: 'refund.completed',
 } as const;
 
 export interface PaymentPendingEventPayload {
@@ -23,4 +24,15 @@ export interface PaymentOutcomeEventPayload {
   amountIdr: number;
   status: string;
   reason?: string;
+}
+
+export interface RefundCompletedEventPayload {
+  refundId: string;
+  orderId: string;
+  orderNumber: string;
+  paymentId: string;
+  returnId: string | null;
+  amountIdr: number;
+  requestedBy: string;
+  approvedBy: string;
 }

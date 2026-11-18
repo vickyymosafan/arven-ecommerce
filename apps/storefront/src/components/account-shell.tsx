@@ -10,6 +10,7 @@ import { StorefrontShell } from './storefront-shell';
 const accountNavItems = [
   { href: '/account', label: 'Profile Overview' },
   { href: '/account/orders', label: 'Order History' },
+  { href: '/account/returns', label: 'Returns' },
   { href: '/account/addresses', label: 'Address Book' },
   { href: '/account/sessions', label: 'Active Sessions' },
 ] as const;
@@ -29,7 +30,8 @@ function AccountNavLinks({ pathname }: { pathname: string | null }) {
       {accountNavItems.map((item) => {
         const active =
           pathname === item.href ||
-          (item.href === '/account/orders' && Boolean(pathname?.startsWith('/account/orders/')));
+          (item.href === '/account/orders' && Boolean(pathname?.startsWith('/account/orders/'))) ||
+          (item.href === '/account/returns' && Boolean(pathname?.startsWith('/account/returns/')));
         return (
           <Link
             key={item.href}

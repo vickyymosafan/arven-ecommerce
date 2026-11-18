@@ -144,6 +144,88 @@ export function renderWorkerEmailTemplate(input: WorkerTemplateEmailInput): {
           ? 'Selamat datang di ARVEN. Beyond Trends. Beyond Time.'
           : 'Welcome to ARVEN. Beyond Trends. Beyond Time.';
       break;
+    case 'shipment.dispatched': {
+      const orderNum =
+        typeof input.variables['orderNumber'] === 'string'
+          ? input.variables['orderNumber'].trim()
+          : '';
+      const tracking =
+        typeof input.variables['trackingNumber'] === 'string'
+          ? input.variables['trackingNumber'].trim()
+          : '';
+      const trackingSuffix = tracking ? ` (Tracking: ${tracking})` : '';
+      bodyLead =
+        locale === 'id'
+          ? `Pesanan ARVEN Anda${orderNum ? ` ${orderNum}` : ''} telah dikirim${trackingSuffix}.`
+          : `Your ARVEN order${orderNum ? ` ${orderNum}` : ''} has been dispatched${trackingSuffix}.`;
+      break;
+    }
+    case 'shipment.delivered': {
+      const orderNum =
+        typeof input.variables['orderNumber'] === 'string'
+          ? input.variables['orderNumber'].trim()
+          : '';
+      bodyLead =
+        locale === 'id'
+          ? `Pesanan ARVEN Anda${orderNum ? ` ${orderNum}` : ''} telah tiba di alamat tujuan.`
+          : `Your ARVEN order${orderNum ? ` ${orderNum}` : ''} has been delivered.`;
+      break;
+    }
+    case 'return.requested': {
+      const orderNum =
+        typeof input.variables['orderNumber'] === 'string'
+          ? input.variables['orderNumber'].trim()
+          : '';
+      bodyLead =
+        locale === 'id'
+          ? `Kami telah menerima permintaan pengembalian untuk pesanan ARVEN${orderNum ? ` ${orderNum}` : ''}.`
+          : `We have received your return request for ARVEN order${orderNum ? ` ${orderNum}` : ''}.`;
+      break;
+    }
+    case 'return.approved': {
+      const orderNum =
+        typeof input.variables['orderNumber'] === 'string'
+          ? input.variables['orderNumber'].trim()
+          : '';
+      bodyLead =
+        locale === 'id'
+          ? `Permintaan pengembalian Anda untuk pesanan${orderNum ? ` ${orderNum}` : ''} telah disetujui.`
+          : `Your return request for order${orderNum ? ` ${orderNum}` : ''} has been approved.`;
+      break;
+    }
+    case 'return.rejected': {
+      const orderNum =
+        typeof input.variables['orderNumber'] === 'string'
+          ? input.variables['orderNumber'].trim()
+          : '';
+      bodyLead =
+        locale === 'id'
+          ? `Terdapat pembaruan terkait permintaan pengembalian pesanan${orderNum ? ` ${orderNum}` : ''}.`
+          : `There is an update regarding your return request for order${orderNum ? ` ${orderNum}` : ''}.`;
+      break;
+    }
+    case 'return.received': {
+      const orderNum =
+        typeof input.variables['orderNumber'] === 'string'
+          ? input.variables['orderNumber'].trim()
+          : '';
+      bodyLead =
+        locale === 'id'
+          ? `Paket pengembalian untuk pesanan${orderNum ? ` ${orderNum}` : ''} telah diterima oleh atelier kami.`
+          : `Your return package for order${orderNum ? ` ${orderNum}` : ''} has been received by our atelier.`;
+      break;
+    }
+    case 'refund.completed': {
+      const orderNum =
+        typeof input.variables['orderNumber'] === 'string'
+          ? input.variables['orderNumber'].trim()
+          : '';
+      bodyLead =
+        locale === 'id'
+          ? `Pengembalian dana untuk pesanan ARVEN${orderNum ? ` ${orderNum}` : ''} telah berhasil diproses.`
+          : `Your refund for ARVEN order${orderNum ? ` ${orderNum}` : ''} has been completed.`;
+      break;
+    }
     default:
       bodyLead = input.subject;
       break;
