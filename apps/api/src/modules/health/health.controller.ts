@@ -1,5 +1,6 @@
 import { Controller, Get, HttpStatus, Inject } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { HealthLiveResponse, HealthReadyResponse } from '@arven/validators';
 import type { Redis } from 'ioredis';
 import { DomainHttpException } from '../../common/http/index.js';
@@ -29,6 +30,7 @@ async function withTimeout<T>(operation: Promise<T>, timeoutMs: number): Promise
 }
 
 @ApiTags('Health')
+@SkipThrottle()
 @Controller('health')
 export class HealthController {
   constructor(
@@ -36,6 +38,7 @@ export class HealthController {
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
+  @Get()
   @Get('live')
   @Public()
   getLive(): HealthLiveResponse {

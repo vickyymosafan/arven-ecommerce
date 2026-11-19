@@ -76,7 +76,9 @@ export function configureApiApp(
     exposedHeaders: ['X-Request-Id', 'Idempotent-Replayed'],
   });
 
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v1', {
+    exclude: ['health', 'health/{*path}'],
+  });
 
   app.useGlobalPipes(
     new StandardSchemaValidationPipe({
