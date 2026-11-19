@@ -4,15 +4,23 @@ import path from 'node:path';
 import argon2 from 'argon2';
 import {
   AUTH_POLICY,
+  OUTFIT_STUDIO_POLICY,
   PERMISSION_CODES,
   PERMISSION_DESCRIPTIONS,
   ROLE_CODES,
   ROLE_PERMISSION_MATRIX,
+  SHOWROOM_POLICY,
+  type OutfitAnchor,
+  type OutfitSlot,
   type RoleCode,
 } from '@arven/config';
 import {
   DEFAULT_ARVEN_MATERIAL_SLOTS,
+  MANNEQUIN_DEFAULT_MAX_TRIANGLES,
+  MANNEQUIN_LITE_MAX_TRIANGLES,
   buildArvenGarmentGlbBuffer,
+  buildArvenMannequinGlbBuffer,
+  buildArvenShowroomZoneGlbBuffer,
   buildDefaultAssetConfig,
   buildStudioPosterSvg,
   inferSilhouetteFromSlug,
@@ -29,6 +37,7 @@ import {
   InventoryMovementType,
   MediaType,
   ProductStatus,
+  ShowroomZoneStatus,
   UserStatus,
   WarehouseStatus,
   type Prisma,
@@ -104,6 +113,7 @@ export interface ProductSeedDefinition {
   readonly categorySlug: string;
   readonly collectionSlug: string;
   readonly isFeatured: boolean;
+  readonly has3dEnabled?: boolean;
   readonly sku: string;
   readonly size: string;
   readonly color: string;
@@ -136,6 +146,11 @@ export interface SeedDatabaseResult {
   readonly inventoryLevelsCreated: number;
   readonly assets3dUpserted: number;
   readonly presets3dUpserted: number;
+  readonly rigAssetsWritten: number;
+  readonly showroomZonesUpserted: number;
+  readonly showroomHotspotsUpserted: number;
+  readonly outfitPublicPresetsUpserted: number;
+  readonly customerOutfitScenesUpserted: number;
   readonly couponsUpserted: number;
   readonly lookbooksUpserted: number;
   readonly journalArticlesUpserted: number;
@@ -1420,6 +1435,319 @@ export const ARVEN_SEED_PRODUCTS: readonly ProductSeedDefinition[] = [
       primaryHex: '#5E5C54',
     }),
   },
+  {
+    slug: 'atelier-archive-field-jacket',
+    name: 'Atelier Archive Field Jacket',
+    description:
+      'Early archive utility field jacket in waxed cotton twill preserved for editorial showcase and compatibility verification.',
+    material: '100% Waxed Long-Staple Cotton Twill',
+    fit: 'Relaxed Utility Fit',
+    careInstruction: 'Sponge clean with cold water only. Do not dry clean or machine wash.',
+    seoTitle: 'Atelier Archive Field Jacket | ARVEN Archival Outerwear',
+    seoDescription:
+      'Waxed cotton twill archival field jacket featuring tonal storm flap and structured bellows pockets.',
+    categorySlug: 'outerwear',
+    collectionSlug: 'atelier',
+    isFeatured: false,
+    has3dEnabled: false,
+    sku: 'ARV-OUT-002',
+    size: 'M',
+    color: 'Charcoal',
+    colorHex: '#17191B',
+    priceIdr: 1_190_000n,
+    weightGrams: 820,
+    initialStock: 8,
+    additionalVariants: [
+      {
+        sku: 'ARV-OUT-002-L-STN',
+        size: 'L',
+        color: 'Deep Stone',
+        colorHex: '#5E5C54',
+        priceIdr: 1_190_000n,
+        weightGrams: 850,
+        initialStock: 5,
+      },
+    ],
+    media: buildProductSeedMedia({
+      slug: 'atelier-archive-field-jacket',
+      sku: 'ARV-OUT-002',
+      name: 'Atelier Archive Field Jacket',
+      material: '100% Waxed Long-Staple Cotton Twill',
+      fit: 'Relaxed Utility Fit',
+      primaryHex: '#35383A',
+    }),
+  },
+];
+
+export interface OutfitCompatibilitySeedEntry {
+  readonly rigId: string;
+  readonly skeletonVersion: string;
+  readonly slot: OutfitSlot;
+  readonly anchor: OutfitAnchor;
+  readonly incompatibleSlots: readonly OutfitSlot[];
+}
+
+export const ARVEN_SEED_OUTFIT_COMPATIBILITY: Readonly<
+  Record<string, OutfitCompatibilitySeedEntry>
+> = {
+  'essentials-heavyweight-crew-tee': {
+    rigId: OUTFIT_STUDIO_POLICY.RIG_ID,
+    skeletonVersion: OUTFIT_STUDIO_POLICY.SKELETON_VERSION,
+    slot: 'top',
+    anchor: 'spine_upper',
+    incompatibleSlots: [],
+  },
+  'atelier-oversized-poplin-shirt': {
+    rigId: OUTFIT_STUDIO_POLICY.RIG_ID,
+    skeletonVersion: OUTFIT_STUDIO_POLICY.SKELETON_VERSION,
+    slot: 'top',
+    anchor: 'spine_upper',
+    incompatibleSlots: ['outerwear'],
+  },
+  'form-wide-leg-tailored-trouser': {
+    rigId: OUTFIT_STUDIO_POLICY.RIG_ID,
+    skeletonVersion: OUTFIT_STUDIO_POLICY.SKELETON_VERSION,
+    slot: 'bottom',
+    anchor: 'pelvis',
+    incompatibleSlots: [],
+  },
+  'atelier-boxy-wool-overshirt': {
+    rigId: OUTFIT_STUDIO_POLICY.RIG_ID,
+    skeletonVersion: OUTFIT_STUDIO_POLICY.SKELETON_VERSION,
+    slot: 'outerwear',
+    anchor: 'spine_upper',
+    incompatibleSlots: [],
+  },
+  'movement-minimalist-leather-sneaker': {
+    rigId: OUTFIT_STUDIO_POLICY.RIG_ID,
+    skeletonVersion: OUTFIT_STUDIO_POLICY.SKELETON_VERSION,
+    slot: 'footwear',
+    anchor: 'feet',
+    incompatibleSlots: [],
+  },
+  'form-structured-calfskin-crossbody': {
+    rigId: OUTFIT_STUDIO_POLICY.RIG_ID,
+    skeletonVersion: OUTFIT_STUDIO_POLICY.SKELETON_VERSION,
+    slot: 'accessory',
+    anchor: 'shoulder_left',
+    incompatibleSlots: [],
+  },
+  // Deliberately incompatible skeletonVersion ("0.9.0") for Phase 08 gate verification
+  'atelier-archive-field-jacket': {
+    rigId: OUTFIT_STUDIO_POLICY.RIG_ID,
+    skeletonVersion: '0.9.0',
+    slot: 'outerwear',
+    anchor: 'spine_upper',
+    incompatibleSlots: [],
+  },
+};
+
+export interface ShowroomHotspotSeedDefinition {
+  readonly productSlug: string;
+  readonly label: string;
+  readonly position: readonly [number, number, number];
+  readonly sortOrder: number;
+}
+
+export interface ShowroomZoneSeedDefinition {
+  readonly code: string;
+  readonly title: string;
+  readonly description: string;
+  readonly status: ShowroomZoneStatus;
+  readonly sortOrder: number;
+  readonly lightingPreset: 'arven_studio_neutral_v1' | 'arven_warm_editorial_v1';
+  readonly cameraBaseline: {
+    readonly fovDeg: number;
+    readonly position: readonly [number, number, number];
+    readonly target: readonly [number, number, number];
+    readonly minDistance: number;
+    readonly maxDistance: number;
+  };
+  readonly portals: ReadonlyArray<{
+    readonly targetZoneCode: string;
+    readonly label: string;
+    readonly position: readonly [number, number, number];
+  }>;
+  readonly hotspots: readonly ShowroomHotspotSeedDefinition[];
+}
+
+export const ARVEN_SEED_SHOWROOM_ZONES: readonly ShowroomZoneSeedDefinition[] = [
+  {
+    code: 'atrium-entrance',
+    title: 'Atrium',
+    description:
+      'Main architectural entrance gallery introducing foundational ARVEN jersey and crisp cotton shirting.',
+    status: ShowroomZoneStatus.PUBLISHED,
+    sortOrder: 0,
+    lightingPreset: 'arven_studio_neutral_v1',
+    cameraBaseline: {
+      fovDeg: 45,
+      position: [0, 1.8, 5.4],
+      target: [0, 1.0, -1.2],
+      minDistance: 1.5,
+      maxDistance: 10,
+    },
+    portals: [
+      {
+        targetZoneCode: 'tailoring-gallery',
+        label: 'Galeri Tailoring',
+        position: [3.6, 0, -2.4],
+      },
+    ],
+    hotspots: [
+      {
+        productSlug: 'essentials-heavyweight-crew-tee',
+        label: 'Essentials Heavyweight Crew Tee',
+        position: [-2.0, 1.05, -1.2],
+        sortOrder: 0,
+      },
+      {
+        productSlug: 'atelier-oversized-poplin-shirt',
+        label: 'Atelier Oversized Poplin Shirt',
+        position: [1.8, 1.05, -1.2],
+        sortOrder: 1,
+      },
+    ],
+  },
+  {
+    code: 'tailoring-gallery',
+    title: 'Galeri Tailoring',
+    description:
+      'Double-faced virgin wool outerwear, wide-leg pleated trousers, and archival tailoring studies.',
+    status: ShowroomZoneStatus.PUBLISHED,
+    sortOrder: 1,
+    lightingPreset: 'arven_warm_editorial_v1',
+    cameraBaseline: {
+      fovDeg: 45,
+      position: [0, 1.85, 5.6],
+      target: [0, 1.0, -1.4],
+      minDistance: 1.5,
+      maxDistance: 10,
+    },
+    portals: [
+      {
+        targetZoneCode: 'atrium-entrance',
+        label: 'Atrium',
+        position: [-3.8, 0, -2.4],
+      },
+      {
+        targetZoneCode: 'movement-annex',
+        label: 'Annex Movement',
+        position: [3.8, 0, -2.4],
+      },
+    ],
+    hotspots: [
+      {
+        productSlug: 'form-wide-leg-tailored-trouser',
+        label: 'Form Wide-Leg Tailored Trouser',
+        position: [-2.2, 1.05, -1.2],
+        sortOrder: 0,
+      },
+      {
+        productSlug: 'atelier-boxy-wool-overshirt',
+        label: 'Atelier Boxy Wool Overshirt',
+        position: [0.0, 1.05, -1.8],
+        sortOrder: 1,
+      },
+      {
+        productSlug: 'atelier-archive-field-jacket',
+        label: 'Atelier Archive Field Jacket',
+        position: [2.2, 1.05, -1.2],
+        sortOrder: 2,
+      },
+    ],
+  },
+  {
+    code: 'movement-annex',
+    title: 'Annex Movement',
+    description:
+      'Tactile leather court footwear and vegetable-tanned architectural carry pieces built for daily transit.',
+    status: ShowroomZoneStatus.PUBLISHED,
+    sortOrder: 2,
+    lightingPreset: 'arven_studio_neutral_v1',
+    cameraBaseline: {
+      fovDeg: 45,
+      position: [0, 1.75, 5.2],
+      target: [0, 0.95, -1.2],
+      minDistance: 1.4,
+      maxDistance: 10,
+    },
+    portals: [
+      {
+        targetZoneCode: 'tailoring-gallery',
+        label: 'Galeri Tailoring',
+        position: [-3.6, 0, -2.4],
+      },
+    ],
+    hotspots: [
+      {
+        productSlug: 'movement-minimalist-leather-sneaker',
+        label: 'Movement Minimalist Leather Sneaker',
+        position: [-1.8, 0.95, -1.2],
+        sortOrder: 0,
+      },
+      {
+        productSlug: 'form-structured-calfskin-crossbody',
+        label: 'Form Structured Calfskin Crossbody',
+        position: [1.8, 0.95, -1.2],
+        sortOrder: 1,
+      },
+    ],
+  },
+  {
+    code: 'archive-vault',
+    title: 'Arsip',
+    description:
+      'Internal archival studio draft zone reserved for curation before publication.',
+    status: ShowroomZoneStatus.DRAFT,
+    sortOrder: 3,
+    lightingPreset: 'arven_warm_editorial_v1',
+    cameraBaseline: {
+      fovDeg: 45,
+      position: [0, 1.8, 5.2],
+      target: [0, 1.0, -1.2],
+      minDistance: 1.5,
+      maxDistance: 10,
+    },
+    portals: [],
+    hotspots: [
+      {
+        productSlug: 'essentials-heavyweight-crew-tee',
+        label: 'Archive Heavyweight Crew Tee',
+        position: [0.0, 1.05, -1.4],
+        sortOrder: 0,
+      },
+    ],
+  },
+];
+
+export interface OutfitPresetSeedDefinition {
+  readonly title: string;
+  readonly slots: ReadonlyArray<{
+    readonly slot: OutfitSlot;
+    readonly productSlug: string;
+  }>;
+}
+
+export const ARVEN_SEED_PUBLIC_OUTFIT_PRESETS: readonly OutfitPresetSeedDefinition[] = [
+  {
+    title: 'Seragam Atelier',
+    slots: [
+      { slot: 'top', productSlug: 'essentials-heavyweight-crew-tee' },
+      { slot: 'bottom', productSlug: 'form-wide-leg-tailored-trouser' },
+      { slot: 'outerwear', productSlug: 'atelier-boxy-wool-overshirt' },
+      { slot: 'footwear', productSlug: 'movement-minimalist-leather-sneaker' },
+    ],
+  },
+  {
+    title: 'Linen Harian',
+    slots: [
+      { slot: 'top', productSlug: 'atelier-oversized-poplin-shirt' },
+      { slot: 'bottom', productSlug: 'form-wide-leg-tailored-trouser' },
+      { slot: 'footwear', productSlug: 'movement-minimalist-leather-sneaker' },
+      { slot: 'accessory', productSlug: 'form-structured-calfskin-crossbody' },
+    ],
+  },
 ];
 
 interface DevUserBlueprint {
@@ -1747,7 +2075,7 @@ async function seedCatalogAndInventory(tx: PrismaTransactionClient): Promise<{
         status: ProductStatus.PUBLISHED,
         isVisible: true,
         isFeatured: item.isFeatured,
-        has3dEnabled: item.isFeatured,
+        has3dEnabled: item.has3dEnabled ?? item.isFeatured,
         deletedAt: null,
       },
       create: {
@@ -1763,7 +2091,7 @@ async function seedCatalogAndInventory(tx: PrismaTransactionClient): Promise<{
         status: ProductStatus.PUBLISHED,
         isVisible: true,
         isFeatured: item.isFeatured,
-        has3dEnabled: item.isFeatured,
+        has3dEnabled: item.has3dEnabled ?? item.isFeatured,
         publishedAt: now,
       },
       select: { id: true },
@@ -1992,6 +2320,16 @@ async function seedCatalog3DAssets(tx: PrismaTransactionClient): Promise<{
         bytes: liteReport.bytes,
       },
     });
+    const outfitCompatibility = ARVEN_SEED_OUTFIT_COMPATIBILITY[item.slug] ?? null;
+    if (outfitCompatibility) {
+      configDto.outfitCompatibility = {
+        rigId: outfitCompatibility.rigId,
+        skeletonVersion: outfitCompatibility.skeletonVersion,
+        slot: outfitCompatibility.slot,
+        anchor: outfitCompatibility.anchor,
+        incompatibleSlots: [...outfitCompatibility.incompatibleSlots],
+      };
+    }
 
     const existingActive = await tx.product3DAsset.findFirst({
       where: {
@@ -2131,6 +2469,375 @@ async function seedCatalog3DAssets(tx: PrismaTransactionClient): Promise<{
   }
 
   return { assets3dUpserted, presets3dUpserted };
+}
+
+function resolvePublicStorageRoot(): string {
+  const workspaceRoot = resolveSeedWorkspaceRoot();
+  const configuredDir = process.env.STORAGE_LOCAL_DIR?.trim() || '.local/storage';
+  const baseStorageDir = path.isAbsolute(configuredDir)
+    ? configuredDir
+    : path.resolve(workspaceRoot, configuredDir);
+  return path.resolve(baseStorageDir, 'public');
+}
+
+async function seedMannequinRigAssets(): Promise<number> {
+  const publicRoot = resolvePublicStorageRoot();
+  const rigDir = path.resolve(publicRoot, 'rigs', OUTFIT_STUDIO_POLICY.RIG_ID, 'v0001');
+  await mkdir(rigDir, { recursive: true });
+
+  const defaultRig = buildArvenMannequinGlbBuffer({ profile: 'default' });
+  const liteRig = buildArvenMannequinGlbBuffer({ profile: 'lite' });
+
+  const defaultCheck = inspectAndValidateGlbBuffer(defaultRig, { profile: 'default' });
+  const liteCheck = inspectAndValidateGlbBuffer(liteRig, { profile: 'lite' });
+  if (
+    !defaultCheck.valid ||
+    !liteCheck.valid ||
+    defaultCheck.triangleCount > MANNEQUIN_DEFAULT_MAX_TRIANGLES ||
+    liteCheck.triangleCount > MANNEQUIN_LITE_MAX_TRIANGLES
+  ) {
+    throw new Error(
+      `Seed mannequin rig validation failed: ${[...defaultCheck.errors, ...liteCheck.errors].join('; ')}`,
+    );
+  }
+
+  await writeFile(path.resolve(rigDir, 'mannequin.glb'), defaultRig);
+  await writeFile(path.resolve(rigDir, 'mannequin-lite.glb'), liteRig);
+  await writeFile(
+    path.resolve(rigDir, 'poster.svg'),
+    buildStudioPosterSvg({
+      title: 'ARVEN Standard Unisex Mannequin',
+      subtitle: `${OUTFIT_STUDIO_POLICY.RIG_ID} (Skeleton v${OUTFIT_STUDIO_POLICY.SKELETON_VERSION})`,
+      primaryHex: '#35383A',
+    }),
+    'utf8',
+  );
+
+  return 3;
+}
+
+async function seedShowroomZonesAndHotspots(tx: PrismaTransactionClient): Promise<{
+  readonly showroomZonesUpserted: number;
+  readonly showroomHotspotsUpserted: number;
+}> {
+  const publicRoot = resolvePublicStorageRoot();
+  const now = new Date();
+  let showroomZonesUpserted = 0;
+  let showroomHotspotsUpserted = 0;
+
+  for (const zoneDef of ARVEN_SEED_SHOWROOM_ZONES) {
+    const pedestals = zoneDef.hotspots.map((hotspot) => ({
+      label: hotspot.label,
+      position: [hotspot.position[0], 0, hotspot.position[2]] as const,
+    }));
+
+    const defaultGlb = buildArvenShowroomZoneGlbBuffer({
+      code: zoneDef.code,
+      title: zoneDef.title,
+      lightingPreset: zoneDef.lightingPreset,
+      profile: 'default',
+      pedestals,
+      portals: zoneDef.portals.map((p) => ({
+        targetZoneCode: p.targetZoneCode,
+        position: p.position,
+      })),
+    });
+
+    const liteGlb = buildArvenShowroomZoneGlbBuffer({
+      code: zoneDef.code,
+      title: zoneDef.title,
+      lightingPreset: zoneDef.lightingPreset,
+      profile: 'lite',
+      pedestals,
+      portals: zoneDef.portals.map((p) => ({
+        targetZoneCode: p.targetZoneCode,
+        position: p.position,
+      })),
+    });
+
+    if (
+      defaultGlb.byteLength <= 0 ||
+      defaultGlb.byteLength > SHOWROOM_POLICY.MAX_ZONE_BYTES ||
+      liteGlb.byteLength <= 0 ||
+      liteGlb.byteLength > SHOWROOM_POLICY.MAX_LITE_ZONE_BYTES
+    ) {
+      throw new Error(
+        `Showroom zone ${zoneDef.code} exceeded byte cap: default=${defaultGlb.byteLength}, lite=${liteGlb.byteLength}`,
+      );
+    }
+
+    const defaultReport = inspectAndValidateGlbBuffer(defaultGlb, { profile: 'default' });
+    const liteReport = inspectAndValidateGlbBuffer(liteGlb, { profile: 'lite' });
+    if (!defaultReport.valid || !liteReport.valid) {
+      throw new Error(
+        `Showroom zone ${zoneDef.code} GLB validation failed: ${[...defaultReport.errors, ...liteReport.errors].join('; ')}`,
+      );
+    }
+
+    const sceneObjectKey = `showroom/${zoneDef.code}/v0001/scene.glb`;
+    const liteSceneObjectKey = `showroom/${zoneDef.code}/v0001/scene-lite.glb`;
+    const posterKey = `showroom/${zoneDef.code}/v0001/poster.svg`;
+
+    const zoneDir = path.resolve(publicRoot, 'showroom', zoneDef.code, 'v0001');
+    await mkdir(zoneDir, { recursive: true });
+    await writeFile(path.resolve(zoneDir, 'scene.glb'), defaultGlb);
+    await writeFile(path.resolve(zoneDir, 'scene-lite.glb'), liteGlb);
+    await writeFile(
+      path.resolve(zoneDir, 'poster.svg'),
+      buildStudioPosterSvg({
+        title: zoneDef.title,
+        subtitle: zoneDef.description,
+        primaryHex: zoneDef.lightingPreset === 'arven_warm_editorial_v1' ? '#3B3833' : '#17191B',
+      }),
+      'utf8',
+    );
+
+    const publishedAt = zoneDef.status === ShowroomZoneStatus.PUBLISHED ? now : null;
+    const zoneConfig = {
+      lightingPreset: zoneDef.lightingPreset,
+      bakedLighting: true,
+      triangleCount: defaultReport.triangleCount,
+      liteTriangleCount: liteReport.triangleCount,
+      provenance: {
+        sourceType: 'in_house_cad',
+        modelAuthor: 'ARVEN Atelier Architecture Team',
+        modelLicense: 'ARVEN Proprietary Commercial Asset License v1.0',
+        commercialUseVerified: true,
+      },
+    };
+
+    const zone = await tx.showroomZone.upsert({
+      where: { code: zoneDef.code },
+      update: {
+        title: zoneDef.title,
+        description: zoneDef.description,
+        status: zoneDef.status,
+        sortOrder: zoneDef.sortOrder,
+        sceneObjectKey,
+        liteSceneObjectKey,
+        posterKey,
+        sceneBytes: BigInt(defaultGlb.byteLength),
+        liteSceneBytes: BigInt(liteGlb.byteLength),
+        cameraBaseline: zoneDef.cameraBaseline as unknown as Prisma.InputJsonValue,
+        portals: zoneDef.portals as unknown as Prisma.InputJsonValue,
+        config: zoneConfig as unknown as Prisma.InputJsonValue,
+        publishedAt,
+      },
+      create: {
+        code: zoneDef.code,
+        title: zoneDef.title,
+        description: zoneDef.description,
+        status: zoneDef.status,
+        sortOrder: zoneDef.sortOrder,
+        sceneObjectKey,
+        liteSceneObjectKey,
+        posterKey,
+        sceneBytes: BigInt(defaultGlb.byteLength),
+        liteSceneBytes: BigInt(liteGlb.byteLength),
+        cameraBaseline: zoneDef.cameraBaseline as unknown as Prisma.InputJsonValue,
+        portals: zoneDef.portals as unknown as Prisma.InputJsonValue,
+        config: zoneConfig as unknown as Prisma.InputJsonValue,
+        publishedAt,
+      },
+      select: { id: true },
+    });
+    showroomZonesUpserted += 1;
+
+    for (const hotspotDef of zoneDef.hotspots) {
+      const product = await tx.product.findUnique({
+        where: { slug: hotspotDef.productSlug },
+        include: {
+          variants: {
+            where: { deletedAt: null, isActive: true },
+            orderBy: [{ createdAt: 'asc' }],
+            take: 1,
+          },
+        },
+      });
+      if (!product) {
+        throw new Error(`Missing product ${hotspotDef.productSlug} for hotspot in ${zoneDef.code}`);
+      }
+      const primaryVariantId = product.variants[0]?.id ?? null;
+
+      await tx.showroomHotspot.upsert({
+        where: {
+          zoneId_productId: {
+            zoneId: zone.id,
+            productId: product.id,
+          },
+        },
+        update: {
+          variantId: primaryVariantId,
+          label: hotspotDef.label,
+          positionX: hotspotDef.position[0],
+          positionY: hotspotDef.position[1],
+          positionZ: hotspotDef.position[2],
+          sortOrder: hotspotDef.sortOrder,
+          isActive: true,
+        },
+        create: {
+          zoneId: zone.id,
+          productId: product.id,
+          variantId: primaryVariantId,
+          label: hotspotDef.label,
+          positionX: hotspotDef.position[0],
+          positionY: hotspotDef.position[1],
+          positionZ: hotspotDef.position[2],
+          sortOrder: hotspotDef.sortOrder,
+          isActive: true,
+        },
+      });
+      showroomHotspotsUpserted += 1;
+    }
+  }
+
+  return { showroomZonesUpserted, showroomHotspotsUpserted };
+}
+
+async function resolveOutfitSceneItemsFromSlugs(
+  tx: PrismaTransactionClient,
+  slots: ReadonlyArray<{ readonly slot: OutfitSlot; readonly productSlug: string }>,
+): Promise<Array<{
+  readonly slot: OutfitSlot;
+  readonly productId: string;
+  readonly variantId: string;
+  readonly assetId: string;
+  readonly presetId: string | null;
+}>> {
+  const items: Array<{
+    readonly slot: OutfitSlot;
+    readonly productId: string;
+    readonly variantId: string;
+    readonly assetId: string;
+    readonly presetId: string | null;
+  }> = [];
+
+  for (const entry of slots) {
+    const product = await tx.product.findUnique({
+      where: { slug: entry.productSlug },
+      include: {
+        variants: {
+          where: { deletedAt: null, isActive: true },
+          orderBy: [{ createdAt: 'asc' }],
+          take: 1,
+        },
+        assets3d: {
+          where: { isActiveVersion: true, status: AssetStatus.READY },
+          include: {
+            customizationPresets: {
+              where: { isActive: true },
+              orderBy: [{ sortOrder: 'asc' }],
+              take: 1,
+            },
+          },
+          take: 1,
+        },
+      },
+    });
+    const variant = product?.variants[0];
+    const asset = product?.assets3d[0];
+    if (!product || !variant || !asset) {
+      throw new Error(`Missing product/variant/asset for seeded outfit slot ${entry.productSlug}`);
+    }
+
+    items.push({
+      slot: entry.slot,
+      productId: product.id,
+      variantId: variant.id,
+      assetId: asset.id,
+      presetId: asset.customizationPresets[0]?.id ?? null,
+    });
+  }
+
+  return items;
+}
+
+async function seedPublicOutfitPresets(tx: PrismaTransactionClient): Promise<number> {
+  let count = 0;
+
+  for (const presetDef of ARVEN_SEED_PUBLIC_OUTFIT_PRESETS) {
+    const items = await resolveOutfitSceneItemsFromSlugs(tx, presetDef.slots);
+    const existing = await tx.outfitScene.findFirst({
+      where: {
+        userId: null,
+        isPublicPreset: true,
+        title: presetDef.title,
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      await tx.outfitScene.update({
+        where: { id: existing.id },
+        data: {
+          mannequinRigVersion: OUTFIT_STUDIO_POLICY.RIG_ID,
+          items: items as unknown as Prisma.InputJsonValue,
+          isPublicPreset: true,
+        },
+      });
+    } else {
+      await tx.outfitScene.create({
+        data: {
+          userId: null,
+          title: presetDef.title,
+          mannequinRigVersion: OUTFIT_STUDIO_POLICY.RIG_ID,
+          items: items as unknown as Prisma.InputJsonValue,
+          isPublicPreset: true,
+        },
+      });
+    }
+    count += 1;
+  }
+
+  return count;
+}
+
+async function seedCustomerOutfitScene(tx: PrismaTransactionClient): Promise<number> {
+  const devCustomer = await tx.user.findUnique({
+    where: { email: 'customer.dev@arven.local' },
+    select: { id: true },
+  });
+  if (!devCustomer) {
+    return 0;
+  }
+
+  const title = 'Uniform Akhir Pekan';
+  const items = await resolveOutfitSceneItemsFromSlugs(tx, [
+    { slot: 'top', productSlug: 'essentials-heavyweight-crew-tee' },
+    { slot: 'bottom', productSlug: 'form-wide-leg-tailored-trouser' },
+    { slot: 'footwear', productSlug: 'movement-minimalist-leather-sneaker' },
+  ]);
+
+  const existing = await tx.outfitScene.findFirst({
+    where: {
+      userId: devCustomer.id,
+      isPublicPreset: false,
+      title,
+    },
+    select: { id: true },
+  });
+
+  if (existing) {
+    await tx.outfitScene.update({
+      where: { id: existing.id },
+      data: {
+        mannequinRigVersion: OUTFIT_STUDIO_POLICY.RIG_ID,
+        items: items as unknown as Prisma.InputJsonValue,
+      },
+    });
+  } else {
+    await tx.outfitScene.create({
+      data: {
+        userId: devCustomer.id,
+        title,
+        mannequinRigVersion: OUTFIT_STUDIO_POLICY.RIG_ID,
+        items: items as unknown as Prisma.InputJsonValue,
+        isPublicPreset: false,
+      },
+    });
+  }
+
+  return 1;
 }
 
 async function seedDevelopmentUsers(
@@ -2339,36 +3046,50 @@ export async function seedDatabase(
     });
   }
 
-  return withTransaction(prisma, async (tx) => {
-    const rbac = await seedRolesAndPermissions(tx);
-    const catalog = await seedCatalogAndInventory(tx);
-    const assets3d = await seedCatalog3DAssets(tx);
-    const couponsUpserted = await seedCoupons(tx);
-    const cms = await seedCmsContent(tx);
+  return withTransaction(
+    prisma,
+    async (tx) => {
+      const rbac = await seedRolesAndPermissions(tx);
+      const catalog = await seedCatalogAndInventory(tx);
+      const assets3d = await seedCatalog3DAssets(tx);
+      const rigAssetsWritten = await seedMannequinRigAssets();
+      const showroom = await seedShowroomZonesAndHotspots(tx);
+      const outfitPublicPresetsUpserted = await seedPublicOutfitPresets(tx);
+      const couponsUpserted = await seedCoupons(tx);
+      const cms = await seedCmsContent(tx);
 
-    let devUsersSeeded = 0;
-    if (devPasswordHash !== null) {
-      devUsersSeeded = await seedDevelopmentUsers(tx, rbac.roleIdsByCode, devPasswordHash);
-    }
+      let devUsersSeeded = 0;
+      let customerOutfitScenesUpserted = 0;
+      if (devPasswordHash !== null) {
+        devUsersSeeded = await seedDevelopmentUsers(tx, rbac.roleIdsByCode, devPasswordHash);
+        customerOutfitScenesUpserted = await seedCustomerOutfitScene(tx);
+      }
 
-    return {
-      rolesUpserted: rbac.roleIdsByCode.size,
-      permissionsUpserted: rbac.permissionsUpserted,
-      rolePermissionsAssigned: rbac.rolePermissionsAssigned,
-      warehouseCode: catalog.warehouseCode,
-      categoriesUpserted: catalog.categoriesUpserted,
-      collectionsUpserted: catalog.collectionsUpserted,
-      productsUpserted: catalog.productsUpserted,
-      variantsUpserted: catalog.variantsUpserted,
-      mediaUpserted: catalog.mediaUpserted,
-      inventoryLevelsCreated: catalog.inventoryLevelsCreated,
-      assets3dUpserted: assets3d.assets3dUpserted,
-      presets3dUpserted: assets3d.presets3dUpserted,
-      couponsUpserted,
-      lookbooksUpserted: cms.lookbooksUpserted,
-      journalArticlesUpserted: cms.journalArticlesUpserted,
-      pagesUpserted: cms.pagesUpserted,
-      devUsersSeeded,
-    };
-  });
+      return {
+        rolesUpserted: rbac.roleIdsByCode.size,
+        permissionsUpserted: rbac.permissionsUpserted,
+        rolePermissionsAssigned: rbac.rolePermissionsAssigned,
+        warehouseCode: catalog.warehouseCode,
+        categoriesUpserted: catalog.categoriesUpserted,
+        collectionsUpserted: catalog.collectionsUpserted,
+        productsUpserted: catalog.productsUpserted,
+        variantsUpserted: catalog.variantsUpserted,
+        mediaUpserted: catalog.mediaUpserted,
+        inventoryLevelsCreated: catalog.inventoryLevelsCreated,
+        assets3dUpserted: assets3d.assets3dUpserted,
+        presets3dUpserted: assets3d.presets3dUpserted,
+        rigAssetsWritten,
+        showroomZonesUpserted: showroom.showroomZonesUpserted,
+        showroomHotspotsUpserted: showroom.showroomHotspotsUpserted,
+        outfitPublicPresetsUpserted,
+        customerOutfitScenesUpserted,
+        couponsUpserted,
+        lookbooksUpserted: cms.lookbooksUpserted,
+        journalArticlesUpserted: cms.journalArticlesUpserted,
+        pagesUpserted: cms.pagesUpserted,
+        devUsersSeeded,
+      };
+    },
+    { timeout: 60_000 },
+  );
 }

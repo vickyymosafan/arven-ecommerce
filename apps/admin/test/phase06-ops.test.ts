@@ -129,6 +129,8 @@ describe('Phase 06 Admin Operations helpers & RBAC gates', () => {
       '/catalog/products',
       '/catalog/categories',
       '/catalog/collections',
+      '/experience/showroom',
+      '/experience/outfit-studio',
       '/inventory',
       '/orders',
       '/returns',

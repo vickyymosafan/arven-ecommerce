@@ -11,6 +11,14 @@
     "./glb": {
       "types": "./dist/glb-binary.d.ts",
       "import": "./dist/glb-binary.js"
+    },
+    "./showroom": {
+      "types": "./dist/showroom.d.ts",
+      "import": "./dist/showroom.js"
+    },
+    "./outfit-studio": {
+      "types": "./dist/outfit-studio.d.ts",
+      "import": "./dist/outfit-studio.js"
     }
   },
   "scripts": {

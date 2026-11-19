@@ -14,6 +14,7 @@ import type {
   AdminOrderDetailDto,
   AdminOrderSummaryDto,
   AdminOrdersQuery,
+  AdminOutfitGarmentDiagnosticDto,
   AdminProduct3DAssetDto,
   AdminProductDetailDto,
   AdminProductSummaryDto,
@@ -22,6 +23,8 @@ import type {
   AdminRefundsQuery,
   AdminReturnsQuery,
   AdminSalesAnalyticsDto,
+  AdminShowroomHotspotDto,
+  AdminShowroomZoneDto,
   AdminStockMovementResultDto,
   AdminStockReservationDto,
   AdminStockReservationsQuery,
@@ -48,6 +51,8 @@ import type {
   CustomizationPresetDto,
   MfaSetupResponse,
   MfaVerifyRequest,
+  OutfitSceneDto,
+  OutfitStudioCatalogDto,
   Presign3DAssetResponseDto,
   ProductMediaDto,
   ReceiveReturnRequest,
@@ -73,11 +78,19 @@ import type {
   AssignUserRolesRequest,
   Confirm3DAssetRequest,
   CreateCustomizationPresetRequest,
+  CreatePublicOutfitPresetRequest,
   CreateRoleRequest,
+  CreateShowroomHotspotRequest,
+  CreateShowroomZoneRequest,
   Presign3DAssetRequest,
   Publish3DAssetRequest,
+  SetAssetOutfitCompatibilityRequest,
+  TransitionShowroomZoneRequest,
   UpdateCustomizationPresetRequest,
+  UpdatePublicOutfitPresetRequest,
   UpdateRoleRequest,
+  UpdateShowroomHotspotRequest,
+  UpdateShowroomZoneRequest,
   UpdateUserStatusRequest,
   UploadStaging3DAssetRequest,
 } from '@arven/validators';
@@ -1228,7 +1241,7 @@ export const adminApi = {
       method: 'DELETE',
     });
   },
-  transitionCmsJournal(
+    transitionCmsJournal(
     id: string,
     input: TransitionCmsStatusRequest,
   ): Promise<CmsJournalArticleDto> {
@@ -1239,6 +1252,135 @@ export const adminApi = {
         body: input,
       },
     );
+  },
+  listShowroomZones(): Promise<AdminShowroomZoneDto[]> {
+    return requestAdminApi<AdminShowroomZoneDto[]>('/api/v1/admin/showroom/zones');
+  },
+  getShowroomZone(id: string): Promise<AdminShowroomZoneDto> {
+    return requestAdminApi<AdminShowroomZoneDto>(
+      `/api/v1/admin/showroom/zones/${encodeURIComponent(id)}`,
+    );
+  },
+  createShowroomZone(input: CreateShowroomZoneRequest): Promise<AdminShowroomZoneDto> {
+    return requestAdminApi<AdminShowroomZoneDto>('/api/v1/admin/showroom/zones', {
+      method: 'POST',
+      body: input,
+    });
+  },
+  updateShowroomZone(
+    id: string,
+    input: UpdateShowroomZoneRequest,
+  ): Promise<AdminShowroomZoneDto> {
+    return requestAdminApi<AdminShowroomZoneDto>(
+      `/api/v1/admin/showroom/zones/${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+        body: input,
+      },
+    );
+  },
+  transitionShowroomZone(
+    id: string,
+    input: TransitionShowroomZoneRequest,
+  ): Promise<AdminShowroomZoneDto> {
+    return requestAdminApi<AdminShowroomZoneDto>(
+      `/api/v1/admin/showroom/zones/${encodeURIComponent(id)}/transition`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    );
+  },
+  createShowroomHotspot(
+    zoneId: string,
+    input: CreateShowroomHotspotRequest,
+  ): Promise<AdminShowroomHotspotDto> {
+    return requestAdminApi<AdminShowroomHotspotDto>(
+      `/api/v1/admin/showroom/zones/${encodeURIComponent(zoneId)}/hotspots`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    );
+  },
+  updateShowroomHotspot(
+    hotspotId: string,
+    input: UpdateShowroomHotspotRequest,
+  ): Promise<AdminShowroomHotspotDto> {
+    return requestAdminApi<AdminShowroomHotspotDto>(
+      `/api/v1/admin/showroom/hotspots/${encodeURIComponent(hotspotId)}`,
+      {
+        method: 'PATCH',
+        body: input,
+      },
+    );
+  },
+  deleteShowroomHotspot(hotspotId: string): Promise<void> {
+    return requestAdminApi<void>(
+      `/api/v1/admin/showroom/hotspots/${encodeURIComponent(hotspotId)}`,
+      {
+        method: 'DELETE',
+      },
+    );
+  },
+  listOutfitStudioGarments(): Promise<AdminOutfitGarmentDiagnosticDto[]> {
+    return requestAdminApi<AdminOutfitGarmentDiagnosticDto[]>(
+      '/api/v1/admin/outfit-studio/garments',
+    );
+  },
+  setAssetOutfitCompatibility(
+    assetId: string,
+    input: SetAssetOutfitCompatibilityRequest,
+  ): Promise<AdminOutfitGarmentDiagnosticDto> {
+    return requestAdminApi<AdminOutfitGarmentDiagnosticDto>(
+      `/api/v1/admin/3d-assets/${encodeURIComponent(assetId)}/outfit-compatibility`,
+      {
+        method: 'PUT',
+        body: input,
+      },
+    );
+  },
+  removeAssetOutfitCompatibility(assetId: string): Promise<void> {
+    return requestAdminApi<void>(
+      `/api/v1/admin/3d-assets/${encodeURIComponent(assetId)}/outfit-compatibility`,
+      {
+        method: 'DELETE',
+      },
+    );
+  },
+  listOutfitStudioPresets(): Promise<OutfitSceneDto[]> {
+    return requestAdminApi<OutfitSceneDto[]>('/api/v1/admin/outfit-studio/presets');
+  },
+  createOutfitStudioPreset(
+    input: CreatePublicOutfitPresetRequest,
+  ): Promise<OutfitSceneDto> {
+    return requestAdminApi<OutfitSceneDto>('/api/v1/admin/outfit-studio/presets', {
+      method: 'POST',
+      body: input,
+    });
+  },
+  updateOutfitStudioPreset(
+    id: string,
+    input: UpdatePublicOutfitPresetRequest,
+  ): Promise<OutfitSceneDto> {
+    return requestAdminApi<OutfitSceneDto>(
+      `/api/v1/admin/outfit-studio/presets/${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+        body: input,
+      },
+    );
+  },
+  deleteOutfitStudioPreset(id: string): Promise<void> {
+    return requestAdminApi<void>(
+      `/api/v1/admin/outfit-studio/presets/${encodeURIComponent(id)}`,
+      {
+        method: 'DELETE',
+      },
+    );
+  },
+  getPublicOutfitStudioCatalog(): Promise<OutfitStudioCatalogDto> {
+    return requestAdminApi<OutfitStudioCatalogDto>('/api/v1/outfit-studio/catalog');
   },
   getHealthLive(): Promise<LiveHealthResponse> {
     return requestAdminApi<LiveHealthResponse>('/api/v1/health/live');

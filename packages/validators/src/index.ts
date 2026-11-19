@@ -8,6 +8,7 @@ export * from './checkout.js';
 export * from './cms.js';
 export * from './common.js';
 export * from './envelope.js';
+export * from './experiences.js';
 export * from './health.js';
 export * from './inventory.js';
 export * from './returns.js';

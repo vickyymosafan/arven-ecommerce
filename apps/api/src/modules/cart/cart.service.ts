@@ -6,6 +6,8 @@ import {
   type RuntimeConfig,
 } from '@arven/config';
 import type {
+  AddOutfitToCartItemResultDto,
+  AddOutfitToCartResultDto,
   CartAvailabilityIssueCode,
   CartDto,
   CartItemDto,
@@ -22,6 +24,7 @@ import type {
   AddCartItemRequest,
   CartItemConfiguration,
   CartStatusInput,
+  OutfitSlotInput,
   StockStatus,
   UpdateCartItemRequest,
 } from '@arven/validators';
@@ -620,6 +623,180 @@ export class CartService {
     }
 
     return cartDto;
+  }
+
+  async addOutfitItemsBatch(
+    req: HttpRequestLike,
+    res: HttpResponseLike,
+    items: ReadonlyArray<{
+      readonly slot: OutfitSlotInput;
+      readonly variantId: string;
+      readonly productId: string;
+      readonly presetId?: string | null;
+    }>,
+  ): Promise<AddOutfitToCartResultDto> {
+    const userId = await this.resolveOptionalCustomerUserId(req);
+    const rawGuestToken = userId ? undefined : this.readGuestCartCookie(req);
+    let mintedGuestToken: string | null = null;
+
+    const batchResult = await this.prisma.withTransaction(async (tx) => {
+      let cartId: string;
+
+      if (userId) {
+        const customerCart = await this.findOrCreateCustomerCart(userId, tx);
+        cartId = customerCart.id;
+      } else {
+        let existingGuestCart: { id: string } | null = null;
+        if (rawGuestToken) {
+          const guestTokenHash = this.tokenCrypto.sha256Hex(rawGuestToken);
+          existingGuestCart = await tx.cart.findFirst({
+            where: { guestTokenHash, status: CartStatus.ACTIVE },
+            select: { id: true },
+          });
+        }
+
+        if (existingGuestCart) {
+          cartId = existingGuestCart.id;
+        } else {
+          const newRawToken = this.tokenCrypto.generateOpaqueToken(
+            CART_POLICY.GUEST_TOKEN_BYTES,
+          );
+          const newTokenHash = this.tokenCrypto.sha256Hex(newRawToken);
+          const createdGuestCart = await tx.cart.create({
+            data: {
+              guestTokenHash: newTokenHash,
+              status: CartStatus.ACTIVE,
+              currency: 'IDR',
+            },
+            select: { id: true },
+          });
+          cartId = createdGuestCart.id;
+          mintedGuestToken = newRawToken;
+        }
+      }
+
+      const results: AddOutfitToCartItemResultDto[] = [];
+      let anyAdded = false;
+
+      for (const item of items) {
+        const variant = await tx.productVariant.findFirst({
+          where: {
+            id: item.variantId,
+            deletedAt: null,
+          },
+          include: VARIANT_AVAILABILITY_INCLUDE,
+        });
+
+        if (
+          !variant ||
+          variant.product.deletedAt !== null ||
+          variant.product.status !== ProductStatus.PUBLISHED ||
+          !variant.product.isVisible ||
+          !variant.isActive ||
+          variant.productId !== item.productId
+        ) {
+          results.push({
+            slot: item.slot,
+            variantId: item.variantId,
+            productId: variant?.productId ?? item.productId,
+            status: 'INACTIVE',
+            reason: 'Selected garment variant is inactive or unavailable for purchase.',
+          });
+          continue;
+        }
+
+        const stock = computeAggregateStock(variant.inventoryLevels);
+        const normalizedConfig = canonicalizeConfiguration(
+          item.presetId ? { outfitPresetId: item.presetId } : {},
+        );
+        const configurationHash = this.tokenCrypto.sha256Hex(
+          canonicalJsonStringify(normalizedConfig),
+        );
+
+        const existingLine = await tx.cartItem.findUnique({
+          where: {
+            cartId_variantId_configurationHash: {
+              cartId,
+              variantId: variant.id,
+              configurationHash,
+            },
+          },
+          select: {
+            id: true,
+            quantity: true,
+          },
+        });
+
+        const nextQuantity = (existingLine?.quantity ?? 0) + 1;
+
+        if (stock.availableQty <= 0 || nextQuantity > stock.availableQty) {
+          results.push({
+            slot: item.slot,
+            variantId: variant.id,
+            productId: variant.productId,
+            status: 'OUT_OF_STOCK',
+            reason:
+              stock.availableQty <= 0
+                ? 'Selected variant is currently out of stock.'
+                : `Only ${stock.availableQty} unit(s) currently available in stock.`,
+          });
+          continue;
+        }
+
+        if (nextQuantity > CART_POLICY.MAX_LINE_QUANTITY) {
+          results.push({
+            slot: item.slot,
+            variantId: variant.id,
+            productId: variant.productId,
+            status: 'OUT_OF_STOCK',
+            reason: `Maximum quantity per cart line (${CART_POLICY.MAX_LINE_QUANTITY}) reached.`,
+          });
+          continue;
+        }
+
+        if (existingLine) {
+          await tx.cartItem.update({
+            where: { id: existingLine.id },
+            data: { quantity: nextQuantity },
+          });
+        } else {
+          await tx.cartItem.create({
+            data: {
+              cartId,
+              variantId: variant.id,
+              quantity: nextQuantity,
+              configuration: normalizedConfig as Prisma.InputJsonValue,
+              configurationHash,
+            },
+          });
+        }
+
+        anyAdded = true;
+        results.push({
+          slot: item.slot,
+          variantId: variant.id,
+          productId: variant.productId,
+          status: 'ADDED',
+          reason: null,
+        });
+      }
+
+      if (anyAdded) {
+        await tx.cart.update({
+          where: { id: cartId },
+          data: { updatedAt: new Date() },
+        });
+      }
+
+      const cart = await this.loadHydratedCartById(cartId, tx);
+      return { cart, results };
+    });
+
+    if (mintedGuestToken) {
+      this.setGuestCartCookie(res, mintedGuestToken);
+    }
+
+    return batchResult;
   }
 
   async updateItem(

@@ -330,3 +330,37 @@ export const AUTH_POLICY = {
   ADMIN_IDLE_TIMEOUT_MINUTES: 30,
   TOTP_ISSUER: 'ARVEN Admin',
 } as const;
+
+export const OUTFIT_SLOTS = ['top', 'bottom', 'outerwear', 'footwear', 'accessory'] as const;
+export type OutfitSlot = (typeof OUTFIT_SLOTS)[number];
+
+export const OUTFIT_ANCHORS = [
+  'spine_upper',
+  'pelvis',
+  'feet',
+  'shoulder_left',
+  'shoulder_right',
+  'wrist_left',
+] as const;
+export type OutfitAnchor = (typeof OUTFIT_ANCHORS)[number];
+
+export const OUTFIT_STUDIO_POLICY = {
+  RIG_ID: 'arven_mannequin_unisex_v1',
+  SKELETON_VERSION: '1.0.0',
+  SLOTS: OUTFIT_SLOTS,
+  ANCHORS: {
+    top: ['spine_upper'],
+    outerwear: ['spine_upper'],
+    bottom: ['pelvis'],
+    footwear: ['feet'],
+    accessory: ['shoulder_left', 'shoulder_right', 'wrist_left'],
+  } as const satisfies Record<OutfitSlot, readonly OutfitAnchor[]>,
+  MAX_SAVED_OUTFITS_PER_USER: 50,
+  TITLE_MAX: 160,
+} as const;
+
+export const SHOWROOM_POLICY = {
+  MAX_ZONE_BYTES: 6_291_456,
+  MAX_LITE_ZONE_BYTES: 3_670_016,
+  MAX_RESIDENT_ZONES: 2,
+} as const;

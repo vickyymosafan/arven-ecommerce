@@ -95,7 +95,7 @@
 | `403` | Authenticated actor lacks RBAC permission, resource ownership, or valid CSRF | `FORBIDDEN`, `CSRF_INVALID`, `RESOURCE_OWNERSHIP_DENIED` |
 | `404` | Resource missing or intentionally hidden per access/publish policy | `RESOURCE_NOT_FOUND` |
 | `409` | State transition conflict, stock race, duplicate key, or idempotency mismatch | `VARIANT_OUT_OF_STOCK`, `INVALID_STATE_TRANSITION`, `IDEMPOTENCY_CONFLICT`, `IDEMPOTENCY_IN_PROGRESS`, `DUPLICATE_RESOURCE` |
-| `422` | Syntactically valid input rejected by domain business rule | `COUPON_INVALID`, `QUOTE_EXPIRED`, `PUBLISH_GATE_UNMET`, `INCOMPATIBLE_OUTFIT_SLOT`, `RETURN_WINDOW_EXPIRED` |
+| `422` | Syntactically valid input rejected by domain business rule | `COUPON_INVALID`, `QUOTE_EXPIRED`, `PUBLISH_GATE_UNMET`, `INCOMPATIBLE_OUTFIT_SLOT`, `OUTFIT_LIMIT_REACHED`, `RETURN_WINDOW_EXPIRED` |
 | `429` | Rate limit threshold exceeded | `RATE_LIMITED` |
 | `500` | Unexpected internal error | `INTERNAL_ERROR` |
 | `503` | Upstream payment/shipping provider or dependency unavailable | `PROVIDER_UNAVAILABLE`, `SERVICE_UNAVAILABLE` |
@@ -245,9 +245,13 @@ ARVEN maintains a **single contract source of truth** without duplicating `class
 | `GET` | `/collections/:slug` | Public | Collection details + ordered products |
 | `GET` | `/products/:id/3d-assets` | Public | Active `READY` `Product3DAsset` manifest + CDN URLs + `customization_presets` (`404` if unpublished) |
 | `GET` | `/3d-assets/:id/metadata` | Public | Published 3D asset metadata (`coordinateSystem`, `materialSlots`, `qualityProfiles`, `posterKey`) |
-| `GET` | `/showroom/scenes` | Public | Published showroom zone configs, camera baselines & product hotspots |
-| `GET` | `/outfit-studio/catalog` | Public | Compatible `READY` garment 3D assets + mannequin rig constraints |
-| `GET/POST/PATCH/DELETE` | `/outfit-scenes`, `/outfit-scenes/:id` | Self (ownership check) | Save/update/delete user outfit configurations (stores IDs/presets only; server hydrates live prices on read) |
+| `GET` | `/showroom/scenes` | Public | Published showroom zones (`PUBLISHED` only), camera baselines, portals, and active hotspots with live `fromPriceIdr` |
+| `GET` | `/showroom/zones/:code/scene`, `/scene-lite`, `/poster` | Public | Binary GLB / poster streams for `PUBLISHED` zones (`@SkipEnvelope()`, `X-Content-Type-Options: nosniff`, `Cache-Control: public, max-age=31536000, immutable`; `404` for `DRAFT`/`ARCHIVED`) |
+| `GET` | `/outfit-studio/catalog` | Public | Pinned unisex mannequin rig contract (`arven_mannequin_unisex_v1`, `1.0.0`), compatible `READY` garments with live variant prices, and curated public presets |
+| `GET` | `/outfit-studio/rigs/:rigId/model`, `/model-lite`, `/poster` | Public | Binary GLB / poster streams for pinned mannequin rig (`@SkipEnvelope()`, `X-Content-Type-Options: nosniff`, `Cache-Control: public, max-age=31536000, immutable`; `404` for unknown rig) |
+| `POST` | `/outfit-studio/validate` | Public (CSRF + throttled) | Stateless compatibility check (`200 { valid: true }` or `422 INCOMPATIBLE_OUTFIT_SLOT` with `RIG_MISMATCH \| SKELETON_VERSION_MISMATCH \| SLOT_MISMATCH \| ANCHOR_INVALID \| LAYER_CONFLICT \| DUPLICATE_SLOT \| GARMENT_UNAVAILABLE \| VARIANT_PRODUCT_MISMATCH \| PRESET_ASSET_MISMATCH`) |
+| `POST` | `/outfit-studio/cart-items` | Guest / User (CSRF + throttled) | Re-validates compatibility, resolves live variant prices/stock inside a `CartService` transaction, and returns per-slot `ADDED \| OUT_OF_STOCK \| INACTIVE` results |
+| `GET/POST/PATCH/DELETE` | `/outfit-scenes`, `/outfit-scenes/:id` | Customer (`@CustomerAuth()`, ownership-scoped) | Customer saved outfits (max `50` per user -> `422 OUTFIT_LIMIT_REACHED`; stores IDs/presets only; hydrates live prices & `stale` flags on read; cross-user IDOR -> `404`) |
 
 ### 8.5 Cart
 | Method | Route | Access | Notes |
@@ -290,6 +294,8 @@ ARVEN maintains a **single contract source of truth** without duplicating `class
 | Categories/Coll. | `CRUD /admin/categories`, `CRUD /admin/collections` | `product.write` | |
 | 3D Assets | `POST /admin/products/:id/3d-assets/presign`, `POST .../confirm`, `POST /admin/3d-assets/:id/publish` | `asset.upload`, `asset.publish` | Presigned upload -> triggers `3d-assets` worker validation -> only `READY` can publish |
 | Presets | `CRUD /admin/3d-assets/:id/presets` | `asset.upload` | Material/color slot validation |
+| Showroom | `GET /admin/showroom/zones`, `GET /admin/showroom/zones/:id`, `POST /admin/showroom/zones`, `PATCH /admin/showroom/zones/:id`, `POST /admin/showroom/zones/:id/transition`, `POST /admin/showroom/zones/:id/hotspots`, `PATCH/DELETE /admin/showroom/hotspots/:id` | `asset.read` (`GET`), `asset.publish` (mutations) | Deterministic server-generated zone GLB (`<= 6 MB` / `<= 3.5 MB`); `DRAFT -> PUBLISHED -> ARCHIVED -> DRAFT`; `@AuditAction` |
+| Outfit Studio | `GET /admin/outfit-studio/garments`, `PUT/DELETE /admin/3d-assets/:id/outfit-compatibility`, `GET/POST/PATCH/DELETE /admin/outfit-studio/presets` | `asset.read` (`GET`), `asset.publish` (mutations) | Compatibility diagnostics, rig/slot/anchor config, curated public presets (`user_id NULL`); `@AuditAction` |
 | Inventory | `GET /admin/inventory/levels`, `GET /admin/inventory/movements`, `GET /admin/inventory/reservations` | `inventory.read` | Cursor-paginated ledger |
 | Stock Ops | `POST /admin/stock-movements` | `inventory.receive` / `inventory.adjust` (**Idempotency Required**) | `RECEIPT` or `ADJUSTMENT` with mandatory reason + `audit_logs` |
 | Orders | `GET /admin/orders`, `GET /admin/orders/:id`, `POST /admin/orders/:id/transition` | `order.read` / `order.read.limited`, `order.fulfill`, `order.cancel` | Validated state transitions only |

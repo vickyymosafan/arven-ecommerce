@@ -4,11 +4,15 @@ import {
   CHECKOUT_POLICY,
   DOMAIN_EVENTS,
   HTTP_HEADERS,
+  OUTFIT_ANCHORS,
+  OUTFIT_SLOTS,
+  OUTFIT_STUDIO_POLICY,
   PERMISSION_CODES,
   ROLE_CODES,
   ROLE_PERMISSION_MATRIX,
   SHIPPING_POLICY,
   SHIPPING_PROVIDERS,
+  SHOWROOM_POLICY,
   validatePublicFrontendConfig,
   validateRuntimeConfig,
 } from '../src/index.js';
@@ -80,6 +84,37 @@ describe('@arven/config constants', () => {
     expect(SHIPPING_PROVIDERS).toEqual(['jne-adapter', 'sicepat-adapter']);
     expect(SHIPPING_POLICY.DEFAULT_WEIGHT_GRAMS_FALLBACK).toBe(500);
     expect(SHIPPING_POLICY.COURIER_ADAPTERS).toEqual(['jne-adapter', 'sicepat-adapter']);
+  });
+
+  it('exposes Phase 08 OUTFIT_STUDIO_POLICY and SHOWROOM_POLICY constants without changing RBAC or queues', () => {
+    expect(OUTFIT_SLOTS).toEqual(['top', 'bottom', 'outerwear', 'footwear', 'accessory']);
+    expect(OUTFIT_ANCHORS).toEqual([
+      'spine_upper',
+      'pelvis',
+      'feet',
+      'shoulder_left',
+      'shoulder_right',
+      'wrist_left',
+    ]);
+    expect(OUTFIT_STUDIO_POLICY).toEqual({
+      RIG_ID: 'arven_mannequin_unisex_v1',
+      SKELETON_VERSION: '1.0.0',
+      SLOTS: ['top', 'bottom', 'outerwear', 'footwear', 'accessory'],
+      ANCHORS: {
+        top: ['spine_upper'],
+        outerwear: ['spine_upper'],
+        bottom: ['pelvis'],
+        footwear: ['feet'],
+        accessory: ['shoulder_left', 'shoulder_right', 'wrist_left'],
+      },
+      MAX_SAVED_OUTFITS_PER_USER: 50,
+      TITLE_MAX: 160,
+    });
+    expect(SHOWROOM_POLICY).toEqual({
+      MAX_ZONE_BYTES: 6_291_456,
+      MAX_LITE_ZONE_BYTES: 3_670_016,
+      MAX_RESIDENT_ZONES: 2,
+    });
   });
 });
 

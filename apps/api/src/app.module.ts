@@ -15,6 +15,7 @@ import { CatalogModule } from './modules/catalog/catalog.module.js';
 import { CheckoutModule } from './modules/checkout/checkout.module.js';
 import { CmsModule } from './modules/cms/cms.module.js';
 import { CouponsModule } from './modules/coupons/coupons.module.js';
+import { ExperiencesModule } from './modules/experiences/experiences.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { InventoryModule } from './modules/inventory/inventory.module.js';
 import { OrdersModule } from './modules/orders/orders.module.js';
@@ -46,6 +47,7 @@ export class AppModule implements NestModule {
         CheckoutModule,
         CmsModule,
         CouponsModule,
+        ExperiencesModule,
         HealthModule,
         InventoryModule,
         OrdersModule,

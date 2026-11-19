@@ -12,7 +12,7 @@ datasource db {
 }
 
 // =============================================================================
-// Canonical Enums (25 Enums — docs/DATA_MODEL.md §3 + AMB-01, AMB-03, AMB-06)
+// Canonical Enums (26 Enums — docs/DATA_MODEL.md §3 + AMB-01, AMB-03, AMB-06, Phase 08)
 // =============================================================================
 
 enum UserStatus {
@@ -206,6 +206,12 @@ enum IdempotencyStatus {
   FAILED
 }
 
+enum ShowroomZoneStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 // =============================================================================
 // Domain 1: Identity & RBAC
 // =============================================================================
@@ -232,6 +238,7 @@ model User {
   assignedUserRoles    UserRole[]           @relation("RoleAssignedBy")
   addresses            Address[]
   created3dAssets      Product3DAsset[]
+  createdShowroomZones ShowroomZone[]
   outfitScenes         OutfitScene[]
   inventoryMovements   InventoryMovement[]
   carts                Cart[]
@@ -428,6 +435,7 @@ model Product {
   media                ProductMedia[]
   assets3d             Product3DAsset[]
   customizationPresets CustomizationPreset[]
+  showroomHotspots     ShowroomHotspot[]
   wishlistItems        WishlistItem[]
   reviews              Review[]
 
@@ -502,6 +510,7 @@ model ProductVariant {
   media                ProductMedia[]
   assets3d             Product3DAsset[]
   customizationPresets CustomizationPreset[]
+  showroomHotspots     ShowroomHotspot[]
   inventoryLevels      InventoryLevel[]
   inventoryMovements   InventoryMovement[]
   stockReservations    StockReservation[]
@@ -624,6 +633,56 @@ model OutfitScene {
   @@index([userId, updatedAt(sort: Desc)])
   @@index([isPublicPreset])
   @@map("outfit_scenes")
+}
+
+model ShowroomZone {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code               String             @unique @db.VarChar(64)
+  title              String             @db.VarChar(160)
+  description        String?            @db.Text
+  status             ShowroomZoneStatus @default(DRAFT)
+  sortOrder          Int                @default(0) @map("sort_order")
+  sceneObjectKey     String             @unique @map("scene_object_key") @db.VarChar(512)
+  liteSceneObjectKey String?            @map("lite_scene_object_key") @db.VarChar(512)
+  posterKey          String             @map("poster_key") @db.VarChar(512)
+  sceneBytes         BigInt             @map("scene_bytes") @db.BigInt
+  liteSceneBytes     BigInt?            @map("lite_scene_bytes") @db.BigInt
+  cameraBaseline     Json               @default("{}") @map("camera_baseline") @db.JsonB
+  portals            Json               @default("[]") @db.JsonB
+  config             Json               @default("{}") @db.JsonB
+  publishedAt        DateTime?          @map("published_at") @db.Timestamptz(3)
+  createdBy          String?            @map("created_by") @db.Uuid
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  creator  User?             @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  hotspots ShowroomHotspot[]
+
+  @@index([status, sortOrder])
+  @@map("showroom_zones")
+}
+
+model ShowroomHotspot {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  zoneId    String   @map("zone_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  variantId String?  @map("variant_id") @db.Uuid
+  label     String   @db.VarChar(120)
+  positionX Float    @map("position_x") @db.DoublePrecision
+  positionY Float    @map("position_y") @db.DoublePrecision
+  positionZ Float    @map("position_z") @db.DoublePrecision
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  zone    ShowroomZone    @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  product Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@unique([zoneId, productId])
+  @@index([zoneId, isActive, sortOrder])
+  @@map("showroom_hotspots")
 }
 
 // =============================================================================

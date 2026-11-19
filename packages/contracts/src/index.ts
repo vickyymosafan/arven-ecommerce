@@ -1,5 +1,7 @@
 import type {
   AddCartItemRequest,
+  AddOutfitCartSlotInput,
+  AddOutfitToCartRequest,
   AddressResponse,
   AdminCmsListQuery,
   AdminCouponsQuery,
@@ -49,10 +51,14 @@ import type {
   CreateCustomerReturnRequest,
   CreateCustomizationPresetRequest,
   CreateOrderRequest,
+  CreateOutfitSceneRequest,
   CreatePaymentSessionRequest,
   CreateProductMediaRequest,
   CreateProductRequest,
   CreateProductVariantRequest,
+  CreatePublicOutfitPresetRequest,
+  CreateShowroomHotspotRequest,
+  CreateShowroomZoneRequest,
   CsrfTokenResponse,
   CustomerReturnItemInput,
   DiscountTypeInput,
@@ -71,6 +77,11 @@ import type {
   MfaVerifyRequest,
   MidtransWebhookPayload,
   OrderStatusInput,
+  OutfitAnchorInput,
+  OutfitCompatibilityConfigInput,
+  OutfitCompatibilityReason,
+  OutfitSlotInput,
+  OutfitSlotSelectionInput,
   PaymentStatusInput,
   Presign3DAssetRequest,
   ProductSort,
@@ -87,11 +98,17 @@ import type {
   ReturnItemConditionInput,
   ReturnStatusInput,
   ReviewReturnRequest,
+  SetAssetOutfitCompatibilityRequest,
   ShipmentStatusInput,
+  ShowroomCameraBaselineInput,
+  ShowroomPortalInput,
+  ShowroomVector3Input,
+  ShowroomZoneStatusInput,
   StockReservationStatusInput,
   StockStatus,
   TransitionCmsStatusRequest,
   TransitionProductStatusRequest,
+  TransitionShowroomZoneRequest,
   UpdateAddressRequest,
   UpdateCartItemRequest,
   UpdateCategoryRequest,
@@ -101,19 +118,26 @@ import type {
   UpdateCollectionRequest,
   UpdateCouponRequest,
   UpdateCustomizationPresetRequest,
+  UpdateOutfitSceneRequest,
   UpdateProductMediaRequest,
   UpdateProductRequest,
   UpdateProductVariantRequest,
   UpdateProfileRequest,
+  UpdatePublicOutfitPresetRequest,
+  UpdateShowroomHotspotRequest,
+  UpdateShowroomZoneRequest,
   UploadStaging3DAssetRequest,
   UserProfileResponse,
   UserSessionSummary,
+  ValidateOutfitRequest,
   VerifyEmailRequest,
   WarehouseStatusInput,
 } from '@arven/validators';
 
 export type {
   AddCartItemRequest,
+  AddOutfitCartSlotInput,
+  AddOutfitToCartRequest,
   AddressResponse,
   AdminCmsListQuery,
   AdminCouponsQuery,
@@ -163,10 +187,14 @@ export type {
   CreateCustomerReturnRequest,
   CreateCustomizationPresetRequest,
   CreateOrderRequest,
+  CreateOutfitSceneRequest,
   CreatePaymentSessionRequest,
   CreateProductMediaRequest,
   CreateProductRequest,
   CreateProductVariantRequest,
+  CreatePublicOutfitPresetRequest,
+  CreateShowroomHotspotRequest,
+  CreateShowroomZoneRequest,
   CsrfTokenResponse,
   CustomerReturnItemInput,
   DiscountTypeInput,
@@ -185,6 +213,11 @@ export type {
   MfaVerifyRequest,
   MidtransWebhookPayload,
   OrderStatusInput,
+  OutfitAnchorInput,
+  OutfitCompatibilityConfigInput,
+  OutfitCompatibilityReason,
+  OutfitSlotInput,
+  OutfitSlotSelectionInput,
   PaymentStatusInput,
   Presign3DAssetRequest,
   ProductSort,
@@ -201,11 +234,17 @@ export type {
   ReturnItemConditionInput,
   ReturnStatusInput,
   ReviewReturnRequest,
+  SetAssetOutfitCompatibilityRequest,
   ShipmentStatusInput,
+  ShowroomCameraBaselineInput,
+  ShowroomPortalInput,
+  ShowroomVector3Input,
+  ShowroomZoneStatusInput,
   StockReservationStatusInput,
   StockStatus,
   TransitionCmsStatusRequest,
   TransitionProductStatusRequest,
+  TransitionShowroomZoneRequest,
   UpdateAddressRequest,
   UpdateCartItemRequest,
   UpdateCategoryRequest,
@@ -215,13 +254,18 @@ export type {
   UpdateCollectionRequest,
   UpdateCouponRequest,
   UpdateCustomizationPresetRequest,
+  UpdateOutfitSceneRequest,
   UpdateProductMediaRequest,
   UpdateProductRequest,
   UpdateProductVariantRequest,
   UpdateProfileRequest,
+  UpdatePublicOutfitPresetRequest,
+  UpdateShowroomHotspotRequest,
+  UpdateShowroomZoneRequest,
   UploadStaging3DAssetRequest,
   UserProfileResponse,
   UserSessionSummary,
+  ValidateOutfitRequest,
   VerifyEmailRequest,
   WarehouseStatusInput,
 };
@@ -1148,6 +1192,7 @@ export interface Product3DAssetConfigDto {
     lite?: AssetQualityProfileDto;
   };
   provenance: AssetProvenanceDto;
+  outfitCompatibility?: OutfitCompatibilityConfigDto | null;
 }
 
 export interface CustomizationPresetDto {
@@ -1262,4 +1307,226 @@ export interface Admin3DEngagementAnalyticsDto {
   readyAssetsCount: number;
   productsWith3DCount: number;
   generatedAt: string;
+}
+
+// =============================================================================
+// Phase 08: Virtual Showroom & Outfit Studio DTOs
+// =============================================================================
+
+export interface ShowroomHotspotPublicDto {
+  id: string;
+  zoneId: string;
+  productId: string;
+  productSlug: string;
+  productName: string;
+  variantId: string | null;
+  label: string;
+  fromPriceIdr: number;
+  primaryImageUrl: string | null;
+  primaryImageAlt: string | null;
+  has3dEnabled: boolean;
+  position: [number, number, number];
+  sortOrder: number;
+}
+
+export interface ShowroomZonePublicDto {
+  id: string;
+  code: string;
+  title: string;
+  description: string | null;
+  sortOrder: number;
+  sceneUrl: string;
+  liteSceneUrl: string | null;
+  posterUrl: string;
+  sceneBytes: number;
+  liteSceneBytes: number | null;
+  cameraBaseline: ShowroomCameraBaselineInput;
+  portals: ShowroomPortalInput[];
+  lightingPreset: LightingPresetInput;
+  hotspots: ShowroomHotspotPublicDto[];
+}
+
+export interface ShowroomScenesResponseDto {
+  zones: ShowroomZonePublicDto[];
+}
+
+export interface AdminShowroomHotspotDto {
+  id: string;
+  zoneId: string;
+  productId: string;
+  productSlug: string;
+  productName: string;
+  productStatus: ProductStatusInput;
+  variantId: string | null;
+  label: string;
+  positionX: number;
+  positionY: number;
+  positionZ: number;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminShowroomZoneDto {
+  id: string;
+  code: string;
+  title: string;
+  description: string | null;
+  status: ShowroomZoneStatusInput;
+  sortOrder: number;
+  sceneObjectKey: string;
+  liteSceneObjectKey: string | null;
+  posterKey: string;
+  sceneUrl: string;
+  liteSceneUrl: string | null;
+  posterUrl: string;
+  sceneBytes: number;
+  liteSceneBytes: number | null;
+  cameraBaseline: ShowroomCameraBaselineInput;
+  portals: ShowroomPortalInput[];
+  config: Record<string, unknown>;
+  publishedAt: string | null;
+  createdBy: string | null;
+  hotspots: AdminShowroomHotspotDto[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OutfitCompatibilityConfigDto {
+  rigId: string;
+  skeletonVersion: string;
+  slot: OutfitSlotInput;
+  anchor: OutfitAnchorInput;
+  incompatibleSlots: OutfitSlotInput[];
+}
+
+export interface OutfitCompatibilityViolationDto {
+  slot: OutfitSlotInput | 'rig';
+  productId: string | null;
+  reason: OutfitCompatibilityReason;
+  message: string;
+}
+
+export interface OutfitRigContractDto {
+  rigId: string;
+  skeletonVersion: string;
+  slots: readonly OutfitSlotInput[];
+  anchors: Record<OutfitSlotInput, readonly OutfitAnchorInput[]>;
+  modelUrl: string;
+  mobileModelUrl: string | null;
+  posterUrl: string;
+}
+
+export interface OutfitStudioGarmentVariantDto {
+  id: string;
+  sku: string;
+  size: string;
+  color: string;
+  colorHex: string | null;
+  priceIdr: number;
+  compareAtPriceIdr: number | null;
+  availableQty: number;
+  inStock: boolean;
+}
+
+export interface OutfitStudioGarmentDto {
+  productId: string;
+  productSlug: string;
+  productName: string;
+  material: string;
+  fit: string;
+  assetId: string;
+  assetVersion: number;
+  modelUrl: string;
+  mobileModelUrl: string | null;
+  posterUrl: string;
+  compatibility: OutfitCompatibilityConfigDto;
+  materialSlots: MaterialSlotSpecDto[];
+  variants: OutfitStudioGarmentVariantDto[];
+  customizationPresets: CustomizationPresetDto[];
+}
+
+export interface OutfitScenePersistedItemDto {
+  slot: OutfitSlotInput;
+  productId: string;
+  variantId: string;
+  assetId: string;
+  presetId: string | null;
+}
+
+export interface OutfitSceneSlotHydratedDto {
+  slot: OutfitSlotInput;
+  productId: string;
+  productSlug: string | null;
+  productName: string;
+  variantId: string;
+  sku: string | null;
+  size: string | null;
+  color: string | null;
+  assetId: string;
+  presetId: string | null;
+  presetCode: string | null;
+  presetLabel: string | null;
+  swatchHex: string | null;
+  unitPriceIdr: number;
+  availableQty: number;
+  inStock: boolean;
+  posterUrl: string | null;
+  stale: boolean;
+  staleReasons: string[];
+}
+
+export interface OutfitSceneDto {
+  id: string;
+  title: string;
+  rigId: string;
+  skeletonVersion: string;
+  isPublicPreset: boolean;
+  slots: OutfitSceneSlotHydratedDto[];
+  liveTotalIdr: number;
+  hasStaleItems: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OutfitStudioCatalogDto {
+  rig: OutfitRigContractDto;
+  garments: OutfitStudioGarmentDto[];
+  publicPresets: OutfitSceneDto[];
+}
+
+export interface ValidateOutfitResultDto {
+  valid: true;
+  rigId: string;
+  skeletonVersion: string;
+  slotCount: number;
+}
+
+export interface AddOutfitToCartItemResultDto {
+  slot: OutfitSlotInput;
+  variantId: string;
+  productId: string;
+  status: 'ADDED' | 'OUT_OF_STOCK' | 'INACTIVE';
+  reason: string | null;
+}
+
+export interface AddOutfitToCartResultDto {
+  cart: CartDto;
+  results: AddOutfitToCartItemResultDto[];
+}
+
+export interface AdminOutfitGarmentDiagnosticDto {
+  assetId: string;
+  productId: string;
+  productSlug: string;
+  productName: string;
+  productStatus: ProductStatusInput;
+  assetStatus: AssetStatusInput;
+  isActiveVersion: boolean;
+  version: number;
+  posterUrl: string;
+  compatibility: OutfitCompatibilityConfigDto | null;
+  compatibleWithCurrentRig: boolean;
+  diagnosticMessage: string | null;
 }

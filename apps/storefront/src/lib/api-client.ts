@@ -1,5 +1,7 @@
 import type {
   AddCartItemRequest,
+  AddOutfitToCartRequest,
+  AddOutfitToCartResultDto,
   AddressResponse,
   AuthUserSummary,
   CancelOrderRequest,
@@ -16,6 +18,7 @@ import type {
   CreateCustomerReturnRequest,
   CreateOrderRequest,
   CreateOrderResultDto,
+  CreateOutfitSceneRequest,
   CreatePaymentSessionRequest,
   ForgotPasswordRequest,
   ListOrdersQuery,
@@ -23,6 +26,8 @@ import type {
   MergeCartResultDto,
   OrderDetailDto,
   OrderSummaryDto,
+  OutfitSceneDto,
+  OutfitStudioCatalogDto,
   PaymentSessionDto,
   PaymentSummaryDto,
   Product3DAssetMetadataDto,
@@ -34,12 +39,16 @@ import type {
   RegisterRequest,
   ResetPasswordRequest,
   ReturnDetailDto,
+  ShowroomScenesResponseDto,
   Telemetry3DReceiptDto,
   UpdateAddressRequest,
   UpdateCartItemRequest,
+  UpdateOutfitSceneRequest,
   UpdateProfileRequest,
   UserProfileResponse,
   UserSessionSummary,
+  ValidateOutfitRequest,
+  ValidateOutfitResultDto,
   VerifyEmailRequest,
 } from '@arven/contracts';
 
@@ -348,6 +357,10 @@ export function notifyCartUpdated(cart?: CartDto): void {
       detail: cart,
     }),
   );
+}
+
+export function refreshBagBadge(cart?: CartDto): void {
+  notifyCartUpdated(cart);
 }
 
 function toQueryString(
@@ -706,5 +719,57 @@ export const storefrontApi = {
     return requestApi<ReturnDetailDto>(`/api/v1/returns/${encodeURIComponent(returnId)}`, {
       guestOrderToken: guestToken,
     });
+  },
+  showroom: {
+    getScenes(): Promise<ShowroomScenesResponseDto> {
+      return requestApi<ShowroomScenesResponseDto>('/api/v1/showroom/scenes');
+    },
+  },
+  outfitStudio: {
+    getCatalog(): Promise<OutfitStudioCatalogDto> {
+      return requestApi<OutfitStudioCatalogDto>('/api/v1/outfit-studio/catalog');
+    },
+    validate(input: ValidateOutfitRequest): Promise<ValidateOutfitResultDto> {
+      return requestApi<ValidateOutfitResultDto>('/api/v1/outfit-studio/validate', {
+        method: 'POST',
+        body: input,
+      });
+    },
+    async addToCart(input: AddOutfitToCartRequest): Promise<AddOutfitToCartResultDto> {
+      const result = await requestApi<AddOutfitToCartResultDto>(
+        '/api/v1/outfit-studio/cart-items',
+        {
+          method: 'POST',
+          body: input,
+        },
+      );
+      refreshBagBadge(result.cart);
+      return result;
+    },
+  },
+  outfitScenes: {
+    list(): Promise<OutfitSceneDto[]> {
+      return requestApi<OutfitSceneDto[]>('/api/v1/outfit-scenes');
+    },
+    get(id: string): Promise<OutfitSceneDto> {
+      return requestApi<OutfitSceneDto>(`/api/v1/outfit-scenes/${encodeURIComponent(id)}`);
+    },
+    create(input: CreateOutfitSceneRequest): Promise<OutfitSceneDto> {
+      return requestApi<OutfitSceneDto>('/api/v1/outfit-scenes', {
+        method: 'POST',
+        body: input,
+      });
+    },
+    update(id: string, input: UpdateOutfitSceneRequest): Promise<OutfitSceneDto> {
+      return requestApi<OutfitSceneDto>(`/api/v1/outfit-scenes/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: input,
+      });
+    },
+    remove(id: string): Promise<void> {
+      return requestVoid(`/api/v1/outfit-scenes/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+    },
   },
 };

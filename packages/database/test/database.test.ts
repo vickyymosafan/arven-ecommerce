@@ -95,8 +95,13 @@ describe('@arven/database exports and client helpers', () => {
 });
 
 describe('Canonical Prisma 7 schema & migration SQL invariants', () => {
-  it('enforces all 25 Prisma enums and AMB-01 / AMB-03 enum resolutions', () => {
-    expect(Object.keys($Enums)).toHaveLength(25);
+  it('enforces all 26 Prisma enums and AMB-01 / AMB-03 enum resolutions', () => {
+    expect(Object.keys($Enums)).toHaveLength(26);
+    expect(Object.values($Enums.ShowroomZoneStatus)).toEqual([
+      'DRAFT',
+      'PUBLISHED',
+      'ARCHIVED',
+    ]);
     expect(Object.values(ProductStatus)).toEqual([
       'DRAFT',
       'REVIEW',
@@ -166,7 +171,7 @@ describe('Seed matrix alignment & fail-closed guards', () => {
     }
   });
 
-  it('aligns reference warehouse, 4 collections, 5 categories, and 6 SKUs with PRD', () => {
+  it('aligns reference warehouse, 4 collections, 5 categories, and 7 SKUs with PRD & Phase 08', () => {
     expect(ARVEN_SEED_WAREHOUSE.code).toBe('JKT-MAIN-01');
     expect(ARVEN_SEED_COLLECTIONS.map((c) => c.slug)).toEqual([
       'essentials',
@@ -188,6 +193,7 @@ describe('Seed matrix alignment & fail-closed guards', () => {
       'ARV-OUT-001',
       'ARV-FW-001',
       'ARV-ACC-001',
+      'ARV-OUT-002',
     ]);
     expect(ARVEN_SEED_PRODUCTS.map((p) => p.priceIdr)).toEqual([
       299_000n,
@@ -196,6 +202,7 @@ describe('Seed matrix alignment & fail-closed guards', () => {
       899_000n,
       1_299_000n,
       799_000n,
+      1_190_000n,
     ]);
   });
 

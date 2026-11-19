@@ -105,11 +105,12 @@ export function hexToLinearRgba(hex: string): [number, number, number, number] {
 interface MeshAccumulator {
   readonly positions: number[];
   readonly normals: number[];
+  readonly colors: number[];
   readonly indices: number[];
 }
 
 function createMeshAccumulator(): MeshAccumulator {
-  return { positions: [], normals: [], indices: [] };
+  return { positions: [], normals: [], colors: [], indices: [] };
 }
 
 function appendBox(
@@ -120,6 +121,7 @@ function appendBox(
   sx: number,
   sy: number,
   sz: number,
+  color?: readonly [number, number, number, number],
 ): void {
   const hx = sx / 2;
   const hy = sy / 2;
@@ -193,9 +195,19 @@ function appendBox(
 
   for (const face of faces) {
     const baseVertex = acc.positions.length / 3;
+    const verticalShade =
+      face.normal[1] > 0.5 ? 1.0 : face.normal[1] < -0.5 ? 0.65 : 0.85;
     for (const [vx, vy, vz] of face.corners) {
       acc.positions.push(vx, vy, vz);
       acc.normals.push(face.normal[0], face.normal[1], face.normal[2]);
+      if (color) {
+        acc.colors.push(
+          Math.min(1, color[0] * verticalShade),
+          Math.min(1, color[1] * verticalShade),
+          Math.min(1, color[2] * verticalShade),
+          color[3],
+        );
+      }
     }
     acc.indices.push(
       baseVertex,
@@ -205,6 +217,96 @@ function appendBox(
       baseVertex + 2,
       baseVertex + 3,
     );
+  }
+}
+
+function appendTaperedCylinder(
+  acc: MeshAccumulator,
+  cx: number,
+  yBottom: number,
+  cz: number,
+  radiusBottom: number,
+  radiusTop: number,
+  height: number,
+  segments: number,
+  color?: readonly [number, number, number, number],
+): void {
+  const yTop = yBottom + height;
+  const sideStart = acc.positions.length / 3;
+
+  for (let i = 0; i <= segments; i += 1) {
+    const theta = (i / segments) * Math.PI * 2;
+    const cos = Math.cos(theta);
+    const sin = Math.sin(theta);
+
+    const bx = cx + radiusBottom * cos;
+    const bz = cz + radiusBottom * sin;
+    const tx = cx + radiusTop * cos;
+    const tz = cz + radiusTop * sin;
+
+    acc.positions.push(bx, yBottom, bz, tx, yTop, tz);
+    acc.normals.push(cos, 0, sin, cos, 0, sin);
+    if (color) {
+      acc.colors.push(
+        color[0] * 0.82,
+        color[1] * 0.82,
+        color[2] * 0.82,
+        color[3],
+        color[0],
+        color[1],
+        color[2],
+        color[3],
+      );
+    }
+  }
+
+  for (let i = 0; i < segments; i += 1) {
+    const b0 = sideStart + i * 2;
+    const t0 = b0 + 1;
+    const b1 = b0 + 2;
+    const t1 = b0 + 3;
+    acc.indices.push(b0, b1, t1, b0, t1, t0);
+  }
+
+  // Top & bottom caps
+  const topCenterIdx = acc.positions.length / 3;
+  acc.positions.push(cx, yTop, cz);
+  acc.normals.push(0, 1, 0);
+  if (color) {
+    acc.colors.push(color[0], color[1], color[2], color[3]);
+  }
+  for (let i = 0; i <= segments; i += 1) {
+    const theta = (i / segments) * Math.PI * 2;
+    acc.positions.push(cx + radiusTop * Math.cos(theta), yTop, cz + radiusTop * Math.sin(theta));
+    acc.normals.push(0, 1, 0);
+    if (color) {
+      acc.colors.push(color[0], color[1], color[2], color[3]);
+    }
+  }
+  for (let i = 0; i < segments; i += 1) {
+    acc.indices.push(topCenterIdx, topCenterIdx + 1 + i + 1, topCenterIdx + 1 + i);
+  }
+
+  const botCenterIdx = acc.positions.length / 3;
+  acc.positions.push(cx, yBottom, cz);
+  acc.normals.push(0, -1, 0);
+  if (color) {
+    acc.colors.push(color[0] * 0.72, color[1] * 0.72, color[2] * 0.72, color[3]);
+  }
+  for (let i = 0; i <= segments; i += 1) {
+    const theta = (i / segments) * Math.PI * 2;
+    acc.positions.push(
+      cx + radiusBottom * Math.cos(theta),
+      yBottom,
+      cz + radiusBottom * Math.sin(theta),
+    );
+    acc.normals.push(0, -1, 0);
+    if (color) {
+      acc.colors.push(color[0] * 0.72, color[1] * 0.72, color[2] * 0.72, color[3]);
+    }
+  }
+  for (let i = 0; i < segments; i += 1) {
+    acc.indices.push(botCenterIdx, botCenterIdx + 1 + i, botCenterIdx + 1 + i + 1);
   }
 }
 
@@ -302,51 +404,64 @@ function computePositionMinMax(positions: readonly number[]): {
   };
 }
 
-/**
- * Builds a deterministic, strictly spec-compliant binary glTF 2.0 (.glb) buffer
- * containing ARVEN's canonical named mesh and material slots (`mat_fabric_primary`,
- * `mat_fabric_secondary`, `mat_hardware_accent`) for both worker verification and WebGL rendering.
- */
-export function buildArvenGarmentGlbBuffer(options: GlbBuildOptions = {}): Uint8Array {
-  const silhouette = options.silhouette ?? 'tee';
-  const lite = options.profile === 'lite';
-  const parts = buildSilhouetteParts(silhouette, lite);
+export const MANNEQUIN_DEFAULT_MAX_TRIANGLES = 30_000;
+export const MANNEQUIN_LITE_MAX_TRIANGLES = 12_000;
+export const SHOWROOM_ZONE_DEFAULT_MAX_BYTES = 6_291_456;
+export const SHOWROOM_ZONE_LITE_MAX_BYTES = 3_670_016;
 
-  const partEntries = [
-    {
-      nodeName: 'mesh_garment_body',
-      meshName: 'mesh_garment_body',
-      materialName: 'mat_fabric_primary',
-      baseColorFactor: hexToLinearRgba(options.primaryHex ?? '#17191B'),
-      roughnessFactor: 0.85,
-      metallicFactor: 0.02,
-      acc: parts.body,
-    },
-    {
-      nodeName: 'mesh_collar_rib',
-      meshName: 'mesh_collar_rib',
-      materialName: 'mat_fabric_secondary',
-      baseColorFactor: hexToLinearRgba(options.secondaryHex ?? '#35383A'),
-      roughnessFactor: silhouette === 'sneaker' ? 0.68 : 0.88,
-      metallicFactor: 0.02,
-      acc: parts.secondary,
-    },
-    {
-      nodeName: 'mesh_buttons',
-      meshName: 'mesh_buttons',
-      materialName: 'mat_hardware_accent',
-      baseColorFactor: hexToLinearRgba(options.accentHex ?? '#C5A572'),
-      roughnessFactor: 0.34,
-      metallicFactor: 0.72,
-      acc: parts.hardware,
-    },
-  ] as const;
+export interface MannequinGlbBuildOptions {
+  readonly profile?: 'default' | 'lite';
+}
 
+export interface ShowroomZonePedestalSpec {
+  readonly label: string;
+  readonly position: readonly [number, number, number];
+}
+
+export interface ShowroomZonePortalSpec {
+  readonly targetZoneCode: string;
+  readonly position: readonly [number, number, number];
+}
+
+export interface ShowroomZoneGlbBuildOptions {
+  readonly code: string;
+  readonly title?: string;
+  readonly lightingPreset?: LightingPresetInput | string;
+  readonly profile?: 'default' | 'lite';
+  readonly pedestals?: ReadonlyArray<ShowroomZonePedestalSpec>;
+  readonly portals?: ReadonlyArray<ShowroomZonePortalSpec>;
+}
+
+interface GlbPartSpec {
+  readonly nodeName: string;
+  readonly meshName: string;
+  readonly materialName: string;
+  readonly baseColorFactor: readonly [number, number, number, number];
+  readonly roughnessFactor: number;
+  readonly metallicFactor: number;
+  readonly doubleSided?: boolean;
+  readonly acc: MeshAccumulator;
+}
+
+interface GlbExtraNodeSpec {
+  readonly name: string;
+  readonly translation?: readonly [number, number, number];
+  readonly childNames?: ReadonlyArray<string>;
+}
+
+function packGlbParts(options: {
+  readonly sceneName: string;
+  readonly generator: string;
+  readonly parts: ReadonlyArray<GlbPartSpec>;
+  readonly extraNodes?: ReadonlyArray<GlbExtraNodeSpec>;
+  readonly rootNodeNames?: ReadonlyArray<string>;
+}): Buffer {
   const bufferViews: Array<Record<string, unknown>> = [];
   const accessors: Array<Record<string, unknown>> = [];
   const materials: Array<Record<string, unknown>> = [];
   const meshes: Array<Record<string, unknown>> = [];
   const nodes: Array<Record<string, unknown>> = [];
+  const nodeIndexByName = new Map<string, number>();
 
   const binChunks: Uint8Array[] = [];
   let binOffset = 0;
@@ -363,9 +478,11 @@ export function buildArvenGarmentGlbBuffer(options: GlbBuildOptions = {}): Uint8
     return { offset: startOffset, length: data.byteLength };
   };
 
-  for (const [index, entry] of partEntries.entries()) {
+  for (const [index, entry] of options.parts.entries()) {
     const posArray = new Float32Array(entry.acc.positions);
     const normArray = new Float32Array(entry.acc.normals);
+    const hasColors = entry.acc.colors.length === (entry.acc.positions.length / 3) * 4;
+    const colorArray = hasColors ? new Float32Array(entry.acc.colors) : null;
     const idxArray = new Uint16Array(entry.acc.indices);
 
     const posSeg = appendBinSegment(
@@ -374,6 +491,11 @@ export function buildArvenGarmentGlbBuffer(options: GlbBuildOptions = {}): Uint8
     const normSeg = appendBinSegment(
       new Uint8Array(normArray.buffer, normArray.byteOffset, normArray.byteLength),
     );
+    const colorSeg = colorArray
+      ? appendBinSegment(
+          new Uint8Array(colorArray.buffer, colorArray.byteOffset, colorArray.byteLength),
+        )
+      : null;
     const idxSeg = appendBinSegment(
       new Uint8Array(idxArray.buffer, idxArray.byteOffset, idxArray.byteLength),
     );
@@ -393,6 +515,19 @@ export function buildArvenGarmentGlbBuffer(options: GlbBuildOptions = {}): Uint8
       byteLength: normSeg.length,
       target: 34962,
     });
+
+    const colorViewIdx = colorSeg
+      ? (() => {
+          const viewIdx = bufferViews.length;
+          bufferViews.push({
+            buffer: 0,
+            byteOffset: colorSeg.offset,
+            byteLength: colorSeg.length,
+            target: 34962,
+          });
+          return viewIdx;
+        })()
+      : null;
 
     const idxViewIdx = bufferViews.length;
     bufferViews.push({
@@ -423,6 +558,21 @@ export function buildArvenGarmentGlbBuffer(options: GlbBuildOptions = {}): Uint8
       type: 'VEC3',
     });
 
+    const colorAccIdx =
+      colorViewIdx !== null
+        ? (() => {
+            const accIdx = accessors.length;
+            accessors.push({
+              bufferView: colorViewIdx,
+              byteOffset: 0,
+              componentType: 5126,
+              count: entry.acc.colors.length / 4,
+              type: 'VEC4',
+            });
+            return accIdx;
+          })()
+        : null;
+
     const idxAccIdx = accessors.length;
     accessors.push({
       bufferView: idxViewIdx,
@@ -434,7 +584,7 @@ export function buildArvenGarmentGlbBuffer(options: GlbBuildOptions = {}): Uint8
 
     materials.push({
       name: entry.materialName,
-      doubleSided: false,
+      doubleSided: entry.doubleSided ?? false,
       pbrMetallicRoughness: {
         baseColorFactor: entry.baseColorFactor,
         metallicFactor: entry.metallicFactor,
@@ -442,36 +592,77 @@ export function buildArvenGarmentGlbBuffer(options: GlbBuildOptions = {}): Uint8
       },
     });
 
+    const attributes: Record<string, number> = {
+      POSITION: posAccIdx,
+      NORMAL: normAccIdx,
+    };
+    if (colorAccIdx !== null) {
+      attributes['COLOR_0'] = colorAccIdx;
+    }
+
     meshes.push({
       name: entry.meshName,
       primitives: [
         {
-          attributes: {
-            POSITION: posAccIdx,
-            NORMAL: normAccIdx,
-          },
+          attributes,
           indices: idxAccIdx,
           material: index,
         },
       ],
     });
 
+    const nodeIdx = nodes.length;
     nodes.push({
       name: entry.nodeName,
       mesh: index,
     });
+    nodeIndexByName.set(entry.nodeName, nodeIdx);
   }
+
+  if (options.extraNodes) {
+    for (const extra of options.extraNodes) {
+      const nodeIdx = nodes.length;
+      const nodeRecord: Record<string, unknown> = {
+        name: extra.name,
+      };
+      if (extra.translation) {
+        nodeRecord['translation'] = [...extra.translation];
+      }
+      nodes.push(nodeRecord);
+      nodeIndexByName.set(extra.name, nodeIdx);
+    }
+
+    for (const extra of options.extraNodes) {
+      if (extra.childNames && extra.childNames.length > 0) {
+        const parentIdx = nodeIndexByName.get(extra.name);
+        if (parentIdx !== undefined) {
+          const childIndices = extra.childNames
+            .map((name) => nodeIndexByName.get(name))
+            .filter((idx): idx is number => idx !== undefined);
+          if (childIndices.length > 0) {
+            nodes[parentIdx]!['children'] = childIndices;
+          }
+        }
+      }
+    }
+  }
+
+  const sceneNodes = options.rootNodeNames
+    ? options.rootNodeNames
+        .map((name) => nodeIndexByName.get(name))
+        .filter((idx): idx is number => idx !== undefined)
+    : nodes.map((_, idx) => idx);
 
   const gltfJson = {
     asset: {
       version: '2.0',
-      generator: 'ARVEN Atelier GLB Builder v1.0',
+      generator: options.generator,
     },
     scene: 0,
     scenes: [
       {
-        name: 'arven_garment_stage',
-        nodes: nodes.map((_, idx) => idx),
+        name: options.sceneName,
+        nodes: sceneNodes,
       },
     ],
     nodes,
@@ -490,7 +681,6 @@ export function buildArvenGarmentGlbBuffer(options: GlbBuildOptions = {}): Uint8
   const jsonAlignedLength = alignToFourBytes(jsonRawBytes.byteLength);
   const jsonChunkBytes = new Uint8Array(jsonAlignedLength);
   jsonChunkBytes.set(jsonRawBytes);
-  // glTF spec requires space padding (0x20) in JSON chunk
   for (let i = jsonRawBytes.byteLength; i < jsonAlignedLength; i += 1) {
     jsonChunkBytes[i] = 0x20;
   }
@@ -499,17 +689,14 @@ export function buildArvenGarmentGlbBuffer(options: GlbBuildOptions = {}): Uint8
   const output = new Uint8Array(totalLength);
   const view = new DataView(output.buffer, output.byteOffset, output.byteLength);
 
-  // Header
   view.setUint32(0, GLB_MAGIC_UINT32, true);
   view.setUint32(4, GLB_VERSION_2, true);
   view.setUint32(8, totalLength, true);
 
-  // JSON Chunk
   view.setUint32(12, jsonChunkBytes.byteLength, true);
   view.setUint32(16, GLB_CHUNK_JSON, true);
   output.set(jsonChunkBytes, 20);
 
-  // BIN Chunk
   const binHeaderOffset = 20 + jsonChunkBytes.byteLength;
   view.setUint32(binHeaderOffset, binOffset, true);
   view.setUint32(binHeaderOffset + 4, GLB_CHUNK_BIN, true);
@@ -520,7 +707,286 @@ export function buildArvenGarmentGlbBuffer(options: GlbBuildOptions = {}): Uint8
     writeCursor += chunk.byteLength;
   }
 
-  return output;
+  return Buffer.from(output.buffer, output.byteOffset, output.byteLength);
+}
+
+/**
+ * Builds a deterministic, strictly spec-compliant binary glTF 2.0 (.glb) buffer
+ * containing ARVEN's canonical named mesh and material slots (`mat_fabric_primary`,
+ * `mat_fabric_secondary`, `mat_hardware_accent`) for both worker verification and WebGL rendering.
+ */
+export function buildArvenGarmentGlbBuffer(options: GlbBuildOptions = {}): Uint8Array {
+  const silhouette = options.silhouette ?? 'tee';
+  const lite = options.profile === 'lite';
+  const parts = buildSilhouetteParts(silhouette, lite);
+
+  return packGlbParts({
+    sceneName: 'arven_garment_stage',
+    generator: 'ARVEN Atelier GLB Builder v1.0',
+    parts: [
+      {
+        nodeName: 'mesh_garment_body',
+        meshName: 'mesh_garment_body',
+        materialName: 'mat_fabric_primary',
+        baseColorFactor: hexToLinearRgba(options.primaryHex ?? '#17191B'),
+        roughnessFactor: 0.85,
+        metallicFactor: 0.02,
+        acc: parts.body,
+      },
+      {
+        nodeName: 'mesh_collar_rib',
+        meshName: 'mesh_collar_rib',
+        materialName: 'mat_fabric_secondary',
+        baseColorFactor: hexToLinearRgba(options.secondaryHex ?? '#35383A'),
+        roughnessFactor: silhouette === 'sneaker' ? 0.68 : 0.88,
+        metallicFactor: 0.02,
+        acc: parts.secondary,
+      },
+      {
+        nodeName: 'mesh_buttons',
+        meshName: 'mesh_buttons',
+        materialName: 'mat_hardware_accent',
+        baseColorFactor: hexToLinearRgba(options.accentHex ?? '#C5A572'),
+        roughnessFactor: 0.34,
+        metallicFactor: 0.72,
+        acc: parts.hardware,
+      },
+    ],
+  });
+}
+
+/**
+ * Builds the standardized ARVEN unisex mannequin rig GLB (`arven_mannequin_unisex_v1`)
+ * resting on Y = 0 (1 unit = 1m, +Y up, +Z forward) with named anchor nodes for Outfit Studio.
+ */
+export function buildArvenMannequinGlbBuffer(
+  options: MannequinGlbBuildOptions = {},
+): Buffer {
+  const lite = options.profile === 'lite';
+  const radialSegs = lite ? 8 : 16;
+
+  const body = createMeshAccumulator();
+  const accents = createMeshAccumulator();
+
+  // Feet resting squarely at Y = 0
+  appendBox(body, -0.11, 0.04, 0.03, 0.1, 0.08, 0.24);
+  appendBox(body, 0.11, 0.04, 0.03, 0.1, 0.08, 0.24);
+
+  // Legs (left & right lower + upper legs)
+  appendTaperedCylinder(body, -0.11, 0.08, 0, 0.055, 0.068, 0.4, radialSegs);
+  appendTaperedCylinder(body, 0.11, 0.08, 0, 0.055, 0.068, 0.4, radialSegs);
+  appendTaperedCylinder(body, -0.11, 0.48, 0, 0.068, 0.088, 0.4, radialSegs);
+  appendTaperedCylinder(body, 0.11, 0.48, 0, 0.068, 0.088, 0.4, radialSegs);
+
+  // Pelvis & waist block
+  appendTaperedCylinder(body, 0, 0.86, 0, 0.17, 0.155, 0.18, radialSegs);
+
+  // Torso (waist -> chest/shoulders)
+  appendTaperedCylinder(body, 0, 1.04, 0, 0.15, 0.195, 0.42, radialSegs);
+
+  // Arms (left & right upper + forearm)
+  appendTaperedCylinder(body, -0.25, 1.12, 0, 0.048, 0.058, 0.32, radialSegs);
+  appendTaperedCylinder(body, 0.25, 1.12, 0, 0.048, 0.058, 0.32, radialSegs);
+  appendTaperedCylinder(body, -0.27, 0.82, 0.02, 0.038, 0.048, 0.3, radialSegs);
+  appendTaperedCylinder(body, 0.27, 0.82, 0.02, 0.038, 0.048, 0.3, radialSegs);
+
+  // Neck & sculpted editorial head
+  appendTaperedCylinder(body, 0, 1.46, 0, 0.055, 0.05, 0.09, radialSegs);
+  appendTaperedCylinder(body, 0, 1.55, 0.01, 0.085, 0.072, 0.2, radialSegs);
+
+  // Subtle bronze architectural joint collars & plinth ring
+  appendTaperedCylinder(accents, 0, 0.0, 0, 0.36, 0.35, 0.016, radialSegs);
+  appendTaperedCylinder(accents, 0, 1.45, 0, 0.064, 0.064, 0.018, radialSegs);
+  appendTaperedCylinder(accents, 0, 1.03, 0, 0.156, 0.156, 0.018, radialSegs);
+  appendTaperedCylinder(accents, -0.27, 0.84, 0.02, 0.044, 0.044, 0.018, radialSegs);
+
+  return packGlbParts({
+    sceneName: 'arven_mannequin_unisex_v1',
+    generator: 'ARVEN Atelier Mannequin Rig Builder v1.0',
+    parts: [
+      {
+        nodeName: 'mesh_mannequin_body',
+        meshName: 'mesh_mannequin_body',
+        materialName: 'mat_mannequin_matte',
+        baseColorFactor: hexToLinearRgba('#35383A'),
+        roughnessFactor: 0.78,
+        metallicFactor: 0.06,
+        acc: body,
+      },
+      {
+        nodeName: 'mesh_mannequin_accents',
+        meshName: 'mesh_mannequin_accents',
+        materialName: 'mat_mannequin_joint',
+        baseColorFactor: hexToLinearRgba('#C5A572'),
+        roughnessFactor: 0.36,
+        metallicFactor: 0.68,
+        acc: accents,
+      },
+    ],
+    extraNodes: [
+      { name: 'spine_upper', translation: [0, 0.62, 0] },
+      { name: 'pelvis', translation: [0, 0, 0] },
+      { name: 'feet', translation: [0, 0, 0] },
+      { name: 'shoulder_left', translation: [-0.24, 0.78, 0.05] },
+      { name: 'shoulder_right', translation: [0.24, 0.78, 0.05] },
+      { name: 'wrist_left', translation: [-0.28, 0.84, 0.03] },
+      {
+        name: 'arven_mannequin_unisex_v1',
+        childNames: [
+          'mesh_mannequin_body',
+          'mesh_mannequin_accents',
+          'spine_upper',
+          'pelvis',
+          'feet',
+          'shoulder_left',
+          'shoulder_right',
+          'wrist_left',
+        ],
+      },
+    ],
+    rootNodeNames: ['arven_mannequin_unisex_v1'],
+  });
+}
+
+function hashZoneCode(code: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < code.length; i += 1) {
+    hash ^= code.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+/**
+ * Builds a deterministic architectural gallery zone GLB with baked `COLOR_0` vertex
+ * colors, floor plinths, colonnade walls, product pedestals, and portal arch markers.
+ */
+export function buildArvenShowroomZoneGlbBuffer(
+  options: ShowroomZoneGlbBuildOptions,
+): Buffer {
+  const lite = options.profile === 'lite';
+  const warm = options.lightingPreset === 'arven_warm_editorial_v1';
+  const zoneSeed = hashZoneCode(options.code);
+  const segs = lite ? 8 : 14;
+
+  const structure = createMeshAccumulator();
+  const accents = createMeshAccumulator();
+
+  const floorTone = warm
+    ? hexToLinearRgba('#2A2825')
+    : hexToLinearRgba('#222528');
+  const wallTone = warm
+    ? hexToLinearRgba('#3B3833')
+    : hexToLinearRgba('#35383A');
+  const plinthTone = warm
+    ? hexToLinearRgba('#4D4942')
+    : hexToLinearRgba('#46494C');
+  const bronzeTone = hexToLinearRgba('#C5A572');
+  const ivoryTone = hexToLinearRgba('#E9E4DA');
+
+  // Gallery floor slab (top at Y = 0)
+  appendBox(structure, 0, -0.06, 0, 12, 0.12, 12, floorTone);
+  // Central recessed architectural dais
+  appendBox(structure, 0, 0.02, -0.4, 6.4, 0.04, 5.2, plinthTone);
+
+  // Back gallery wall with architectural recessed niche (open on +Z for unobstructed orbit)
+  appendBox(structure, 0, 2.1, -5.6, 12, 4.2, 0.32, wallTone);
+  appendBox(structure, 0, 3.85, -5.25, 11.4, 0.24, 0.45, plinthTone);
+
+  // Side colonnade piers (varies rhythm deterministically per zone)
+  const pierCount = lite ? 2 : 3;
+  for (let i = 0; i < pierCount; i += 1) {
+    const z = -4.2 + i * (lite ? 3.8 : 2.6) + ((zoneSeed % 3) * 0.08);
+    appendBox(structure, -5.4, 2.0, z, 0.42, 4.0, 0.65, wallTone);
+    appendBox(structure, 5.4, 2.0, z, 0.42, 4.0, 0.65, wallTone);
+    appendBox(accents, -5.18, 2.0, z, 0.03, 3.6, 0.08, bronzeTone);
+    appendBox(accents, 5.18, 2.0, z, 0.03, 3.6, 0.08, bronzeTone);
+  }
+
+  // Overhead architectural skylight frame
+  appendBox(structure, 0, 4.18, -2.0, 7.6, 0.16, 4.6, plinthTone);
+  appendBox(accents, 0, 4.08, -2.0, 6.6, 0.04, 3.6, ivoryTone);
+
+  // Product pedestals
+  const pedestals: ReadonlyArray<ShowroomZonePedestalSpec> =
+    options.pedestals && options.pedestals.length > 0
+      ? options.pedestals
+      : [
+          { label: 'pedestal_1', position: [-2.2, 0, -1.2] },
+          { label: 'pedestal_2', position: [0, 0, -1.8] },
+          { label: 'pedestal_3', position: [2.2, 0, -1.2] },
+        ];
+
+  for (const pedestal of pedestals) {
+    const [px, py, pz] = pedestal.position;
+    const baseY = Math.max(0, py);
+    appendBox(structure, px, baseY + 0.05, pz, 0.92, 0.1, 0.92, plinthTone);
+    appendTaperedCylinder(
+      structure,
+      px,
+      baseY + 0.1,
+      pz,
+      0.34,
+      0.32,
+      0.72,
+      segs,
+      wallTone,
+    );
+    appendBox(accents, px, baseY + 0.835, pz, 0.72, 0.03, 0.72, bronzeTone);
+  }
+
+  // Portal arch frames
+  const portals = options.portals ?? [];
+  const portalNodeNames: string[] = [];
+  const extraNodes: GlbExtraNodeSpec[] = [];
+
+  for (const portal of portals) {
+    const [px, py, pz] = portal.position;
+    const baseY = Math.max(0, py);
+    appendBox(structure, px - 0.65, baseY + 1.25, pz, 0.18, 2.5, 0.24, wallTone);
+    appendBox(structure, px + 0.65, baseY + 1.25, pz, 0.18, 2.5, 0.24, wallTone);
+    appendBox(structure, px, baseY + 2.58, pz, 1.48, 0.2, 0.28, plinthTone);
+    appendBox(accents, px, baseY + 2.46, pz + 0.11, 1.12, 0.04, 0.04, bronzeTone);
+    const portalName = `portal_${portal.targetZoneCode}`;
+    portalNodeNames.push(portalName);
+    extraNodes.push({
+      name: portalName,
+      translation: [px, baseY, pz],
+    });
+  }
+
+  const rootName = `zone_${options.code}`;
+  extraNodes.push({
+    name: rootName,
+    childNames: ['mesh_zone_architecture', 'mesh_zone_accents', ...portalNodeNames],
+  });
+
+  return packGlbParts({
+    sceneName: rootName,
+    generator: 'ARVEN Atelier Showroom Zone Builder v1.0',
+    parts: [
+      {
+        nodeName: 'mesh_zone_architecture',
+        meshName: 'mesh_zone_architecture',
+        materialName: 'mat_gallery_stone',
+        baseColorFactor: [1, 1, 1, 1],
+        roughnessFactor: 0.88,
+        metallicFactor: 0.04,
+        acc: structure,
+      },
+      {
+        nodeName: 'mesh_zone_accents',
+        meshName: 'mesh_zone_accents',
+        materialName: 'mat_gallery_bronze',
+        baseColorFactor: [1, 1, 1, 1],
+        roughnessFactor: 0.42,
+        metallicFactor: 0.55,
+        acc: accents,
+      },
+    ],
+    extraNodes,
+    rootNodeNames: [rootName],
+  });
 }
 
 function hasForbiddenPolyglotPrefix(bytes: Uint8Array): string | null {
@@ -957,3 +1423,5 @@ export function buildStudioPosterSvg(options: {
   <text x="90" y="1010" fill="#B2B0A6" font-family="sans-serif" font-size="18">${esc(options.subtitle)}</text>
 </svg>`;
 }
+
+export const validateGlbBuffer = inspectAndValidateGlbBuffer;

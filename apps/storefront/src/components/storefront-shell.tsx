@@ -25,6 +25,7 @@ const primaryNavLinks: readonly NavLinkItem[] = [
   { href: '/', label: 'Home' },
   { href: '/shop', label: 'Shop' },
   { href: '/collections', label: 'Collections' },
+  { href: '/showroom', label: 'Showroom' },
   { href: '/lookbook', label: 'Lookbook' },
   { href: '/journal', label: 'Journal' },
   { href: '/search', label: 'Search' },
@@ -34,6 +35,9 @@ const primaryNavLinks: readonly NavLinkItem[] = [
 ];
 
 const drawerSecondaryLinks: readonly NavLinkItem[] = [
+  { href: '/showroom', label: 'Virtual Showroom' },
+  { href: '/outfit-studio', label: 'Outfit Studio' },
+  { href: '/account/outfits', label: 'Saved Outfits' },
   { href: '/account/orders', label: 'Order History' },
   { href: '/account/returns', label: 'Returns' },
   { href: '/account/addresses', label: 'Saved Addresses' },
@@ -324,6 +328,12 @@ export function StorefrontShell({ children, narrow = false }: StorefrontShellPro
               <Link href="/collections" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
                 Collections
               </Link>
+              <Link href="/showroom" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
+                Showroom
+              </Link>
+              <Link href="/outfit-studio" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
+                Outfit Studio
+              </Link>
               <Link href="/lookbook" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
                 Lookbook
               </Link>
@@ -344,6 +354,9 @@ export function StorefrontShell({ children, narrow = false }: StorefrontShellPro
               </Link>
               <Link href="/account/orders" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
                 Orders
+              </Link>
+              <Link href="/account/outfits" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
+                Saved Outfits
               </Link>
               <Link href="/account/returns" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
                 Returns

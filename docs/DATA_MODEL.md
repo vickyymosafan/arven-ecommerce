@@ -66,6 +66,7 @@ All enums below live in `packages/database/prisma/schema.prisma`:
 | `CmsStatus` | `DRAFT`, `PREVIEW`, `PUBLISHED`, `ARCHIVED` |
 | `OutboxStatus` | `PENDING`, `PUBLISHED`, `FAILED` |
 | `IdempotencyStatus` | `IN_PROGRESS`, `COMPLETED`, `FAILED` |
+| `ShowroomZoneStatus` | `DRAFT`, `PUBLISHED`, `ARCHIVED` |
 
 ---
 
@@ -90,6 +91,9 @@ erDiagram
     product_3d_assets ||--o{ asset_validation_runs : validated_by
     product_3d_assets ||--o{ customization_presets : configures
     users ||--o{ outfit_scenes : saves
+    users ||--o{ showroom_zones : creates
+    showroom_zones ||--o{ showroom_hotspots : displays
+    products ||--o{ showroom_hotspots : featured_in
 
     warehouses ||--o{ inventory_levels : stocks
     product_variants ||--o{ inventory_levels : tracked_at
@@ -248,7 +252,7 @@ erDiagram
 
 ---
 
-### Domain 3: 3D Assets, Presets & Outfit Studio
+### Domain 3: 3D Assets, Presets, Virtual Showroom & Outfit Studio
 
 #### `product_3d_assets`
 | Column | Type | Null | Default / Constraint | Notes |
@@ -264,7 +268,7 @@ erDiagram
 | `bytes` | `BIGINT` | NO | | File size in bytes |
 | `status` | `AssetStatus` | NO | `'UPLOADED'` | |
 | `is_active_version` | `BOOLEAN` | NO | `false` | Partial unique `(product_id) WHERE is_active_version = true` |
-| `config` | `JSONB` | NO | `'{}'` | `coordinateSystem`, `materialSlots`, `rigVersion`, `slotType`, `qualityProfiles`, `license` |
+| `config` | `JSONB` | NO | `'{}'` | `coordinateSystem`, `materialSlots`, `rigVersion`, `slotType`, `qualityProfiles`, `provenance`, optional `outfitCompatibility` (`{ rigId, skeletonVersion, slot, anchor, incompatibleSlots }`) |
 | `published_at` | `TIMESTAMPTZ(3)` | YES | | |
 | `created_by` | `UUID` | YES | FK -> `users(id)` | |
 | `created_at`, `updated_at` | `TIMESTAMPTZ(3)` | NO | `NOW()` | |
@@ -276,7 +280,41 @@ erDiagram
 - `id UUID PK`, `product_id UUID NOT NULL FK -> products(id) ON DELETE CASCADE`, `asset_id UUID NOT NULL FK -> product_3d_assets(id) ON DELETE CASCADE`, `code VARCHAR(64) NOT NULL`, `label VARCHAR(120) NOT NULL`, `swatch_hex CHAR(7) NOT NULL`, `material_overrides JSONB NOT NULL`, `variant_id UUID NULL FK -> product_variants(id) ON DELETE SET NULL`, `is_active BOOLEAN NOT NULL DEFAULT true`, `sort_order INTEGER NOT NULL DEFAULT 0`, `created_at`, `updated_at`. Unique `(asset_id, code)`.
 
 #### `outfit_scenes`
-- `id UUID PK`, `user_id UUID NULL FK -> users(id) ON DELETE CASCADE`, `title VARCHAR(160) NOT NULL`, `mannequin_rig_version VARCHAR(64) NOT NULL`, `items JSONB NOT NULL` (stores only `productId`, `variantId`, `assetId`, `slot`, `presetId` — **never** authoritative prices), `is_public_preset BOOLEAN NOT NULL DEFAULT false`, `created_at`, `updated_at`. Index `(user_id, updated_at DESC)`, `(is_public_preset)`.
+- `id UUID PK`, `user_id UUID NULL FK -> users(id) ON DELETE CASCADE`, `title VARCHAR(160) NOT NULL`, `mannequin_rig_version VARCHAR(64) NOT NULL`, `items JSONB NOT NULL` (stores only `slot`, `productId`, `variantId`, `assetId`, `presetId` — **never** authoritative prices), `is_public_preset BOOLEAN NOT NULL DEFAULT false`, `created_at`, `updated_at`. Index `(user_id, updated_at DESC)`, `(is_public_preset)`.
+
+#### `showroom_zones`
+| Column | Type | Null | Default / Constraint | Notes |
+|---|---|---|---|---|
+| `id` | `UUID` | NO | PK | |
+| `code` | `VARCHAR(64)` | NO | `UNIQUE`, `CHECK (code ~ '^[a-z0-9]+(-[a-z0-9]+)*$')` | Gallery zone slug |
+| `title` | `VARCHAR(160)` | NO | | |
+| `description` | `TEXT` | YES | | |
+| `status` | `ShowroomZoneStatus` | NO | `'DRAFT'` | `DRAFT`, `PUBLISHED`, `ARCHIVED` |
+| `sort_order` | `INTEGER` | NO | `0`, `CHECK >= 0` | |
+| `scene_object_key` | `VARCHAR(512)` | NO | `UNIQUE` | `showroom/{code}/v{000N}/scene.glb` |
+| `lite_scene_object_key` | `VARCHAR(512)` | YES | | `showroom/{code}/v{000N}/scene-lite.glb` |
+| `poster_key` | `VARCHAR(512)` | NO | | Fallback poster asset key |
+| `scene_bytes` | `BIGINT` | NO | `CHECK (> 0 AND <= 6291456)` | Max 6 MB active zone budget |
+| `lite_scene_bytes` | `BIGINT` | YES | `CHECK (NULL OR (> 0 AND <= 3670016))` | Max 3.5 MB lite zone budget |
+| `camera_baseline` | `JSONB` | NO | `'{}'`, `CHECK object` | Default camera framing |
+| `portals` | `JSONB` | NO | `'[]'`, `CHECK array` | Portal definitions `[{ targetZoneCode, label, position }]` |
+| `config` | `JSONB` | NO | `'{}'` | `lightingPreset`, `bakedLighting`, triangle counts, provenance |
+| `published_at` | `TIMESTAMPTZ(3)` | YES | `CHECK (status <> 'PUBLISHED' OR published_at IS NOT NULL)` | |
+| `created_by` | `UUID` | YES | FK -> `users(id)` `ON DELETE SET NULL` | |
+| `created_at`, `updated_at` | `TIMESTAMPTZ(3)` | NO | `NOW()` | Index `(status, sort_order)` |
+
+#### `showroom_hotspots`
+| Column | Type | Null | Default / Constraint | Notes |
+|---|---|---|---|---|
+| `id` | `UUID` | NO | PK | |
+| `zone_id` | `UUID` | NO | FK -> `showroom_zones(id)` `ON DELETE CASCADE` | |
+| `product_id` | `UUID` | NO | FK -> `products(id)` `ON DELETE CASCADE` | `UNIQUE(zone_id, product_id)` |
+| `variant_id` | `UUID` | YES | FK -> `product_variants(id)` `ON DELETE SET NULL` | Optional featured variant |
+| `label` | `VARCHAR(120)` | NO | | |
+| `position_x`, `position_y`, `position_z` | `DOUBLE PRECISION` | NO | `CHECK (abs(x) <= 50 AND y >= 0 AND y <= 10 AND abs(z) <= 50)` | 3D hotspot coordinates |
+| `sort_order` | `INTEGER` | NO | `0`, `CHECK >= 0` | |
+| `is_active` | `BOOLEAN` | NO | `true` | Index `(zone_id, is_active, sort_order)` |
+| `created_at`, `updated_at` | `TIMESTAMPTZ(3)` | NO | `NOW()` | |
 
 ---
 
@@ -511,6 +549,28 @@ CREATE UNIQUE INDEX uq_addresses_default_per_user
 
 CREATE INDEX idx_outbox_pending
   ON outbox_events (next_attempt_at ASC) WHERE published_at IS NULL;
+
+-- Phase 08 Virtual Showroom & Outfit Studio invariants (Domain 3)
+ALTER TABLE showroom_zones
+  ADD CONSTRAINT chk_showroom_zone_code_format CHECK (code ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
+  ADD CONSTRAINT chk_showroom_zone_sort_nonneg CHECK (sort_order >= 0),
+  ADD CONSTRAINT chk_showroom_zone_scene_bytes CHECK (scene_bytes > 0 AND scene_bytes <= 6291456),
+  ADD CONSTRAINT chk_showroom_zone_lite_bytes CHECK (lite_scene_bytes IS NULL OR (lite_scene_bytes > 0 AND lite_scene_bytes <= 3670016)),
+  ADD CONSTRAINT chk_showroom_zone_camera_object CHECK (jsonb_typeof(camera_baseline) = 'object'),
+  ADD CONSTRAINT chk_showroom_zone_portals_array CHECK (jsonb_typeof(portals) = 'array'),
+  ADD CONSTRAINT chk_showroom_zone_published_at CHECK (status <> 'PUBLISHED' OR published_at IS NOT NULL);
+
+ALTER TABLE showroom_hotspots
+  ADD CONSTRAINT chk_showroom_hotspot_position CHECK (abs(position_x) <= 50 AND position_y >= 0 AND position_y <= 10 AND abs(position_z) <= 50),
+  ADD CONSTRAINT chk_showroom_hotspot_sort_nonneg CHECK (sort_order >= 0);
+
+ALTER TABLE outfit_scenes
+  ADD CONSTRAINT chk_outfit_items_shape CHECK (jsonb_typeof(items) = 'array' AND jsonb_array_length(items) BETWEEN 1 AND 5),
+  ADD CONSTRAINT chk_outfit_owner_or_public CHECK (user_id IS NOT NULL OR is_public_preset = true),
+  ADD CONSTRAINT chk_outfit_rig_format CHECK (mannequin_rig_version ~ '^arven_mannequin_[a-z0-9_]+$'),
+  ADD CONSTRAINT chk_outfit_items_no_price CHECK (
+    NOT jsonb_path_exists(items, '$[*].keyvalue() ? (@.key like_regex "price|amount|total|discount" flag "i")')
+  );
 ```
 
 ---

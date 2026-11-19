@@ -21,7 +21,7 @@ describe('Phase 07 3D Assets & Customization Presets Seed Invariants', () => {
     const prisma = createPrismaClient({ connectionString: dbUrl });
     try {
       const seedRes = await seedDatabase(prisma, { seedDevUsers: false });
-      expect(seedRes.assets3dUpserted).toBe(6);
+      expect(seedRes.assets3dUpserted).toBe(7);
       expect(seedRes.presets3dUpserted).toBeGreaterThanOrEqual(12);
 
       const featured3D = await prisma.product.findUnique({

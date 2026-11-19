@@ -153,8 +153,6 @@ describe('Phase 06 Storefront Editorial & Customer Returns', () => {
       expect(content, `${relPath} must not contain em-dash`).not.toContain('\u2014');
       expect(content.toLowerCase(), `${relPath} must not use #8b897f`).not.toContain('#8b897f');
       expect(content, `${relPath} must not import three`).not.toMatch(/from\s+['"]three['"]/);
-      expect(content, `${relPath} must not link to /showroom`).not.toContain('/showroom');
-      expect(content, `${relPath} must not link to /outfit-studio`).not.toContain('/outfit-studio');
     }
   });
 });

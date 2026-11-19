@@ -8,6 +8,7 @@ import type {
   RefundStatusInput,
   ReturnStatusInput,
   ShipmentStatusInput,
+  ShowroomZoneStatusInput,
 } from '@arven/contracts';
 import type { BadgeTone } from '@arven/ui';
 
@@ -33,6 +34,16 @@ export const ADMIN_NAV_ITEMS: readonly AdminNavItem[] = [
     href: '/catalog/collections',
     label: 'Collections',
     requiredPermissions: ['product.read', 'product.write'],
+  },
+  {
+    href: '/experience/showroom',
+    label: 'Showroom',
+    requiredPermissions: ['asset.read', 'asset.publish'],
+  },
+  {
+    href: '/experience/outfit-studio',
+    label: 'Outfit Studio',
+    requiredPermissions: ['asset.read', 'asset.publish'],
   },
   {
     href: '/inventory',
@@ -271,6 +282,35 @@ export function getCmsStatusBadge(status: CmsStatusInput): { label: string; tone
     label: formatStatusLabel(status),
     tone: CMS_STATUS_TONES[status] ?? 'neutral',
   };
+}
+
+const SHOWROOM_ZONE_STATUS_TONES: Record<ShowroomZoneStatusInput, BadgeTone> = {
+  DRAFT: 'neutral',
+  PUBLISHED: 'success',
+  ARCHIVED: 'warning',
+};
+
+export function getShowroomZoneStatusBadge(
+  status: ShowroomZoneStatusInput,
+): { label: string; tone: BadgeTone } {
+  return {
+    label: formatStatusLabel(status),
+    tone: SHOWROOM_ZONE_STATUS_TONES[status] ?? 'neutral',
+  };
+}
+
+export function canUserPublishExperience(params: {
+  roles?: readonly string[] | null;
+  permissions?: ReadonlySet<string> | readonly string[] | null;
+}): boolean {
+  if (params.roles?.includes('OWNER')) {
+    return true;
+  }
+  const permSet =
+    params.permissions instanceof Set
+      ? params.permissions
+      : new Set(params.permissions ?? []);
+  return permSet.has('asset.publish');
 }
 
 const REFUND_ELIGIBLE_ORDER_STATUSES = new Set<string>([

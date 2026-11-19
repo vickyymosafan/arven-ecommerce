@@ -10,6 +10,7 @@ import { StorefrontShell } from './storefront-shell';
 const accountNavItems = [
   { href: '/account', label: 'Profile Overview' },
   { href: '/account/orders', label: 'Order History' },
+  { href: '/account/outfits', label: 'Saved Outfits' },
   { href: '/account/returns', label: 'Returns' },
   { href: '/account/addresses', label: 'Address Book' },
   { href: '/account/sessions', label: 'Active Sessions' },
