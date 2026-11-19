@@ -15,6 +15,7 @@ import { NotificationsProcessor } from './processors/notifications.processor.js'
 import { OrderProcessor } from './processors/order.processor.js';
 import { PaymentProcessor } from './processors/payment.processor.js';
 import { ShippingProcessor } from './processors/shipping.processor.js';
+import { ThreeDAssetsProcessor } from './processors/three-d-assets.processor.js';
 
 export function buildBullMqConnectionOptions(redisUrl: string): ConnectionOptions {
   const parsed = new URL(redisUrl);
@@ -62,6 +63,7 @@ export class WorkerModule {
         PaymentProcessor,
         OrderProcessor,
         ShippingProcessor,
+        ThreeDAssetsProcessor,
       ],
       exports: [
         WorkerPrismaService,
@@ -72,6 +74,7 @@ export class WorkerModule {
         PaymentProcessor,
         OrderProcessor,
         ShippingProcessor,
+        ThreeDAssetsProcessor,
         BullModule,
       ],
     };

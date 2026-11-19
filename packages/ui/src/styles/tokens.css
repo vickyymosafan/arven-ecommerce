@@ -224,15 +224,17 @@
 /* ==========================================================================
    ACCESSIBILITY & REDUCED MOTION POLICY
    ========================================================================== */
-:focus-visible {
-  outline: 2px solid var(--arven-focus-ring);
-  outline-offset: 2px;
-}
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--arven-focus-ring);
+    outline-offset: 2px;
+  }
 
-input,
-select,
-textarea {
-  scroll-margin-bottom: 120px;
+  input,
+  select,
+  textarea {
+    scroll-margin-bottom: 120px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

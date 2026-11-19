@@ -20,6 +20,10 @@ import type {
   ApiSuccessEnvelope,
   ApproveRefundInput,
   ApproveReturnRequest,
+  AssetFormatInput,
+  AssetProvenanceInput,
+  AssetStatusInput,
+  AssetValidationStatusInput,
   AuthUserSummary,
   CancelOrderRequest,
   CartItemConfiguration,
@@ -32,6 +36,7 @@ import type {
   CmsPageBlockInput,
   CmsStatusInput,
   CollectionStatusInput,
+  Confirm3DAssetRequest,
   CouponStatusInput,
   CreateAddressRequest,
   CreateAdminStockMovementRequest,
@@ -42,6 +47,7 @@ import type {
   CreateCollectionRequest,
   CreateCouponRequest,
   CreateCustomerReturnRequest,
+  CreateCustomizationPresetRequest,
   CreateOrderRequest,
   CreatePaymentSessionRequest,
   CreateProductMediaRequest,
@@ -51,22 +57,29 @@ import type {
   CustomerReturnItemInput,
   DiscountTypeInput,
   ForgotPasswordRequest,
+  GarmentSilhouetteInput,
   HealthLiveResponse,
   HealthReadyResponse,
   InventoryMovementTypeInput,
+  LightingPresetInput,
   ListOrdersQuery,
   LoginRequest,
+  MaterialOverrideEntryInput,
+  MaterialSlotSpecInput,
   MediaTypeInput,
   MfaSetupResponse,
   MfaVerifyRequest,
   MidtransWebhookPayload,
   OrderStatusInput,
   PaymentStatusInput,
+  Presign3DAssetRequest,
   ProductSort,
   ProductStatusInput,
   PublicProductsQuery,
+  Publish3DAssetRequest,
   ReceiveReturnItemInput,
   ReceiveReturnRequest,
+  Record3DTelemetryRequest,
   RefundStatusInput,
   RegisterRequest,
   RequestRefundInput,
@@ -87,10 +100,12 @@ import type {
   UpdateCmsPageRequest,
   UpdateCollectionRequest,
   UpdateCouponRequest,
+  UpdateCustomizationPresetRequest,
   UpdateProductMediaRequest,
   UpdateProductRequest,
   UpdateProductVariantRequest,
   UpdateProfileRequest,
+  UploadStaging3DAssetRequest,
   UserProfileResponse,
   UserSessionSummary,
   VerifyEmailRequest,
@@ -119,6 +134,10 @@ export type {
   ApiSuccessEnvelope,
   ApproveRefundInput,
   ApproveReturnRequest,
+  AssetFormatInput,
+  AssetProvenanceInput,
+  AssetStatusInput,
+  AssetValidationStatusInput,
   AuthUserSummary,
   CancelOrderRequest,
   CartItemConfiguration,
@@ -131,6 +150,7 @@ export type {
   CmsPageBlockInput,
   CmsStatusInput,
   CollectionStatusInput,
+  Confirm3DAssetRequest,
   CouponStatusInput,
   CreateAddressRequest,
   CreateAdminStockMovementRequest,
@@ -141,6 +161,7 @@ export type {
   CreateCollectionRequest,
   CreateCouponRequest,
   CreateCustomerReturnRequest,
+  CreateCustomizationPresetRequest,
   CreateOrderRequest,
   CreatePaymentSessionRequest,
   CreateProductMediaRequest,
@@ -150,22 +171,29 @@ export type {
   CustomerReturnItemInput,
   DiscountTypeInput,
   ForgotPasswordRequest,
+  GarmentSilhouetteInput,
   HealthLiveResponse,
   HealthReadyResponse,
   InventoryMovementTypeInput,
+  LightingPresetInput,
   ListOrdersQuery,
   LoginRequest,
+  MaterialOverrideEntryInput,
+  MaterialSlotSpecInput,
   MediaTypeInput,
   MfaSetupResponse,
   MfaVerifyRequest,
   MidtransWebhookPayload,
   OrderStatusInput,
   PaymentStatusInput,
+  Presign3DAssetRequest,
   ProductSort,
   ProductStatusInput,
   PublicProductsQuery,
+  Publish3DAssetRequest,
   ReceiveReturnItemInput,
   ReceiveReturnRequest,
+  Record3DTelemetryRequest,
   RefundStatusInput,
   RegisterRequest,
   RequestRefundInput,
@@ -186,10 +214,12 @@ export type {
   UpdateCmsPageRequest,
   UpdateCollectionRequest,
   UpdateCouponRequest,
+  UpdateCustomizationPresetRequest,
   UpdateProductMediaRequest,
   UpdateProductRequest,
   UpdateProductVariantRequest,
   UpdateProfileRequest,
+  UploadStaging3DAssetRequest,
   UserProfileResponse,
   UserSessionSummary,
   VerifyEmailRequest,
@@ -376,7 +406,12 @@ export interface ProductDetailDto {
 }
 
 export interface PublishGateCheckItemDto {
-  key: 'CORE_METADATA' | 'ACTIVE_VARIANTS_AND_INVENTORY' | 'SEO_AND_SIZE_GUIDE' | 'MEDIA_AND_ALT_TEXT';
+  key:
+    | 'CORE_METADATA'
+    | 'ACTIVE_VARIANTS_AND_INVENTORY'
+    | 'SEO_AND_SIZE_GUIDE'
+    | 'MEDIA_AND_ALT_TEXT'
+    | 'THREE_D_ASSET_READINESS';
   label: string;
   passed: boolean;
   issues: Array<{
@@ -1056,5 +1091,175 @@ export interface AdminSalesAnalyticsDto {
   returnRatePct: number | null;
   statusBreakdown: AdminOrderStatusCountDto[];
   dailySeries: AdminSalesDailyPointDto[];
+  generatedAt: string;
+}
+
+// =============================================================================
+// Phase 07: 3D Product Viewer, Asset Pipeline & Customization Presets DTOs
+// =============================================================================
+
+export interface MaterialSlotSpecDto {
+  slotId: string;
+  meshNames: string[];
+  materialName: string;
+  customizable: boolean;
+  defaultBaseColorHex: string;
+  roughnessRange: [number, number];
+  metalnessRange: [number, number];
+}
+
+export interface AssetProvenanceDto {
+  sourceType: 'in_house_cad' | 'commissioned_vendor' | 'licensed_stock';
+  modelAuthor: string;
+  modelLicense: string;
+  textureLicense: string;
+  hdriLicense: string;
+  commercialUseVerified: true;
+}
+
+export interface AssetQualityProfileDto {
+  triangles: number;
+  vertices: number;
+  bytes: number;
+  url?: string;
+}
+
+export interface Product3DAssetConfigDto {
+  schemaVersion: string;
+  coordinateSystem: {
+    upAxis: 'Y';
+    units: 'meters';
+    frontAxis: '+Z';
+    groundY: number;
+    pivot: [number, number, number];
+    cameraBaseline: {
+      fovDeg: number;
+      position: [number, number, number];
+      target: [number, number, number];
+      minDistance: number;
+      maxDistance: number;
+    };
+  };
+  silhouette?: GarmentSilhouetteInput;
+  lightingPreset: LightingPresetInput;
+  materialSlots: MaterialSlotSpecDto[];
+  qualityProfiles: {
+    default: AssetQualityProfileDto;
+    lite?: AssetQualityProfileDto;
+  };
+  provenance: AssetProvenanceDto;
+}
+
+export interface CustomizationPresetDto {
+  id: string;
+  productId: string;
+  assetId: string;
+  code: string;
+  label: string;
+  swatchHex: string;
+  materialOverrides: Record<string, MaterialOverrideEntryInput>;
+  variantId: string | null;
+  variantSku?: string | null;
+  variantColor?: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AssetValidationRunDto {
+  id: string;
+  assetId: string;
+  status: AssetValidationStatusInput;
+  validatorVersion: string;
+  report: Record<string, unknown>;
+  errorSummary: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+}
+
+export interface Product3DAssetPublicDto {
+  id: string;
+  productId: string;
+  productSlug: string;
+  productName: string;
+  variantId: string | null;
+  version: number;
+  format: AssetFormatInput;
+  bytes: number;
+  modelUrl: string;
+  mobileModelUrl: string | null;
+  posterUrl: string;
+  config: Product3DAssetConfigDto;
+  customizationPresets: CustomizationPresetDto[];
+  publishedAt: string | null;
+}
+
+export interface Product3DAssetMetadataDto {
+  id: string;
+  productId: string;
+  version: number;
+  format: AssetFormatInput;
+  bytes: number;
+  posterUrl: string;
+  modelUrl: string;
+  mobileModelUrl: string | null;
+  coordinateSystem: Product3DAssetConfigDto['coordinateSystem'];
+  lightingPreset: LightingPresetInput;
+  materialSlots: MaterialSlotSpecDto[];
+  qualityProfiles: Product3DAssetConfigDto['qualityProfiles'];
+  provenance: AssetProvenanceDto;
+}
+
+export interface AdminProduct3DAssetDto {
+  id: string;
+  productId: string;
+  variantId: string | null;
+  version: number;
+  format: AssetFormatInput;
+  objectKey: string;
+  mobileObjectKey: string | null;
+  posterKey: string;
+  bytes: number;
+  status: AssetStatusInput;
+  isActiveVersion: boolean;
+  config: Product3DAssetConfigDto;
+  modelUrl: string | null;
+  mobileModelUrl: string | null;
+  posterUrl: string;
+  previewModelUrl: string;
+  validationRuns: AssetValidationRunDto[];
+  customizationPresets: CustomizationPresetDto[];
+  publishedAt: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Presign3DAssetResponseDto {
+  asset: AdminProduct3DAssetDto;
+  stagingKey: string;
+  uploadUrl: string;
+  uploadMethod: 'PUT';
+  uploadHeaders: Record<string, string>;
+  expiresAtUtc: string;
+}
+
+export interface Telemetry3DReceiptDto {
+  recorded: true;
+  eventType: Record3DTelemetryRequest['eventType'];
+  recordedAtUtc: string;
+}
+
+export interface Admin3DEngagementAnalyticsDto {
+  viewerOpenedCount: number;
+  presetSelectedCount: number;
+  cameraPresetCount: number;
+  fallbackTriggeredCount: number;
+  loadErrorCount: number;
+  contextLostCount: number;
+  readyAssetsCount: number;
+  productsWith3DCount: number;
   generatedAt: string;
 }

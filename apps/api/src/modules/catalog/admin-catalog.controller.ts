@@ -3,52 +3,70 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   Inject,
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Req,
+  StreamableFile,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type {
   AdminCategoryDto,
   AdminCollectionDto,
+  AdminProduct3DAssetDto,
   AdminProductDetailDto,
   AdminProductSummaryDto,
   AdminProductVariantDto,
+  CustomizationPresetDto,
+  Presign3DAssetResponseDto,
   ProductMediaDto,
 } from '@arven/contracts';
 import {
   adminProductsQuerySchema,
+  confirm3DAssetRequestSchema,
   createCategoryRequestSchema,
   createCollectionRequestSchema,
+  createCustomizationPresetRequestSchema,
   createProductMediaRequestSchema,
   createProductRequestSchema,
   createProductVariantRequestSchema,
+  presign3DAssetRequestSchema,
+  publish3DAssetRequestSchema,
   transitionProductStatusRequestSchema,
   updateCategoryRequestSchema,
   updateCollectionRequestSchema,
+  updateCustomizationPresetRequestSchema,
   updateProductMediaRequestSchema,
   updateProductRequestSchema,
   updateProductVariantRequestSchema,
+  uploadStaging3DAssetRequestSchema,
   uuidSchema,
   type AdminProductsQuery,
+  type Confirm3DAssetRequest,
   type CreateCategoryRequest,
   type CreateCollectionRequest,
+  type CreateCustomizationPresetRequest,
   type CreateProductMediaRequest,
   type CreateProductRequest,
   type CreateProductVariantRequest,
+  type Presign3DAssetRequest,
+  type Publish3DAssetRequest,
   type TransitionProductStatusRequest,
   type UpdateCategoryRequest,
   type UpdateCollectionRequest,
+  type UpdateCustomizationPresetRequest,
   type UpdateProductMediaRequest,
   type UpdateProductRequest,
   type UpdateProductVariantRequest,
+  type UploadStaging3DAssetRequest,
 } from '@arven/validators';
-import type { PaginatedResponse } from '../../common/http/index.js';
+import { SkipEnvelope, type PaginatedResponse } from '../../common/http/index.js';
 import {
   AdminAuth,
   AuditAction,
@@ -58,6 +76,7 @@ import {
   RequirePermissions,
   type AuthenticatedActor,
 } from '../../common/security/index.js';
+import { Assets3DService } from './assets3d.service.js';
 import { CatalogService } from './catalog.service.js';
 
 type ControllerRequest = Parameters<typeof extractClientIp>[0];
@@ -66,7 +85,10 @@ type ControllerRequest = Parameters<typeof extractClientIp>[0];
 @Controller('admin')
 @AdminAuth()
 export class AdminCatalogController {
-  constructor(@Inject(CatalogService) private readonly catalogService: CatalogService) {}
+  constructor(
+    @Inject(CatalogService) private readonly catalogService: CatalogService,
+    @Inject(Assets3DService) private readonly assets3dService: Assets3DService,
+  ) {}
 
   @Get('products')
   @RequirePermissions('product.read')
@@ -323,5 +345,196 @@ export class AdminCatalogController {
   ): Promise<void> {
     markAuditRecordedInTransaction(req);
     await this.catalogService.deleteCollection(actor, id, extractClientIp(req));
+  }
+
+  // ===========================================================================
+  // Phase 07: Admin 3D Asset Quarantine Upload, Validation, Preview & Presets
+  // ===========================================================================
+
+  @Get('products/:id/3d-assets')
+  @RequirePermissions('asset.read')
+  async listProduct3DAssets(
+    @Param('id', { schema: uuidSchema }) id: string,
+  ): Promise<AdminProduct3DAssetDto[]> {
+    return this.assets3dService.listAdminProduct3DAssets(id);
+  }
+
+  @Post('products/:id/3d-assets/presign')
+  @HttpCode(HttpStatus.CREATED)
+  @RequirePermissions('asset.upload')
+  @AuditAction('asset3d.presigned', 'Product3DAsset')
+  async presign3DAssetUpload(
+    @Req() req: ControllerRequest,
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('id', { schema: uuidSchema }) id: string,
+    @Body({ schema: presign3DAssetRequestSchema }) body: Presign3DAssetRequest,
+  ): Promise<Presign3DAssetResponseDto> {
+    markAuditRecordedInTransaction(req);
+    return this.assets3dService.presignAdmin3DAssetUpload(
+      actor,
+      id,
+      body,
+      extractClientIp(req),
+    );
+  }
+
+  @Put('3d-assets/:id/upload-staging')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('asset.upload')
+  @AuditAction('asset3d.staged', 'Product3DAsset')
+  async uploadStaging3DAsset(
+    @Req() req: ControllerRequest,
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('id', { schema: uuidSchema }) assetId: string,
+    @Body({ schema: uploadStaging3DAssetRequestSchema })
+    body: UploadStaging3DAssetRequest,
+  ): Promise<AdminProduct3DAssetDto> {
+    markAuditRecordedInTransaction(req);
+    return this.assets3dService.uploadStagingBytes(
+      actor,
+      assetId,
+      body,
+      extractClientIp(req),
+    );
+  }
+
+  @Post('products/:id/3d-assets/:assetId/confirm')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @RequirePermissions('asset.upload')
+  @AuditAction('asset3d.validated', 'Product3DAsset')
+  async confirmProduct3DAsset(
+    @Req() req: ControllerRequest,
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('id', { schema: uuidSchema }) productId: string,
+    @Param('assetId', { schema: uuidSchema }) assetId: string,
+    @Body({ schema: confirm3DAssetRequestSchema }) body: Confirm3DAssetRequest,
+  ): Promise<AdminProduct3DAssetDto> {
+    markAuditRecordedInTransaction(req);
+    return this.assets3dService.confirmAdmin3DAssetUpload(
+      actor,
+      assetId,
+      body,
+      extractClientIp(req),
+      productId,
+    );
+  }
+
+  @Post('3d-assets/:id/confirm')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @RequirePermissions('asset.upload')
+  @AuditAction('asset3d.validated', 'Product3DAsset')
+  async confirm3DAsset(
+    @Req() req: ControllerRequest,
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('id', { schema: uuidSchema }) assetId: string,
+    @Body({ schema: confirm3DAssetRequestSchema }) body: Confirm3DAssetRequest,
+  ): Promise<AdminProduct3DAssetDto> {
+    markAuditRecordedInTransaction(req);
+    return this.assets3dService.confirmAdmin3DAssetUpload(
+      actor,
+      assetId,
+      body,
+      extractClientIp(req),
+    );
+  }
+
+  @Get('3d-assets/:id/preview-model')
+  @SkipEnvelope()
+  @RequirePermissions('asset.read')
+  @Header('Content-Type', 'model/gltf-binary')
+  @Header('X-Content-Type-Options', 'nosniff')
+  @Header('Cache-Control', 'no-store')
+  async previewAdmin3DAsset(
+    @Param('id', { schema: uuidSchema }) assetId: string,
+  ): Promise<StreamableFile> {
+    const buf = await this.assets3dService.readAdminPreviewModelBinary(assetId);
+    return new StreamableFile(buf);
+  }
+
+  @Post('3d-assets/:id/publish')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('asset.publish')
+  @AuditAction('asset3d.published', 'Product3DAsset')
+  async publish3DAsset(
+    @Req() req: ControllerRequest,
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('id', { schema: uuidSchema }) assetId: string,
+    @Body({ schema: publish3DAssetRequestSchema }) body: Publish3DAssetRequest,
+  ): Promise<AdminProduct3DAssetDto> {
+    markAuditRecordedInTransaction(req);
+    return this.assets3dService.publishAdmin3DAsset(
+      actor,
+      assetId,
+      body,
+      extractClientIp(req),
+    );
+  }
+
+  @Get('3d-assets/:id/presets')
+  @RequirePermissions('asset.read')
+  async list3DAssetPresets(
+    @Param('id', { schema: uuidSchema }) assetId: string,
+  ): Promise<CustomizationPresetDto[]> {
+    return this.assets3dService.listAssetPresets(assetId);
+  }
+
+  @Post('3d-assets/:id/presets')
+  @HttpCode(HttpStatus.CREATED)
+  @RequirePermissions('asset.upload')
+  @AuditAction('asset3d.preset.created', 'CustomizationPreset')
+  async create3DAssetPreset(
+    @Req() req: ControllerRequest,
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('id', { schema: uuidSchema }) assetId: string,
+    @Body({ schema: createCustomizationPresetRequestSchema })
+    body: CreateCustomizationPresetRequest,
+  ): Promise<CustomizationPresetDto> {
+    markAuditRecordedInTransaction(req);
+    return this.assets3dService.createAssetPreset(
+      actor,
+      assetId,
+      body,
+      extractClientIp(req),
+    );
+  }
+
+  @Patch('3d-assets/:id/presets/:presetId')
+  @RequirePermissions('asset.upload')
+  @AuditAction('asset3d.preset.updated', 'CustomizationPreset')
+  async update3DAssetPreset(
+    @Req() req: ControllerRequest,
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('id', { schema: uuidSchema }) assetId: string,
+    @Param('presetId', { schema: uuidSchema }) presetId: string,
+    @Body({ schema: updateCustomizationPresetRequestSchema })
+    body: UpdateCustomizationPresetRequest,
+  ): Promise<CustomizationPresetDto> {
+    markAuditRecordedInTransaction(req);
+    return this.assets3dService.updateAssetPreset(
+      actor,
+      assetId,
+      presetId,
+      body,
+      extractClientIp(req),
+    );
+  }
+
+  @Delete('3d-assets/:id/presets/:presetId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermissions('asset.upload')
+  @AuditAction('asset3d.preset.deleted', 'CustomizationPreset')
+  async delete3DAssetPreset(
+    @Req() req: ControllerRequest,
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('id', { schema: uuidSchema }) assetId: string,
+    @Param('presetId', { schema: uuidSchema }) presetId: string,
+  ): Promise<void> {
+    markAuditRecordedInTransaction(req);
+    await this.assets3dService.deleteAssetPreset(
+      actor,
+      assetId,
+      presetId,
+      extractClientIp(req),
+    );
   }
 }

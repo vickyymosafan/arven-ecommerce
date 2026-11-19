@@ -1,5 +1,6 @@
 export * from './admin.js';
 export * from './admin-ops.js';
+export * from './assets3d.js';
 export * from './auth.js';
 export * from './cart.js';
 export * from './catalog.js';

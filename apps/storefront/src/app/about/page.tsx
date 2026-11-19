@@ -75,7 +75,7 @@ export default function AboutCmsPage() {
   return (
     <StorefrontShell>
       {loading ? (
-        <LoadingState label="Loading ARVEN house story" rows={4} />
+        <LoadingState label="Loading ARVEN house story" rows={4} className="min-h-[85dvh]" />
       ) : error ? (
         <ErrorState
           title="Unable to load About page"

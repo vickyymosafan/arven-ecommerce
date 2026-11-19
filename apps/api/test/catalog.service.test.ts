@@ -148,6 +148,7 @@ function makeReadyLoadedProduct(overrides: Record<string, unknown> = {}) {
         updatedAt: now,
       },
     ],
+    assets3d: [],
     ...overrides,
   };
 }

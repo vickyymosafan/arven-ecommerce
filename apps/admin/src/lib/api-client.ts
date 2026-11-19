@@ -1,4 +1,5 @@
 import type {
+  Admin3DEngagementAnalyticsDto,
   AdminCategoryDto,
   AdminCmsListQuery,
   AdminCollectionDto,
@@ -13,6 +14,7 @@ import type {
   AdminOrderDetailDto,
   AdminOrderSummaryDto,
   AdminOrdersQuery,
+  AdminProduct3DAssetDto,
   AdminProductDetailDto,
   AdminProductSummaryDto,
   AdminProductVariantDto,
@@ -43,8 +45,10 @@ import type {
   CreateProductMediaRequest,
   CreateProductRequest,
   CreateProductVariantRequest,
+  CustomizationPresetDto,
   MfaSetupResponse,
   MfaVerifyRequest,
+  Presign3DAssetResponseDto,
   ProductMediaDto,
   ReceiveReturnRequest,
   RefundDto,
@@ -67,9 +71,15 @@ import type {
 } from '@arven/contracts';
 import type {
   AssignUserRolesRequest,
+  Confirm3DAssetRequest,
+  CreateCustomizationPresetRequest,
   CreateRoleRequest,
+  Presign3DAssetRequest,
+  Publish3DAssetRequest,
+  UpdateCustomizationPresetRequest,
   UpdateRoleRequest,
   UpdateUserStatusRequest,
+  UploadStaging3DAssetRequest,
 } from '@arven/validators';
 
 export interface ApiErrorDetail {
@@ -609,6 +619,97 @@ export const adminApi = {
       },
     );
   },
+  listProduct3DAssets(productId: string): Promise<AdminProduct3DAssetDto[]> {
+    return requestAdminApi<AdminProduct3DAssetDto[]>(
+      `/api/v1/admin/products/${encodeURIComponent(productId)}/3d-assets`,
+    );
+  },
+  presign3DAssetUpload(
+    productId: string,
+    input: Presign3DAssetRequest,
+  ): Promise<Presign3DAssetResponseDto> {
+    return requestAdminApi<Presign3DAssetResponseDto>(
+      `/api/v1/admin/products/${encodeURIComponent(productId)}/3d-assets/presign`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    );
+  },
+  uploadStaging3DAsset(
+    assetId: string,
+    input: UploadStaging3DAssetRequest,
+  ): Promise<AdminProduct3DAssetDto> {
+    return requestAdminApi<AdminProduct3DAssetDto>(
+      `/api/v1/admin/3d-assets/${encodeURIComponent(assetId)}/upload-staging`,
+      {
+        method: 'PUT',
+        body: input,
+      },
+    );
+  },
+  confirm3DAsset(
+    assetId: string,
+    input: Confirm3DAssetRequest = {},
+  ): Promise<AdminProduct3DAssetDto> {
+    return requestAdminApi<AdminProduct3DAssetDto>(
+      `/api/v1/admin/3d-assets/${encodeURIComponent(assetId)}/confirm`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    );
+  },
+  publish3DAsset(
+    assetId: string,
+    input: Publish3DAssetRequest = { enableProduct3d: true },
+  ): Promise<AdminProduct3DAssetDto> {
+    return requestAdminApi<AdminProduct3DAssetDto>(
+      `/api/v1/admin/3d-assets/${encodeURIComponent(assetId)}/publish`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    );
+  },
+  list3DAssetPresets(assetId: string): Promise<CustomizationPresetDto[]> {
+    return requestAdminApi<CustomizationPresetDto[]>(
+      `/api/v1/admin/3d-assets/${encodeURIComponent(assetId)}/presets`,
+    );
+  },
+  create3DAssetPreset(
+    assetId: string,
+    input: CreateCustomizationPresetRequest,
+  ): Promise<CustomizationPresetDto> {
+    return requestAdminApi<CustomizationPresetDto>(
+      `/api/v1/admin/3d-assets/${encodeURIComponent(assetId)}/presets`,
+      {
+        method: 'POST',
+        body: input,
+      },
+    );
+  },
+  update3DAssetPreset(
+    assetId: string,
+    presetId: string,
+    input: UpdateCustomizationPresetRequest,
+  ): Promise<CustomizationPresetDto> {
+    return requestAdminApi<CustomizationPresetDto>(
+      `/api/v1/admin/3d-assets/${encodeURIComponent(assetId)}/presets/${encodeURIComponent(presetId)}`,
+      {
+        method: 'PATCH',
+        body: input,
+      },
+    );
+  },
+  delete3DAssetPreset(assetId: string, presetId: string): Promise<void> {
+    return requestAdminApi<void>(
+      `/api/v1/admin/3d-assets/${encodeURIComponent(assetId)}/presets/${encodeURIComponent(presetId)}`,
+      {
+        method: 'DELETE',
+      },
+    );
+  },
   listCategories(): Promise<AdminCategoryDto[]> {
     return requestAdminApi<AdminCategoryDto[]>('/api/v1/admin/categories');
   },
@@ -745,6 +846,11 @@ export const adminApi = {
   getSalesAnalytics(query: Partial<AnalyticsSalesQuery> = {}): Promise<AdminSalesAnalyticsDto> {
     const qs = toQueryString({ days: query.days });
     return requestAdminApi<AdminSalesAnalyticsDto>(`/api/v1/admin/analytics/sales${qs}`);
+  },
+  get3DEngagementAnalytics(): Promise<Admin3DEngagementAnalyticsDto> {
+    return requestAdminApi<Admin3DEngagementAnalyticsDto>(
+      '/api/v1/admin/analytics/3d-engagement',
+    );
   },
   async listOrders(
     query: Partial<AdminOrdersQuery> = {},

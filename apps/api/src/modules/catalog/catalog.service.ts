@@ -18,6 +18,7 @@ import type {
   SizeGuideDataDto,
 } from '@arven/contracts';
 import {
+  AssetStatus,
   CollectionStatus,
   InventoryMovementType,
   MediaType,
@@ -87,6 +88,15 @@ const PRODUCT_RELATIONS_INCLUDE = {
   },
   media: {
     orderBy: [{ position: 'asc' as const }, { createdAt: 'asc' as const }],
+  },
+  assets3d: {
+    orderBy: [{ version: 'desc' as const }],
+    include: {
+      customizationPresets: {
+        where: { isActive: true },
+        orderBy: [{ sortOrder: 'asc' as const }, { createdAt: 'asc' as const }],
+      },
+    },
   },
 } satisfies Prisma.ProductInclude;
 
@@ -350,11 +360,61 @@ export function evaluateProductPublishGate(product: LoadedProduct): PublishGateE
     },
   ];
 
+  const threeDIssues: Array<{ field: string; issue: string }> = [];
+  if (product.has3dEnabled) {
+    const activeReadyAsset = product.assets3d.find(
+      (asset) => asset.isActiveVersion && asset.status === AssetStatus.READY,
+    );
+    if (!activeReadyAsset) {
+      threeDIssues.push({
+        field: 'assets3d',
+        issue:
+          'has3dEnabled is true, so an active READY Product3DAsset version must be published first',
+      });
+    } else {
+      if (!activeReadyAsset.posterKey.trim()) {
+        threeDIssues.push({
+          field: 'assets3d.posterKey',
+          issue: 'Active READY 3D asset requires a fallback posterKey',
+        });
+      }
+      const cfg =
+        activeReadyAsset.config && typeof activeReadyAsset.config === 'object'
+          ? (activeReadyAsset.config as Record<string, unknown>)
+          : {};
+      const slots = Array.isArray(cfg['materialSlots']) ? cfg['materialSlots'] : [];
+      if (slots.length === 0) {
+        threeDIssues.push({
+          field: 'assets3d.config.materialSlots',
+          issue: 'Active READY 3D asset must declare at least one validated material slot',
+        });
+      }
+      const qualityProfiles =
+        cfg['qualityProfiles'] && typeof cfg['qualityProfiles'] === 'object'
+          ? (cfg['qualityProfiles'] as Record<string, unknown>)
+          : {};
+      if (!activeReadyAsset.mobileObjectKey && !qualityProfiles['lite']) {
+        threeDIssues.push({
+          field: 'assets3d.mobileObjectKey',
+          issue: 'Active READY 3D asset requires a mobile lite profile before publishing',
+        });
+      }
+    }
+
+    checks.push({
+      key: 'THREE_D_ASSET_READINESS',
+      label: 'Validated 3D asset, poster & mobile lite profile',
+      passed: threeDIssues.length === 0,
+      issues: threeDIssues,
+    });
+  }
+
   const allIssues = [
     ...coreIssues,
     ...variantIssues,
     ...seoAndSizeGuideIssues,
     ...mediaIssues,
+    ...threeDIssues,
   ];
 
   return {

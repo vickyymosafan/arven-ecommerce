@@ -1,6 +1,9 @@
 import { Controller, Get, Header, Inject, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { AdminSalesAnalyticsDto } from '@arven/contracts';
+import type {
+  Admin3DEngagementAnalyticsDto,
+  AdminSalesAnalyticsDto,
+} from '@arven/contracts';
 import {
   analyticsSalesQuerySchema,
   type AnalyticsSalesQuery,
@@ -33,5 +36,15 @@ export class AdminAnalyticsController {
     @Query({ schema: analyticsSalesQuerySchema }) query: AnalyticsSalesQuery,
   ): Promise<AdminSalesAnalyticsDto> {
     return this.analyticsService.getSalesAnalytics(actor, query);
+  }
+
+  @Get('3d-engagement')
+  @RequireAnyPermission('analytics.read', 'analytics.read.limited')
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({
+    summary: 'Get aggregated zero-PII 3D viewer engagement & readiness counters',
+  })
+  async get3DEngagementAnalytics(): Promise<Admin3DEngagementAnalyticsDto> {
+    return this.analyticsService.get3DEngagementAnalytics();
   }
 }

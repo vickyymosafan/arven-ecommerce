@@ -47,6 +47,8 @@ describe('Admin proxy and redirect sanitization', () => {
     const csp = response.headers.get('Content-Security-Policy') ?? '';
     expect(csp).toContain("script-src 'self' 'nonce-");
     expect(csp).toContain("'sha256-7mu4H06fwDCjmnxxr/xNHyuQC6pLTHr4M2E4jXw5WZs='");
+    expect(csp).toContain("'wasm-unsafe-eval'");
+    expect(csp).toContain("worker-src 'self' blob:");
     expect(csp).not.toContain("'strict-dynamic'");
     expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
     expect(csp).not.toContain('upgrade-insecure-requests');

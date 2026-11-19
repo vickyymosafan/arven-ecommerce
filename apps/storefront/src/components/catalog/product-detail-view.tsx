@@ -2,7 +2,11 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { ProductDetailDto } from '@arven/contracts';
+import type {
+  CustomizationPresetDto,
+  Product3DAssetPublicDto,
+  ProductDetailDto,
+} from '@arven/contracts';
 import {
   Badge,
   Button,
@@ -20,18 +24,23 @@ import {
   formatIDR,
   useToast,
 } from '@arven/ui';
+import { Product3DViewerIsland } from '@/components/catalog/product-3d-viewer-island';
 import { ApiClientError, notifyCartUpdated, storefrontApi } from '@/lib/api-client';
 
 export function ProductDetailView({ slug }: { slug: string }) {
   const { toast } = useToast();
 
   const [product, setProduct] = useState<ProductDetailDto | null>(null);
+  const [asset3d, setAsset3d] = useState<Product3DAssetPublicDto | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<{ message: string; requestId?: string | null } | null>(null);
 
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
+  const [activePresetId, setActivePresetId] = useState<string | null>(null);
+  const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [addingToBag, setAddingToBag] = useState(false);
@@ -46,6 +55,10 @@ export function ProductDetailView({ slug }: { slug: string }) {
     setLoading(true);
     setNotFound(false);
     setError(null);
+    setAsset3d(null);
+    setViewMode('2d');
+    setActivePresetId(null);
+    setFallbackNotice(null);
     setQuantity(1);
     setAddedToBagMessage(null);
     setAddToBagError(null);
@@ -56,7 +69,7 @@ export function ProductDetailView({ slug }: { slug: string }) {
     let active = true;
     storefrontApi
       .getProductBySlug(slug)
-      .then((data) => {
+      .then(async (data) => {
         if (!active) return;
         setProduct(data);
         setNotFound(false);
@@ -64,11 +77,48 @@ export function ProductDetailView({ slug }: { slug: string }) {
         setQuantity(1);
         setAddedToBagMessage(null);
         setAddToBagError(null);
+        setViewMode('2d');
+        setFallbackNotice(null);
         const initialVariant =
           data.variants.find((v) => v.availableQty > 0) ?? data.variants[0] ?? null;
         setSelectedVariantId(initialVariant?.id ?? null);
         const initialMedia = data.primaryMedia ?? data.media[0] ?? null;
         setSelectedMediaId(initialMedia?.id ?? null);
+
+        if (!data.has3dEnabled) {
+          setAsset3d(null);
+          setActivePresetId(null);
+          if (active) {
+            setLoading(false);
+          }
+          return;
+        }
+
+        try {
+          const asset = await storefrontApi.getProduct3DAssets(slug);
+          if (!active) return;
+          setAsset3d(asset);
+          const presets = asset?.customizationPresets.filter((p) => p.isActive) ?? [];
+          const matchedInitialPreset =
+            presets.find(
+              (preset) =>
+                initialVariant &&
+                (preset.variantId === initialVariant.id ||
+                  (preset.variantColor &&
+                    preset.variantColor.toLowerCase() === initialVariant.color.toLowerCase())),
+            ) ??
+            presets[0] ??
+            null;
+          setActivePresetId(matchedInitialPreset?.id ?? null);
+        } catch {
+          if (!active) return;
+          setAsset3d(null);
+          setActivePresetId(null);
+        } finally {
+          if (active) {
+            setLoading(false);
+          }
+        }
       })
       .catch((err: unknown) => {
         if (!active) return;
@@ -79,11 +129,7 @@ export function ProductDetailView({ slug }: { slug: string }) {
         } else {
           setError({ message: 'Unable to load product details right now.' });
         }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
+        setLoading(false);
       });
 
     return () => {
@@ -111,6 +157,51 @@ export function ProductDetailView({ slug }: { slug: string }) {
     );
   }, [product, selectedMediaId]);
 
+  const activePresets = useMemo(() => {
+    if (!asset3d) return [];
+    return asset3d.customizationPresets.filter((p) => p.isActive);
+  }, [asset3d]);
+
+  const activePreset = useMemo(() => {
+    if (activePresets.length === 0 || !activePresetId) return null;
+    return activePresets.find((p) => p.id === activePresetId) ?? null;
+  }, [activePresetId, activePresets]);
+
+  const has3dControlSurface = Boolean(product && (product.has3dEnabled || asset3d !== null));
+
+  const handleSelectPreset = useCallback(
+    (preset: CustomizationPresetDto) => {
+      setActivePresetId(preset.id);
+      setAddedToBagMessage(null);
+      setAddToBagError(null);
+      if (!product) return;
+
+      const byId = preset.variantId
+        ? product.variants.find((v) => v.id === preset.variantId)
+        : undefined;
+      const targetColor = preset.variantColor?.trim().toLowerCase();
+      const byColor =
+        !byId && targetColor
+          ? product.variants.find(
+              (v) =>
+                v.color.toLowerCase() === targetColor &&
+                selectedVariant &&
+                v.size === selectedVariant.size,
+            ) ??
+            product.variants.find(
+              (v) => v.color.toLowerCase() === targetColor && v.availableQty > 0,
+            ) ??
+            product.variants.find((v) => v.color.toLowerCase() === targetColor)
+          : undefined;
+      const matchedVariant = byId ?? byColor;
+      if (matchedVariant) {
+        setSelectedVariantId(matchedVariant.id);
+        setQuantity(1);
+      }
+    },
+    [product, selectedVariant],
+  );
+
   const maxOrderQuantity = selectedVariant
     ? Math.max(0, Math.min(10, selectedVariant.availableQty))
     : 0;
@@ -136,14 +227,24 @@ export function ProductDetailView({ slug }: { slug: string }) {
       const updatedCart = await storefrontApi.addCartItem({
         variantId: selectedVariant.id,
         quantity: clampedQuantity,
+        ...(activePreset
+          ? {
+              configuration: {
+                colorPresetId: activePreset.id,
+                colorPresetCode: activePreset.code,
+                colorPresetLabel: activePreset.label,
+              },
+            }
+          : {}),
       });
       notifyCartUpdated(updatedCart);
-      const summary = `Added ${clampedQuantity} x ${product.name} (${selectedVariant.sku} / ${selectedVariant.color} / Size ${selectedVariant.size}) to your bag.`;
+      const presetSummary = activePreset ? ` / ${activePreset.label}` : '';
+      const summary = `Added ${clampedQuantity} x ${product.name} (${selectedVariant.sku} / ${selectedVariant.color} / Size ${selectedVariant.size}${presetSummary}) to your bag.`;
       setAddedToBagMessage(summary);
       toast({
         tone: 'success',
         title: 'Added to Bag',
-        description: `${clampedQuantity} x ${selectedVariant.sku} (${selectedVariant.size}, ${selectedVariant.color}) added at ${formatIDR(selectedVariant.priceIdr)}.`,
+        description: `${clampedQuantity} x ${selectedVariant.sku} (${selectedVariant.size}, ${selectedVariant.color}${presetSummary}) added at ${formatIDR(selectedVariant.priceIdr)}.`,
       });
     } catch (err) {
       if (err instanceof ApiClientError) {
@@ -230,68 +331,178 @@ export function ProductDetailView({ slug }: { slug: string }) {
       </nav>
 
       {/* Main 2-Column PDP Layout */}
+      {has3dControlSurface ? (
+        <a
+          href="#pdp-purchase-controls"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[var(--z-toast)] focus:inline-flex focus:min-h-11 focus:items-center focus:rounded-[var(--radius-sm)] focus:border focus:border-strong-border focus:bg-canvas focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-ink focus:shadow-[var(--shadow-raised)] focus:outline-2 focus:outline-offset-2 focus:outline-focus"
+        >
+          Lewati Tampilan 3D
+        </a>
+      ) : null}
+
       <div className="grid gap-10 lg:grid-cols-12">
-        {/* Left Column: 2D Studio Gallery */}
+        {/* Left Column: 2D Studio Gallery & Progressive 3D Viewer */}
         <section aria-label="Product media gallery" className="space-y-4 lg:col-span-6">
-          <div className="relative aspect-[3/4] w-full overflow-hidden border border-hairline bg-panel">
-            {activeMedia ? (
-              <img
-                src={activeMedia.url}
-                alt={activeMedia.altText || product.name}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-subtle p-8 text-center">
-                <span className="font-display text-2xl text-ink-muted">{product.name}</span>
+          {has3dControlSurface ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div
+                role="group"
+                aria-label="Mode Tampilan Produk"
+                className="inline-flex flex-wrap items-center gap-2"
+              >
+                <button
+                  type="button"
+                  aria-pressed={viewMode === '2d'}
+                  onClick={() => {
+                    setViewMode('2d');
+                    setFallbackNotice(null);
+                  }}
+                  className={cn(
+                    'inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-sm)] border px-4 py-2 text-xs font-medium tracking-[0.04em] transition-[background-color,border-color,color] cursor-pointer',
+                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+                    viewMode === '2d'
+                      ? 'border-strong-border bg-inverse text-ink-inverse font-semibold'
+                      : 'border-control-border bg-panel text-ink-muted hover:border-strong-border hover:text-ink',
+                  )}
+                >
+                  Foto 2D
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={viewMode === '3d'}
+                  onClick={() => {
+                    setFallbackNotice(null);
+                    setViewMode('3d');
+                  }}
+                  className={cn(
+                    'inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-sm)] border px-4 py-2 text-xs font-medium tracking-[0.04em] transition-[background-color,border-color,color] cursor-pointer',
+                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+                    viewMode === '3d'
+                      ? 'border-strong-border bg-inverse text-ink-inverse font-semibold'
+                      : 'border-control-border bg-panel text-ink-muted hover:border-strong-border hover:text-ink',
+                  )}
+                >
+                  Model 3D
+                </button>
               </div>
-            )}
-
-            <div className="pointer-events-none absolute top-3 left-3 flex flex-wrap items-center gap-2">
-              {activeMedia ? <Badge tone="neutral">{activeMedia.type}</Badge> : null}
-              {product.isFeatured ? <Badge tone="info">Featured</Badge> : null}
-            </div>
-          </div>
-
-          {product.media.length > 1 ? (
-            <div
-              role="group"
-              aria-label="Gallery view selector"
-              className="grid grid-cols-3 gap-3 sm:grid-cols-4"
-            >
-              {product.media.map((media, idx) => {
-                const isSelected = activeMedia?.id === media.id;
-                return (
-                  <button
-                    key={media.id}
-                    type="button"
-                    aria-label={`View image ${idx + 1}: ${media.altText}`}
-                    aria-current={isSelected ? 'true' : undefined}
-                    onClick={() => setSelectedMediaId(media.id)}
-                    className={cn(
-                      'group relative min-h-11 min-w-11 overflow-hidden border bg-panel transition-colors cursor-pointer',
-                      'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
-                      isSelected
-                        ? 'border-2 border-strong-border'
-                        : 'border-hairline hover:border-strong-border',
-                    )}
-                  >
-                    <img
-                      src={media.url}
-                      alt={media.altText}
-                      className="aspect-[3/4] w-full object-cover"
-                    />
-                    <span className="block border-t border-hairline bg-canvas px-2 py-1 text-left font-mono text-xs text-ink-muted">
-                      {media.type}
-                    </span>
-                  </button>
-                );
-              })}
+              {asset3d ? (
+                <span className="font-mono text-xs tabular-nums text-ink-muted">
+                  Studio 3D v{String(asset3d.version).padStart(4, '0')}
+                </span>
+              ) : null}
             </div>
           ) : null}
+
+          {fallbackNotice ? (
+            <StatusBanner
+              tone="info"
+              title="Mode 2D Studio Aktif"
+              description="Perangkat ini tidak mendukung WebGL penuh, sehingga menampilkan poster studio. Pemilihan preset, varian, ukuran, dan Tambah ke Tas tetap berfungsi normal."
+              action={
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setViewMode('2d');
+                    setFallbackNotice(null);
+                  }}
+                >
+                  Tampilkan Galeri 2D
+                </Button>
+              }
+            />
+          ) : null}
+
+          {viewMode === '3d' && asset3d !== null ? (
+            <Product3DViewerIsland
+              asset={asset3d}
+              activePresetId={activePresetId}
+              onFallbackTo2D={(reason) => {
+                if (reason === 'user_switched_to_2d') {
+                  setViewMode('2d');
+                  setFallbackNotice(null);
+                } else {
+                  setFallbackNotice(reason);
+                }
+              }}
+            />
+          ) : (
+            <>
+              {viewMode === '3d' && asset3d === null ? (
+                <StatusBanner
+                  tone="info"
+                  title="Model 3D belum tersedia"
+                  description="Menampilkan galeri studio 2D. Anda tetap dapat memilih varian dan menambahkan produk ke tas."
+                />
+              ) : null}
+
+              <div className="relative aspect-[3/4] w-full overflow-hidden border border-hairline bg-panel">
+                {activeMedia ? (
+                  <img
+                    src={activeMedia.url}
+                    alt={activeMedia.altText || product.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-subtle p-8 text-center">
+                    <span className="font-display text-2xl text-ink-muted">{product.name}</span>
+                  </div>
+                )}
+
+                <div className="pointer-events-none absolute top-3 left-3 flex flex-wrap items-center gap-2">
+                  {activeMedia ? <Badge tone="neutral">{activeMedia.type}</Badge> : null}
+                  {product.isFeatured ? <Badge tone="info">Featured</Badge> : null}
+                </div>
+              </div>
+
+              {product.media.length > 1 ? (
+                <div
+                  role="group"
+                  aria-label="Gallery view selector"
+                  className="grid grid-cols-3 gap-3 sm:grid-cols-4"
+                >
+                  {product.media.map((media, idx) => {
+                    const isSelected = activeMedia?.id === media.id;
+                    return (
+                      <button
+                        key={media.id}
+                        type="button"
+                        aria-label={`View image ${idx + 1}: ${media.altText}`}
+                        aria-current={isSelected ? 'true' : undefined}
+                        onClick={() => setSelectedMediaId(media.id)}
+                        className={cn(
+                          'group relative min-h-11 min-w-11 overflow-hidden border bg-panel transition-colors cursor-pointer',
+                          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+                          isSelected
+                            ? 'border-2 border-strong-border'
+                            : 'border-hairline hover:border-strong-border',
+                        )}
+                      >
+                        <img
+                          src={media.url}
+                          alt={media.altText}
+                          className="aspect-[3/4] w-full object-cover"
+                        />
+                        <span className="block border-t border-hairline bg-canvas px-2 py-1 text-left font-mono text-xs text-ink-muted">
+                          {media.type}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </>
+          )}
         </section>
 
         {/* Right Column: Specifications & Variant Selector */}
-        <section aria-label="Product details and selection" className="space-y-6 lg:col-span-6">
+        <section
+          id="pdp-purchase-controls"
+          tabIndex={-1}
+          aria-label="Product details and selection"
+          className="space-y-6 lg:col-span-6 focus:outline-none"
+        >
           <div className="space-y-3 border-b border-hairline pb-6">
             <div className="flex flex-wrap items-center gap-2">
               {product.primaryCategory ? (
@@ -331,7 +542,7 @@ export function ProductDetailView({ slug }: { slug: string }) {
               </div>
 
               {selectedVariant ? (
-                <span className="font-mono text-xs text-ink-muted">
+                <span className="font-mono text-xs tabular-nums text-ink-muted">
                   SKU: <strong className="font-medium text-ink">{selectedVariant.sku}</strong>
                 </span>
               ) : null}
@@ -339,6 +550,78 @@ export function ProductDetailView({ slug }: { slug: string }) {
 
             <p className="text-sm leading-relaxed text-ink-secondary">{product.description}</p>
           </div>
+
+          {/* Material & Color Presets (Server-driven 3D & Variant Sync) */}
+          {activePresets.length > 0 ? (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.06em] text-ink">
+                  Material &amp; Color Presets
+                </span>
+                {activePreset ? (
+                  <span className="text-xs font-medium text-ink-secondary">
+                    {activePreset.label}
+                  </span>
+                ) : null}
+              </div>
+              <div
+                role="radiogroup"
+                aria-label="Material and color presets"
+                className="flex flex-wrap items-center gap-2.5"
+              >
+                {activePresets.map((preset, presetIdx) => {
+                  const isSelected = activePreset?.id === preset.id;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      onClick={() => handleSelectPreset(preset)}
+                      onKeyDown={(event) => {
+                        if (activePresets.length <= 1) return;
+                        let targetIdx: number | null = null;
+                        if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                          targetIdx = (presetIdx + 1) % activePresets.length;
+                        } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                          targetIdx = (presetIdx - 1 + activePresets.length) % activePresets.length;
+                        } else if (event.key === 'Home') {
+                          targetIdx = 0;
+                        } else if (event.key === 'End') {
+                          targetIdx = activePresets.length - 1;
+                        }
+                        if (targetIdx === null) return;
+                        event.preventDefault();
+                        const nextPreset = activePresets[targetIdx];
+                        if (nextPreset) {
+                          handleSelectPreset(nextPreset);
+                          const radios =
+                            event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+                              '[role="radio"]',
+                            );
+                          radios?.[targetIdx]?.focus();
+                        }
+                      }}
+                      className={cn(
+                        'inline-flex min-h-11 min-w-11 items-center gap-2.5 rounded-[var(--radius-sm)] border px-3.5 py-2 text-xs font-medium transition-[background-color,border-color,color] cursor-pointer',
+                        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+                        isSelected
+                          ? 'border-2 border-strong-border bg-panel text-ink font-semibold'
+                          : 'border-control-border bg-elevated text-ink-secondary hover:border-strong-border hover:text-ink',
+                      )}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="inline-block h-4 w-4 shrink-0 rounded-full border border-control-border"
+                        style={{ backgroundColor: preset.swatchHex }}
+                      />
+                      <span>{preset.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
 
           {/* Interactive Color & Size Variant Selector */}
           <VariantSelector
@@ -349,6 +632,18 @@ export function ProductDetailView({ slug }: { slug: string }) {
               setQuantity(1);
               setAddedToBagMessage(null);
               setAddToBagError(null);
+              if (activePresets.length > 0) {
+                const matchedPreset =
+                  activePresets.find((p) => p.variantId === variant.id) ??
+                  activePresets.find(
+                    (p) =>
+                      p.variantColor &&
+                      p.variantColor.toLowerCase() === variant.color.toLowerCase(),
+                  );
+                if (matchedPreset) {
+                  setActivePresetId(matchedPreset.id);
+                }
+              }
             }}
           />
 
@@ -382,6 +677,7 @@ export function ProductDetailView({ slug }: { slug: string }) {
                 -
               </button>
               <span
+                role="status"
                 aria-live="polite"
                 aria-label={`Selected quantity ${selectedVariant && selectedVariant.availableQty > 0 ? clampedQuantity : 0}`}
                 className="inline-flex min-h-11 min-w-12 items-center justify-center px-3 font-mono text-sm font-medium tabular-nums text-ink"
@@ -428,6 +724,7 @@ export function ProductDetailView({ slug }: { slug: string }) {
               type="button"
               variant="secondary"
               size="lg"
+              className="shrink-0 whitespace-nowrap"
               onClick={() => setSizeGuideOpen(true)}
             >
               Size Guide

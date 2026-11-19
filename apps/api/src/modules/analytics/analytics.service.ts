@@ -1,13 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type {
+  Admin3DEngagementAnalyticsDto,
   AdminOrderStatusCountDto,
   AdminSalesAnalyticsDto,
   AdminSalesDailyPointDto,
 } from '@arven/contracts';
-import { OrderStatus, RefundStatus, ReturnStatus } from '@arven/database';
+import { AssetStatus, OrderStatus, RefundStatus, ReturnStatus } from '@arven/database';
 import type { AnalyticsSalesQuery, OrderStatusInput } from '@arven/validators';
+import type { Redis } from 'ioredis';
 import type { AuthenticatedActor } from '../../common/security/index.js';
 import { PrismaService } from '../../shared/prisma/prisma.service.js';
+import { REDIS_CLIENT } from '../../shared/redis/redis.module.js';
+import { TELEMETRY_3D_REDIS_KEY } from '../catalog/assets3d.service.js';
 
 const PAID_LIKE_ORDER_STATUSES = new Set<OrderStatus>([
   OrderStatus.PAID,
@@ -61,7 +65,10 @@ function toJakartaDateKey(date: Date): string {
 
 @Injectable()
 export class AnalyticsService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+  ) {}
 
   async getSalesAnalytics(
     actor: AuthenticatedActor,
@@ -247,6 +254,35 @@ export class AnalyticsService {
       statusBreakdown,
       dailySeries,
       generatedAt: now.toISOString(),
+    };
+  }
+
+  async get3DEngagementAnalytics(): Promise<Admin3DEngagementAnalyticsDto> {
+    const [readyAssetsCount, productsWith3DCount, telemetryMap] = await Promise.all([
+      this.prisma.client.product3DAsset.count({
+        where: { status: AssetStatus.READY, isActiveVersion: true },
+      }),
+      this.prisma.client.product.count({
+        where: { has3dEnabled: true, deletedAt: null },
+      }),
+      this.redis.hgetall(TELEMETRY_3D_REDIS_KEY).catch(() => ({} as Record<string, string>)),
+    ]);
+
+    const readCount = (field: string): number => {
+      const parsed = Number.parseInt(telemetryMap[field] ?? '0', 10);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+    };
+
+    return {
+      viewerOpenedCount: readCount('viewer_opened'),
+      presetSelectedCount: readCount('preset_selected'),
+      cameraPresetCount: readCount('camera_preset'),
+      fallbackTriggeredCount: readCount('fallback_triggered'),
+      loadErrorCount: readCount('load_error'),
+      contextLostCount: readCount('context_lost'),
+      readyAssetsCount,
+      productsWith3DCount,
+      generatedAt: new Date().toISOString(),
     };
   }
 }

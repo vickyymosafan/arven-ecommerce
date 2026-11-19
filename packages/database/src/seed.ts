@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import argon2 from 'argon2';
 import {
   AUTH_POLICY,
@@ -8,6 +11,17 @@ import {
   type RoleCode,
 } from '@arven/config';
 import {
+  DEFAULT_ARVEN_MATERIAL_SLOTS,
+  buildArvenGarmentGlbBuffer,
+  buildDefaultAssetConfig,
+  buildStudioPosterSvg,
+  inferSilhouetteFromSlug,
+  inspectAndValidateGlbBuffer,
+} from '@arven/three-engine/glb';
+import {
+  AssetFormat,
+  AssetStatus,
+  AssetValidationStatus,
   CmsStatus,
   CollectionStatus,
   CouponStatus,
@@ -120,6 +134,8 @@ export interface SeedDatabaseResult {
   readonly variantsUpserted: number;
   readonly mediaUpserted: number;
   readonly inventoryLevelsCreated: number;
+  readonly assets3dUpserted: number;
+  readonly presets3dUpserted: number;
   readonly couponsUpserted: number;
   readonly lookbooksUpserted: number;
   readonly journalArticlesUpserted: number;
@@ -1731,6 +1747,7 @@ async function seedCatalogAndInventory(tx: PrismaTransactionClient): Promise<{
         status: ProductStatus.PUBLISHED,
         isVisible: true,
         isFeatured: item.isFeatured,
+        has3dEnabled: item.isFeatured,
         deletedAt: null,
       },
       create: {
@@ -1746,7 +1763,7 @@ async function seedCatalogAndInventory(tx: PrismaTransactionClient): Promise<{
         status: ProductStatus.PUBLISHED,
         isVisible: true,
         isFeatured: item.isFeatured,
-        has3dEnabled: false,
+        has3dEnabled: item.isFeatured,
         publishedAt: now,
       },
       select: { id: true },
@@ -1857,6 +1874,263 @@ async function seedCatalogAndInventory(tx: PrismaTransactionClient): Promise<{
     mediaUpserted,
     inventoryLevelsCreated,
   };
+}
+
+function resolveSeedWorkspaceRoot(): string {
+  let current = path.resolve(import.meta.dirname);
+  for (let depth = 0; depth < 8; depth += 1) {
+    if (existsSync(path.resolve(current, 'pnpm-workspace.yaml'))) {
+      return current;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      break;
+    }
+    current = parent;
+  }
+  return process.cwd();
+}
+
+function slugifyPresetCode(label: string): string {
+  const normalized = label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized || 'default';
+}
+
+async function seedCatalog3DAssets(tx: PrismaTransactionClient): Promise<{
+  readonly assets3dUpserted: number;
+  readonly presets3dUpserted: number;
+}> {
+  const workspaceRoot = resolveSeedWorkspaceRoot();
+  const configuredDir = process.env.STORAGE_LOCAL_DIR?.trim() || '.local/storage';
+  const baseStorageDir = path.isAbsolute(configuredDir)
+    ? configuredDir
+    : path.resolve(workspaceRoot, configuredDir);
+  const publicRoot = path.resolve(baseStorageDir, 'public');
+
+  let assets3dUpserted = 0;
+  let presets3dUpserted = 0;
+  const now = new Date();
+
+  for (const item of ARVEN_SEED_PRODUCTS) {
+    const product = await tx.product.findUnique({
+      where: { slug: item.slug },
+      include: {
+        variants: {
+          where: { deletedAt: null, isActive: true },
+          orderBy: [{ createdAt: 'asc' }],
+        },
+      },
+    });
+    if (!product) {
+      continue;
+    }
+
+    const silhouette = inferSilhouetteFromSlug(item.slug);
+    const defaultGlb = buildArvenGarmentGlbBuffer({
+      silhouette,
+      primaryHex: item.colorHex,
+      secondaryHex: '#35383A',
+      accentHex: '#C5A572',
+      profile: 'default',
+    });
+    const liteGlb = buildArvenGarmentGlbBuffer({
+      silhouette,
+      primaryHex: item.colorHex,
+      secondaryHex: '#35383A',
+      accentHex: '#C5A572',
+      profile: 'lite',
+    });
+
+    const defaultReport = inspectAndValidateGlbBuffer(defaultGlb, {
+      profile: 'default',
+      expectedMaterialSlots: DEFAULT_ARVEN_MATERIAL_SLOTS,
+    });
+    const liteReport = inspectAndValidateGlbBuffer(liteGlb, {
+      profile: 'lite',
+      expectedMaterialSlots: DEFAULT_ARVEN_MATERIAL_SLOTS,
+    });
+
+    if (!defaultReport.valid || !liteReport.valid) {
+      throw new Error(
+        `Seed GLB validation failed for ${item.slug}: ${[...defaultReport.errors, ...liteReport.errors].join('; ')}`,
+      );
+    }
+
+    const objectKey = `products/${item.slug}/v0001/model.glb`;
+    const mobileObjectKey = `products/${item.slug}/v0001/model-lite.glb`;
+    const posterKey = `products/${item.slug}/v0001/poster.svg`;
+
+    const dirPath = path.resolve(publicRoot, 'products', item.slug, 'v0001');
+    await mkdir(dirPath, { recursive: true });
+    await writeFile(path.resolve(dirPath, 'model.glb'), defaultGlb);
+    await writeFile(path.resolve(dirPath, 'model-lite.glb'), liteGlb);
+    await writeFile(
+      path.resolve(dirPath, 'poster.svg'),
+      buildStudioPosterSvg({
+        title: item.name,
+        subtitle: `${item.material} · ${item.fit}`,
+        primaryHex: item.colorHex,
+      }),
+      'utf8',
+    );
+
+    const configDto = buildDefaultAssetConfig({
+      silhouette,
+      lightingPreset: 'arven_studio_neutral_v1',
+      defaultProfile: {
+        triangles: defaultReport.triangleCount,
+        vertices: defaultReport.vertexCount,
+        bytes: defaultReport.bytes,
+      },
+      liteProfile: {
+        triangles: liteReport.triangleCount,
+        vertices: liteReport.vertexCount,
+        bytes: liteReport.bytes,
+      },
+    });
+
+    const existingActive = await tx.product3DAsset.findFirst({
+      where: {
+        productId: product.id,
+        isActiveVersion: true,
+      },
+      select: { id: true, version: true },
+    });
+
+    const asset = await tx.product3DAsset.upsert({
+      where: {
+        productId_version: {
+          productId: product.id,
+          version: 1,
+        },
+      },
+      update: {
+        format: AssetFormat.GLB,
+        objectKey,
+        mobileObjectKey,
+        posterKey,
+        bytes: BigInt(defaultReport.bytes),
+        status: AssetStatus.READY,
+        isActiveVersion: !existingActive || existingActive.version === 1,
+        config: configDto as unknown as Prisma.InputJsonValue,
+        publishedAt: now,
+      },
+      create: {
+        productId: product.id,
+        version: 1,
+        format: AssetFormat.GLB,
+        objectKey,
+        mobileObjectKey,
+        posterKey,
+        bytes: BigInt(defaultReport.bytes),
+        status: AssetStatus.READY,
+        isActiveVersion: !existingActive,
+        config: configDto as unknown as Prisma.InputJsonValue,
+        publishedAt: now,
+      },
+      select: { id: true },
+    });
+    assets3dUpserted += 1;
+
+    const existingValidation = await tx.assetValidationRun.findFirst({
+      where: {
+        assetId: asset.id,
+        status: AssetValidationStatus.PASSED,
+      },
+      select: { id: true },
+    });
+    if (!existingValidation) {
+      await tx.assetValidationRun.create({
+        data: {
+          assetId: asset.id,
+          status: AssetValidationStatus.PASSED,
+          validatorVersion: 'arven-glb-validator-1.0.0',
+          report: {
+            bytes: defaultReport.bytes,
+            triangleCount: defaultReport.triangleCount,
+            vertexCount: defaultReport.vertexCount,
+            meshNames: defaultReport.meshNames,
+            materialNames: defaultReport.materialNames,
+            boundsMin: defaultReport.boundsMin,
+            boundsMax: defaultReport.boundsMax,
+            liteBytes: liteReport.bytes,
+            liteTriangles: liteReport.triangleCount,
+            errors: [],
+          } as unknown as Prisma.InputJsonValue,
+          startedAt: now,
+          completedAt: now,
+        },
+      });
+    }
+
+    // Build distinct color customization presets mapped cleanly to real active variants
+    const seenColors = new Set<string>();
+    let presetSortOrder = 0;
+    for (const variant of product.variants) {
+      const normalizedColor = variant.color.trim().toLowerCase();
+      if (seenColors.has(normalizedColor)) {
+        continue;
+      }
+      seenColors.add(normalizedColor);
+
+      const code = slugifyPresetCode(variant.color);
+      const swatchHex = variant.colorHex ?? '#17191B';
+      const secondaryHex =
+        swatchHex.toUpperCase() === '#F8F7F3' || swatchHex.toUpperCase() === '#E9E4DA'
+          ? '#D8D3C8'
+          : '#35383A';
+
+      const materialOverrides = {
+        mat_fabric_primary: {
+          baseColorHex: swatchHex,
+          roughness: 0.85,
+          metalness: 0.02,
+        },
+        mat_fabric_secondary: {
+          baseColorHex: secondaryHex,
+          roughness: 0.88,
+          metalness: 0.02,
+        },
+      };
+
+      await tx.customizationPreset.upsert({
+        where: {
+          assetId_code: {
+            assetId: asset.id,
+            code,
+          },
+        },
+        update: {
+          productId: product.id,
+          label: variant.color,
+          swatchHex,
+          materialOverrides: materialOverrides as unknown as Prisma.InputJsonValue,
+          variantId: variant.id,
+          isActive: true,
+          sortOrder: presetSortOrder,
+        },
+        create: {
+          productId: product.id,
+          assetId: asset.id,
+          code,
+          label: variant.color,
+          swatchHex,
+          materialOverrides: materialOverrides as unknown as Prisma.InputJsonValue,
+          variantId: variant.id,
+          isActive: true,
+          sortOrder: presetSortOrder,
+        },
+      });
+      presets3dUpserted += 1;
+      presetSortOrder += 1;
+    }
+  }
+
+  return { assets3dUpserted, presets3dUpserted };
 }
 
 async function seedDevelopmentUsers(
@@ -2068,6 +2342,7 @@ export async function seedDatabase(
   return withTransaction(prisma, async (tx) => {
     const rbac = await seedRolesAndPermissions(tx);
     const catalog = await seedCatalogAndInventory(tx);
+    const assets3d = await seedCatalog3DAssets(tx);
     const couponsUpserted = await seedCoupons(tx);
     const cms = await seedCmsContent(tx);
 
@@ -2087,6 +2362,8 @@ export async function seedDatabase(
       variantsUpserted: catalog.variantsUpserted,
       mediaUpserted: catalog.mediaUpserted,
       inventoryLevelsCreated: catalog.inventoryLevelsCreated,
+      assets3dUpserted: assets3d.assets3dUpserted,
+      presets3dUpserted: assets3d.presets3dUpserted,
       couponsUpserted,
       lookbooksUpserted: cms.lookbooksUpserted,
       journalArticlesUpserted: cms.journalArticlesUpserted,

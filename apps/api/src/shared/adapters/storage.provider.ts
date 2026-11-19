@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { copyFile, mkdir, realpath, rename, stat, unlink } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { copyFile, mkdir, readFile, realpath, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { RuntimeConfig } from '@arven/config';
 import {
   CopyObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -60,11 +62,40 @@ export interface PublishAssetResult {
   publicUrl: string;
 }
 
+export interface PutBufferInput {
+  key: string;
+  body: Uint8Array | Buffer;
+  contentType?: string;
+  scope?: StorageScope;
+}
+
+export interface ReadBufferInput {
+  key: string;
+  scope?: StorageScope;
+}
+
 export interface ObjectStorageProvider {
   createPresignedUpload(input: PresignedUploadInput): Promise<PresignedUploadResult>;
   headObject(input: HeadObjectInput): Promise<HeadObjectResult>;
   deleteObject(input: DeleteObjectInput): Promise<void>;
   publishAsset(input: PublishAssetInput): Promise<PublishAssetResult>;
+  putBuffer(input: PutBufferInput): Promise<void>;
+  readBuffer(input: ReadBufferInput): Promise<Buffer>;
+}
+
+function findWorkspaceRoot(): string {
+  let current = path.resolve(import.meta.dirname);
+  for (let depth = 0; depth < 8; depth += 1) {
+    if (existsSync(path.resolve(current, 'pnpm-workspace.yaml'))) {
+      return current;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      break;
+    }
+    current = parent;
+  }
+  return process.cwd();
 }
 
 function validateObjectKey(key: string): string[] {
@@ -98,7 +129,9 @@ export class LocalFsStorageAdapter implements ObjectStorageProvider {
     if (options.nodeEnv === 'production') {
       throw new Error('LocalFsStorageAdapter is strictly forbidden when NODE_ENV=production');
     }
-    this.baseDir = path.resolve(options.baseDir);
+    this.baseDir = path.isAbsolute(options.baseDir)
+      ? path.resolve(options.baseDir)
+      : path.resolve(findWorkspaceRoot(), options.baseDir);
     this.publicBaseUrl = trimTrailingSlash(options.publicBaseUrl);
   }
 
@@ -196,6 +229,22 @@ export class LocalFsStorageAdapter implements ObjectStorageProvider {
       publicKey: input.publicKey,
       publicUrl: `${this.publicBaseUrl}/${input.publicKey}`,
     };
+  }
+
+  async putBuffer(input: PutBufferInput): Promise<void> {
+    const scope = input.scope ?? 'staging';
+    const targetPath = this.resolveSafePath(scope, input.key);
+    await mkdir(path.dirname(targetPath), { recursive: true });
+    const tempPath = `${targetPath}.${randomUUID()}.tmp`;
+    await writeFile(tempPath, input.body);
+    await rename(tempPath, targetPath);
+  }
+
+  async readBuffer(input: ReadBufferInput): Promise<Buffer> {
+    const scope = input.scope ?? 'staging';
+    const targetPath = this.resolveSafePath(scope, input.key);
+    await this.ensureContainedRealPath(scope, targetPath);
+    return readFile(targetPath);
   }
 }
 
@@ -310,6 +359,35 @@ export class S3StorageAdapter implements ObjectStorageProvider {
       publicKey: input.publicKey,
       publicUrl: `${this.publicBaseUrl}/${input.publicKey}`,
     };
+  }
+
+  async putBuffer(input: PutBufferInput): Promise<void> {
+    validateObjectKey(input.key);
+    const scope = input.scope ?? 'staging';
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucketFor(scope),
+        Key: input.key,
+        Body: input.body,
+        ...(input.contentType ? { ContentType: input.contentType } : {}),
+      }),
+    );
+  }
+
+  async readBuffer(input: ReadBufferInput): Promise<Buffer> {
+    validateObjectKey(input.key);
+    const scope = input.scope ?? 'staging';
+    const response = await this.client.send(
+      new GetObjectCommand({
+        Bucket: this.bucketFor(scope),
+        Key: input.key,
+      }),
+    );
+    if (!response.Body) {
+      throw new Error(`Missing S3 object body for key ${input.key}`);
+    }
+    const bytes = await response.Body.transformToByteArray();
+    return Buffer.from(bytes);
   }
 }
 

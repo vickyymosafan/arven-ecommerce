@@ -25,12 +25,16 @@ import type {
   OrderSummaryDto,
   PaymentSessionDto,
   PaymentSummaryDto,
+  Product3DAssetMetadataDto,
+  Product3DAssetPublicDto,
   ProductCardDto,
   ProductDetailDto,
   PublicProductsQuery,
+  Record3DTelemetryRequest,
   RegisterRequest,
   ResetPasswordRequest,
   ReturnDetailDto,
+  Telemetry3DReceiptDto,
   UpdateAddressRequest,
   UpdateCartItemRequest,
   UpdateProfileRequest,
@@ -499,6 +503,29 @@ export const storefrontApi = {
   },
   getProductBySlug(slug: string): Promise<ProductDetailDto> {
     return requestApi<ProductDetailDto>(`/api/v1/products/${encodeURIComponent(slug)}`);
+  },
+  async getProduct3DAssets(idOrSlug: string): Promise<Product3DAssetPublicDto | null> {
+    try {
+      return await requestApi<Product3DAssetPublicDto>(
+        `/api/v1/products/${encodeURIComponent(idOrSlug)}/3d-assets`,
+      );
+    } catch (err) {
+      if (err instanceof ApiClientError && err.status === 404) {
+        return null;
+      }
+      throw err;
+    }
+  },
+  get3DAssetMetadata(assetId: string): Promise<Product3DAssetMetadataDto> {
+    return requestApi<Product3DAssetMetadataDto>(
+      `/api/v1/3d-assets/${encodeURIComponent(assetId)}/metadata`,
+    );
+  },
+  record3DTelemetry(input: Record3DTelemetryRequest): Promise<Telemetry3DReceiptDto> {
+    return requestApi<Telemetry3DReceiptDto>('/api/v1/3d-assets/telemetry', {
+      method: 'POST',
+      body: input,
+    });
   },
   getCart(): Promise<CartDto> {
     return requestApi<CartDto>('/api/v1/cart');

@@ -23,8 +23,8 @@ function buildContentSecurityPolicy(nonce: string, isHttps: boolean): string {
   const isDev = process.env['NODE_ENV'] === 'development';
   // Avoid 'strict-dynamic' so 'self' remains active for pre-rendered /_next/static/chunks scripts in cacheComponents shells.
   const scriptSrc = isDev
-    ? `'self' 'nonce-${nonce}' ${NEXT_CACHE_COMPONENTS_INLINE_HASHES} 'unsafe-eval'`
-    : `'self' 'nonce-${nonce}' ${NEXT_CACHE_COMPONENTS_INLINE_HASHES}`;
+    ? `'self' 'nonce-${nonce}' ${NEXT_CACHE_COMPONENTS_INLINE_HASHES} 'wasm-unsafe-eval' 'unsafe-eval'`
+    : `'self' 'nonce-${nonce}' ${NEXT_CACHE_COMPONENTS_INLINE_HASHES} 'wasm-unsafe-eval'`;
   const connectSrc = isDev
     ? "'self' ws://127.0.0.1:* ws://localhost:*"
     : "'self'";
@@ -36,6 +36,7 @@ function buildContentSecurityPolicy(nonce: string, isHttps: boolean): string {
     "img-src 'self' data: blob:",
     "font-src 'self'",
     `connect-src ${connectSrc}`,
+    "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

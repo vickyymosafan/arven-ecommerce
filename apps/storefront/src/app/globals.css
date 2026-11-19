@@ -2,4 +2,5 @@
 @import "@arven/ui/tokens.css";
 @import "@arven/ui/theme.css";
 @source "../../../../packages/ui/src";
+@source "../../../../packages/three-engine/src";
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

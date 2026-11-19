@@ -14,6 +14,7 @@
   "dependencies": {
     "@arven/config": "workspace:*",
     "@arven/contracts": "workspace:*",
+    "@arven/three-engine": "workspace:*",
     "@arven/ui": "workspace:*",
     "@arven/validators": "workspace:*",
     "next": "^16.4.6",

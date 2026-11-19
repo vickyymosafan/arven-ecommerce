@@ -77,7 +77,7 @@ export function ProductCard({ product, href, className }: ProductCardProps) {
           <a
             href={productHref}
             aria-label={mediaUrl ? `Inspect ${product.name}` : undefined}
-            className="block h-full w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            className="relative block h-full w-full focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus after:pointer-events-none after:absolute after:inset-0 after:z-10 focus-visible:after:border-2 focus-visible:after:border-focus"
           >
             {mediaUrl ? (
               <img

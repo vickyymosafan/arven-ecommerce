@@ -40,6 +40,7 @@ import {
   type DataTableColumn,
 } from '@arven/ui';
 import { AdminShell } from '@/components/admin-shell';
+import { AdminProduct3DPanel } from '@/components/catalog/admin-product-3d-panel';
 import { AdminApiClientError, adminApi } from '@/lib/api-client';
 import {
   buildStudioSvgDataUri,
@@ -83,6 +84,11 @@ export function AdminProductDetailView({ productId }: { productId: string }) {
   const canPublishCatalog = Boolean(
     user?.roles.includes('OWNER') || permissions.has('product.publish'),
   );
+  const canReadAssets = canAccess(['asset.read', 'asset.upload', 'asset.publish']);
+  const canUploadAssets = Boolean(user?.roles.includes('OWNER') || permissions.has('asset.upload'));
+  const canPublishAssets = Boolean(
+    user?.roles.includes('OWNER') || permissions.has('asset.publish'),
+  );
 
   const [product, setProduct] = useState<AdminProductDetailDto | null>(null);
   const [categories, setCategories] = useState<AdminCategoryDto[]>([]);
@@ -101,6 +107,7 @@ export function AdminProductDetailView({ productId }: { productId: string }) {
   const [seoDescription, setSeoDescription] = useState('');
   const [isVisible, setIsVisible] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
+  const [has3dEnabled, setHas3dEnabled] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
   const [savingMeta, setSavingMeta] = useState(false);
@@ -159,6 +166,7 @@ export function AdminProductDetailView({ productId }: { productId: string }) {
     setSeoDescription(detail.seoDescription ?? '');
     setIsVisible(detail.isVisible);
     setIsFeatured(detail.isFeatured);
+    setHas3dEnabled(detail.has3dEnabled);
     const primaryCat = detail.categories.find((c) => c.isPrimary) ?? detail.categories[0];
     setSelectedCategoryId(primaryCat?.id ?? '');
     setSelectedCollectionIds(detail.collections.map((c) => c.id));
@@ -237,6 +245,7 @@ export function AdminProductDetailView({ productId }: { productId: string }) {
       seoDescription: seoDescription.trim() || null,
       isVisible,
       isFeatured,
+      has3dEnabled,
       categoryIds: selectedCategoryId ? [selectedCategoryId] : [],
       primaryCategoryId: selectedCategoryId || null,
       collectionIds: selectedCollectionIds,
@@ -488,7 +497,7 @@ export function AdminProductDetailView({ productId }: { productId: string }) {
     {
       key: 'sku',
       header: 'SKU',
-      render: (v) => <code className="font-mono text-xs font-medium text-ink">{v.sku}</code>,
+      render: (v) => <code className="font-mono text-xs font-medium tabular-nums text-ink">{v.sku}</code>,
     },
     {
       key: 'spec',
@@ -800,6 +809,13 @@ export function AdminProductDetailView({ productId }: { productId: string }) {
                     disabled={!canWriteCatalog}
                     onChange={(event) => setIsFeatured(event.target.checked)}
                   />
+                  <Checkbox
+                    id="edit-prod-3d-enabled"
+                    label="Enable 3D Product Viewer (Requires READY 3D Asset)"
+                    checked={has3dEnabled}
+                    disabled={!canWriteCatalog}
+                    onChange={(event) => setHas3dEnabled(event.target.checked)}
+                  />
                 </div>
               </div>
 
@@ -968,6 +984,15 @@ export function AdminProductDetailView({ productId }: { productId: string }) {
               </div>
             )}
           </Surface>
+
+          {/* 3D Studio Asset Lifecycle & Customization Presets */}
+          <AdminProduct3DPanel
+            product={product}
+            canReadAssets={canReadAssets}
+            canUploadAssets={canUploadAssets}
+            canPublishAssets={canPublishAssets}
+            onProductUpdated={loadDetail}
+          />
         </div>
       )}
 
