@@ -83,13 +83,16 @@ export function AdminShell({
             aria-current={active ? 'page' : undefined}
             onClick={onNavigate}
             className={cn(
-              'inline-flex min-h-11 items-center rounded-[var(--radius-sm)] border px-3.5 py-2 text-xs font-medium uppercase tracking-[0.06em] transition-colors',
+              'relative inline-flex min-h-11 items-center justify-between rounded-[var(--radius-xs)] border px-3.5 py-2 text-xs font-medium uppercase tracking-[0.06em] transition-all duration-[var(--duration-fast)]',
               active
-                ? 'border-strong-border bg-panel text-ink'
-                : 'border-transparent text-ink-secondary hover:border-control-border hover:bg-subtle hover:text-ink',
+                ? 'border-strong-border bg-panel text-ink shadow-sm'
+                : 'border-transparent text-ink-secondary hover:border-hairline hover:bg-subtle hover:text-ink',
             )}
           >
-            {item.label}
+            <span>{item.label}</span>
+            {active ? (
+              <span className="h-1.5 w-1.5 rounded-full bg-gold" aria-hidden="true" />
+            ) : null}
           </Link>
         );
       })}
@@ -104,11 +107,14 @@ export function AdminShell({
       <aside className="hidden lg:flex lg:w-64 lg:shrink-0 lg:flex-col lg:justify-between lg:border-r lg:border-hairline lg:bg-subtle lg:p-6">
         <div className="space-y-6">
           <div className="space-y-1">
-            <Link href="/" className="inline-flex min-h-11 items-center">
-              <ArvenWordmark />
-            </Link>
+            <div className="flex items-center justify-between">
+              <Link href="/" className="inline-flex min-h-11 items-center">
+                <ArvenWordmark />
+              </Link>
+              <span className="inline-block h-2 w-2 rounded-full bg-success-fg" title="Operations Online" aria-hidden="true" />
+            </div>
             <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-muted">
-              Admin Operations
+              Admin Operations Console
             </p>
           </div>
 

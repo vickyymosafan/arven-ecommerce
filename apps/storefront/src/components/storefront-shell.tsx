@@ -241,7 +241,20 @@ export function StorefrontShell({ children, narrow = false }: StorefrontShellPro
     <div className="flex min-h-dvh flex-col bg-canvas text-ink">
       <SkipLink href="#main-content" />
 
-      <header className="sticky top-0 z-[var(--z-header)] border-b border-hairline bg-canvas/95 backdrop-blur-sm">
+      {/* Luxury Atelier Announcement Bar */}
+      <div className="border-b border-hairline/80 bg-panel/90 px-4 py-2 text-center text-[11px] font-medium uppercase tracking-[0.12em] text-ink-secondary">
+        <div className="mx-auto flex max-w-[var(--container-max)] items-center justify-between gap-4 px-2 sm:px-6 lg:px-12">
+          <span className="hidden md:inline text-ink-muted">Atelier Jakarta · Est. 2026</span>
+          <span className="mx-auto md:mx-0">
+            Complimentary White-Glove Delivery Across Indonesia · Worldwide Insured Shipping
+          </span>
+          <span className="hidden md:inline font-mono text-[10px] uppercase text-ink-muted">
+            Mon - Sat 09:00 - 21:00 WIB
+          </span>
+        </div>
+      </div>
+
+      <header className="sticky top-0 z-[var(--z-header)] border-b border-hairline/80 bg-canvas/85 backdrop-blur-md transition-colors">
         <div className="mx-auto flex min-h-16 w-full max-w-[var(--container-max)] items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6 lg:px-12">
           <div className="flex min-w-0 items-center gap-2 sm:gap-4">
             <Link
@@ -310,70 +323,144 @@ export function StorefrontShell({ children, narrow = false }: StorefrontShellPro
         {children}
       </main>
 
-      <footer className="border-t border-hairline bg-subtle">
-        <div className="mx-auto flex w-full max-w-[var(--container-max)] flex-col gap-6 px-4 py-8 text-xs text-ink-muted sm:px-6 lg:px-12">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1.5">
-              <p className="font-medium uppercase tracking-[0.06em] text-ink">
-                ARVEN. Beyond Trends. Beyond Time.
-              </p>
-              <p>
+      <footer className="border-t border-hairline bg-subtle/80">
+        <div className="mx-auto flex w-full max-w-[var(--container-max)] flex-col gap-10 px-4 py-12 text-xs text-ink-muted sm:px-6 lg:px-12">
+          <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-12">
+            <div className="space-y-4 lg:col-span-5">
+              <div className="space-y-2">
+                <p className="font-display text-xl font-normal tracking-[0.04em] text-ink">
+                  ARVEN
+                </p>
+                <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">
+                  Beyond Trends. Beyond Time.
+                </p>
+              </div>
+              <p className="max-w-md leading-relaxed text-ink-secondary">
                 Contemporary unisex apparel, footwear, and architectural accessories crafted in Jakarta.
+                Formulated through restrained monochromatic geometry and artisanal fiber weights.
               </p>
+              <div className="flex items-center gap-2 pt-2 text-[11px] font-medium uppercase tracking-[0.1em] text-ink-muted">
+                <span className="inline-block h-2 w-2 rounded-full bg-gold" aria-hidden="true" />
+                <span>Atelier Jakarta · Hub JKT-MAIN-01</span>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <Link href="/shop" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                Shop All
-              </Link>
-              <Link href="/collections" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                Collections
-              </Link>
-              <Link href="/showroom" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                Showroom
-              </Link>
-              <Link href="/outfit-studio" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                Outfit Studio
-              </Link>
-              <Link href="/lookbook" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                Lookbook
-              </Link>
-              <Link href="/journal" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                Journal
-              </Link>
-              <Link href="/about" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                About
-              </Link>
-              <Link href="/search" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                Search
-              </Link>
-              <Link href="/cart" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                Bag
-              </Link>
-              <Link href="/account" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                My Account
-              </Link>
-              <Link href="/account/orders" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                Orders
-              </Link>
-              <Link href="/account/outfits" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                Saved Outfits
-              </Link>
-              <Link href="/account/returns" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                Returns
-              </Link>
-              <Link href="/account/addresses" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                Addresses
-              </Link>
-              <Link href="/account/sessions" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                Sessions
-              </Link>
-              <Link href="/auth/login" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                Sign In
-              </Link>
-              <Link href="/auth/register" className="inline-flex min-h-11 items-center px-1 text-link hover:underline">
-                Register
-              </Link>
+
+            <div className="space-y-3 lg:col-span-2">
+              <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink">
+                Wardrobe
+              </p>
+              <ul className="flex flex-col gap-1.5">
+                <li>
+                  <Link href="/shop" className="inline-flex min-h-11 items-center text-ink-secondary hover:text-ink hover:underline">
+                    Shop All
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/collections" className="inline-flex min-h-11 items-center text-ink-secondary hover:text-ink hover:underline">
+                    Collections
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/search" className="inline-flex min-h-11 items-center text-ink-secondary hover:text-ink hover:underline">
+                    Search Archive
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/cart" className="inline-flex min-h-11 items-center text-ink-secondary hover:text-ink hover:underline">
+                    Bag
+                  </Link>
+                </li>
+              </ul>
             </div>
+
+            <div className="space-y-3 lg:col-span-2">
+              <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink">
+                Experiences
+              </p>
+              <ul className="flex flex-col gap-1.5">
+                <li>
+                  <Link href="/showroom" className="inline-flex min-h-11 items-center text-ink-secondary hover:text-ink hover:underline">
+                    3D Showroom
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/outfit-studio" className="inline-flex min-h-11 items-center text-ink-secondary hover:text-ink hover:underline">
+                    Outfit Studio
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/lookbook" className="inline-flex min-h-11 items-center text-ink-secondary hover:text-ink hover:underline">
+                    Lookbook
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/journal" className="inline-flex min-h-11 items-center text-ink-secondary hover:text-ink hover:underline">
+                    Journal
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/about" className="inline-flex min-h-11 items-center text-ink-secondary hover:text-ink hover:underline">
+                    About
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-3 lg:col-span-3">
+              <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink">
+                Clientele Care
+              </p>
+              <ul className="flex flex-col gap-1.5">
+                <li>
+                  <Link href="/account" className="inline-flex min-h-11 items-center text-ink-secondary hover:text-ink hover:underline">
+                    My Account
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/account/orders" className="inline-flex min-h-11 items-center text-ink-secondary hover:text-ink hover:underline">
+                    Orders
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/account/outfits" className="inline-flex min-h-11 items-center text-ink-secondary hover:text-ink hover:underline">
+                    Saved Outfits
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/account/returns" className="inline-flex min-h-11 items-center text-ink-secondary hover:text-ink hover:underline">
+                    Returns
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/account/addresses" className="inline-flex min-h-11 items-center text-ink-secondary hover:text-ink hover:underline">
+                    Addresses
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/account/sessions" className="inline-flex min-h-11 items-center text-ink-secondary hover:text-ink hover:underline">
+                    Sessions
+                  </Link>
+                </li>
+                <li className="flex items-center gap-3 pt-1">
+                  <Link href="/auth/login" className="inline-flex min-h-11 items-center text-link hover:underline">
+                    Sign In
+                  </Link>
+                  <span className="text-hairline">|</span>
+                  <Link href="/auth/register" className="inline-flex min-h-11 items-center text-link hover:underline">
+                    Register
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <Divider />
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-ink-muted">
+            <p>© 2026 ARVEN Atelier. All rights reserved. Jakarta, Indonesia.</p>
+            <p className="font-mono text-[11px] tabular-nums">
+              Currency: IDR (Rp) · All taxes included
+            </p>
           </div>
         </div>
       </footer>

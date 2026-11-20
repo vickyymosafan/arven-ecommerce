@@ -43,6 +43,13 @@
   --color-terracotta-700: #9C3D3D;
   --color-terracotta-900: #35231E;
 
+  /* Champagne / Gold Atelier Accent Primitives */
+  --color-gold-200: #EADBCC;
+  --color-gold-300: #D8C3A5;
+  --color-gold-400: #C5A880;
+  --color-gold-600: #9B7E56;
+  --color-gold-900: #332616;
+
   --color-scrim-dark-72: rgba(23, 25, 27, 0.72);
 
   /* Spacing Scale (4px base) */
@@ -125,6 +132,13 @@
   --arven-accent-link: var(--color-blue-600);          /* #1F4E79 */
   --arven-focus-ring: var(--color-blue-600);           /* #1F4E79 */
 
+  --arven-accent-gold: var(--color-gold-400);          /* #C5A880 */
+  --arven-accent-gold-hover: var(--color-gold-600);    /* #9B7E56 */
+  --arven-accent-gold-subtle: rgba(197, 168, 128, 0.12);
+  --arven-glass-bg: rgba(248, 247, 243, 0.88);
+  --arven-glass-border: rgba(216, 211, 200, 0.7);
+  --arven-shadow-glass: 0 8px 32px 0 rgba(23, 25, 27, 0.05);
+
   --arven-status-info-fg: var(--color-blue-600);       /* #1F4E79 */
   --arven-status-info-bg: var(--color-blue-100);       /* #E6EEF5 */
   --arven-status-success-fg: var(--color-sage-600);    /* #416B59 */
@@ -162,6 +176,13 @@
   --arven-accent-primary-hover: var(--color-cream-200); /* #E9E4DA */
   --arven-accent-link: var(--color-blue-300);          /* #82B0DC */
   --arven-focus-ring: var(--color-blue-300);           /* #82B0DC */
+
+  --arven-accent-gold: var(--color-gold-300);          /* #D8C3A5 */
+  --arven-accent-gold-hover: var(--color-gold-200);    /* #EADBCC */
+  --arven-accent-gold-subtle: rgba(216, 195, 165, 0.16);
+  --arven-glass-bg: rgba(23, 25, 27, 0.88);
+  --arven-glass-border: rgba(70, 73, 76, 0.65);
+  --arven-shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 
   --arven-status-info-fg: var(--color-blue-300);       /* #82B0DC */
   --arven-status-info-bg: var(--color-blue-900);       /* #1E2C3A */

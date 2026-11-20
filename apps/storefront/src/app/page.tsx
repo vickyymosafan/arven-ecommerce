@@ -96,27 +96,27 @@ export default function StorefrontHomePage() {
 
   return (
     <StorefrontShell>
-      <div className="space-y-14">
+      <div className="space-y-16">
         {/* Editorial Hero */}
-        <section className="grid gap-8 border-b border-hairline pb-12 lg:grid-cols-12 lg:items-end">
-          <div className="space-y-5 lg:col-span-8">
+        <section className="grid gap-8 border-b border-hairline pb-14 lg:grid-cols-12 lg:items-end">
+          <div className="space-y-6 lg:col-span-8">
             <div className="flex flex-wrap items-center gap-3">
-              <Badge tone="info">Seasonal Archive</Badge>
-              <span className="font-mono text-xs uppercase tracking-[0.06em] text-ink-muted">
+              <Badge tone="gold">Seasonal Archive · 2026</Badge>
+              <span className="font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">
                 Jakarta Studio Dispatch
               </span>
             </div>
 
-            <h1 className="font-display text-4xl font-normal leading-[1.08] tracking-[-0.02em] text-ink sm:text-5xl lg:text-6xl">
+            <h1 className="font-display text-4xl font-normal leading-[1.06] tracking-[-0.025em] text-ink sm:text-5xl lg:text-6xl">
               Beyond Trends.
               <br />
               Beyond Time.
             </h1>
 
             <p className="max-w-[var(--container-prose)] text-base leading-relaxed text-ink-secondary">
-              ARVEN is a contemporary luxury fashion house shaped by architectural proportion,
-              natural fiber weight, and restrained monochromatic craft. Explore published garments,
-              inspect multi-variant sizing, and curate pieces built for longevity.
+              ARVEN is an architectural luxury house shaped by sculptural proportion, natural fiber weight,
+              and restrained monochromatic craft. Curated and finished in Jakarta for timeless permanence.
+              Inspect published garments, explore multi-variant sizing, or step into our real-time 3D Virtual Showroom.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -126,18 +126,21 @@ export default function StorefrontHomePage() {
               <LinkButton href="/collections" variant="secondary" size="lg">
                 View Capsules
               </LinkButton>
-              <LinkButton href="/search" variant="ghost" size="lg">
-                Search Archive
+              <LinkButton href="/showroom" variant="gold" size="lg">
+                3D Showroom
               </LinkButton>
             </div>
           </div>
 
           <div className="lg:col-span-4">
-            <Surface variant="panel" border="control" padding="md" className="space-y-4">
+            <Surface variant="glass" border="control" padding="md" className="space-y-5">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-mono text-xs uppercase tracking-[0.06em] text-ink-muted">
-                  House Release Index
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-gold" aria-hidden="true" />
+                  <span className="font-mono text-xs uppercase tracking-[0.08em] text-ink">
+                    House Release Index
+                  </span>
+                </div>
                 <Badge tone="success">Published</Badge>
               </div>
               <Divider />
@@ -165,6 +168,10 @@ export default function StorefrontHomePage() {
                   <dd className="font-mono text-xs text-ink">Jakarta (JKT-MAIN-01)</dd>
                 </div>
               </dl>
+              <div className="rounded-[var(--radius-xs)] border border-hairline bg-panel/70 p-3 text-xs leading-relaxed text-ink-secondary">
+                <p className="font-medium text-ink">Virtual Showroom Active</p>
+                <p className="text-[11px] text-ink-muted">Inspect fabric drape and 360-degree silhouettes in real-time WebGL.</p>
+              </div>
             </Surface>
           </div>
         </section>
@@ -184,7 +191,7 @@ export default function StorefrontHomePage() {
             <section aria-labelledby="home-collections-heading" className="space-y-6">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div className="space-y-1">
-                  <p className="font-mono text-xs uppercase tracking-[0.06em] text-ink-muted">
+                  <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">
                     Editorial Capsules
                   </p>
                   <h2
@@ -208,43 +215,41 @@ export default function StorefrontHomePage() {
                   description="Seasonal capsule releases will appear here once curated and published by the studio."
                 />
               ) : (
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                   {collections.map((collection) => (
                     <Surface
                       key={collection.id}
                       variant="elevated"
                       border="hairline"
                       padding="none"
-                      className="flex flex-col justify-between overflow-hidden transition-colors hover:border-strong-border"
+                      className="group flex flex-col justify-between overflow-hidden transition-all duration-[var(--duration-moderate)] hover:border-strong-border hover:shadow-[var(--shadow-raised)]"
                     >
                       <Link
                         href={`/collections/${collection.slug}`}
-                        className="block border-b border-hairline bg-panel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                        className="relative block aspect-[5/3] w-full overflow-hidden border-b border-hairline bg-panel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                       >
                         {collection.bannerUrl ? (
                           <img
                             src={collection.bannerUrl}
                             alt={`${collection.name} capsule editorial banner`}
                             decoding="async"
-                            className="aspect-[5/2] w-full object-cover"
+                            className="h-full w-full object-cover transition-transform duration-[var(--duration-moderate)] ease-[var(--ease-editorial)] motion-safe:group-hover:scale-[1.04]"
                           />
                         ) : (
-                          <div className="flex aspect-[5/2] w-full items-center justify-center bg-subtle p-4">
+                          <div className="flex h-full w-full items-center justify-center bg-subtle p-4">
                             <span className="font-display text-xl text-ink">{collection.name}</span>
                           </div>
                         )}
+                        <span className="absolute bottom-2.5 right-2.5 rounded-[var(--radius-xs)] border border-hairline bg-canvas/85 px-2 py-0.5 font-mono text-[10px] uppercase tabular-nums tracking-[0.06em] text-ink backdrop-blur-sm">
+                          {collection.productCount} {collection.productCount === 1 ? 'piece' : 'pieces'}
+                        </span>
                       </Link>
 
-                      <div className="flex flex-1 flex-col justify-between gap-4 p-4">
+                      <div className="flex flex-1 flex-col justify-between gap-4 p-5">
                         <div className="space-y-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-mono text-xs uppercase tracking-[0.06em] text-ink-muted">
-                              Capsule
-                            </span>
-                            <span className="font-mono text-xs tabular-nums text-ink-muted">
-                              {collection.productCount} {collection.productCount === 1 ? 'piece' : 'pieces'}
-                            </span>
-                          </div>
+                          <span className="font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">
+                            Capsule Release
+                          </span>
                           <h3 className="font-display text-2xl font-normal text-ink">
                             <Link
                               href={`/collections/${collection.slug}`}
@@ -254,7 +259,7 @@ export default function StorefrontHomePage() {
                             </Link>
                           </h3>
                           {collection.description ? (
-                            <p className="text-xs leading-relaxed text-ink-secondary">
+                            <p className="line-clamp-2 text-xs leading-relaxed text-ink-secondary">
                               {collection.description}
                             </p>
                           ) : null}
@@ -268,6 +273,60 @@ export default function StorefrontHomePage() {
                   ))}
                 </div>
               )}
+            </section>
+
+            {/* Virtual Showroom Feature Banner */}
+            <section className="relative overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-charcoal-border-hairline)] bg-[var(--color-charcoal-900)] p-8 text-[var(--color-ivory-50)] sm:p-12">
+              <div className="relative z-10 grid gap-8 lg:grid-cols-12 lg:items-center">
+                <div className="space-y-4 lg:col-span-8">
+                  <div className="flex items-center gap-2">
+                    <Badge tone="gold">WebGL · 60 FPS</Badge>
+                    <span className="font-mono text-xs uppercase tracking-[0.08em] text-[var(--color-stone-300)]">
+                      Virtual Atelier
+                    </span>
+                  </div>
+                  <h2 className="font-display text-3xl font-normal tracking-[-0.015em] sm:text-4xl text-[var(--color-ivory-50)]">
+                    Interactive 3D Garment Inspection
+                  </h2>
+                  <p className="max-w-xl text-sm leading-relaxed text-[var(--color-stone-300)]">
+                    Experience real-time cloth drape, 360-degree rotation, and multi-angle silhouette exploration.
+                    Examine fabric texture, seams, and structured fits directly within our WebGL showroom
+                    powered by client-side Three.js.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-4 pt-2">
+                    <LinkButton href="/showroom" variant="gold" size="md">
+                      Enter Virtual Showroom
+                    </LinkButton>
+                    <LinkButton
+                      href="/outfit-studio"
+                      variant="secondary"
+                      size="md"
+                      className="border-[var(--color-charcoal-border-hairline)] bg-[var(--color-graphite-700)] text-[var(--color-ivory-50)] hover:bg-[var(--color-charcoal-800)]"
+                    >
+                      Open Outfit Studio
+                    </LinkButton>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 lg:col-span-4">
+                  <div className="rounded-[var(--radius-xs)] border border-[var(--color-charcoal-border-hairline)] bg-[var(--color-graphite-700)]/60 p-4">
+                    <p className="font-mono text-xs uppercase tracking-[0.06em] text-[var(--color-gold-300)]">01 / Draping</p>
+                    <p className="mt-1 text-xs text-[var(--color-stone-300)]">Physical gravity &amp; fabric drape simulation</p>
+                  </div>
+                  <div className="rounded-[var(--radius-xs)] border border-[var(--color-charcoal-border-hairline)] bg-[var(--color-graphite-700)]/60 p-4">
+                    <p className="font-mono text-xs uppercase tracking-[0.06em] text-[var(--color-gold-300)]">02 / Orbit</p>
+                    <p className="mt-1 text-xs text-[var(--color-stone-300)]">Smooth touch &amp; mouse orbit at 60 FPS</p>
+                  </div>
+                  <div className="rounded-[var(--radius-xs)] border border-[var(--color-charcoal-border-hairline)] bg-[var(--color-graphite-700)]/60 p-4">
+                    <p className="font-mono text-xs uppercase tracking-[0.06em] text-[var(--color-gold-300)]">03 / Shaders</p>
+                    <p className="mt-1 text-xs text-[var(--color-stone-300)]">PBR rendering of tactile fiber textures</p>
+                  </div>
+                  <div className="rounded-[var(--radius-xs)] border border-[var(--color-charcoal-border-hairline)] bg-[var(--color-graphite-700)]/60 p-4">
+                    <p className="font-mono text-xs uppercase tracking-[0.06em] text-[var(--color-gold-300)]">04 / Styling</p>
+                    <p className="mt-1 text-xs text-[var(--color-stone-300)]">Curate &amp; inspect layer combinations</p>
+                  </div>
+                </div>
+              </div>
             </section>
 
             {/* Featured Garments */}
@@ -330,7 +389,7 @@ export default function StorefrontHomePage() {
                   <Link
                     key={category.id}
                     href={`/shop/${category.slug}`}
-                    className="group flex min-h-28 flex-col justify-between rounded-[var(--radius-sm)] border border-hairline bg-elevated p-4 transition-colors hover:border-strong-border hover:bg-panel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                    className="group flex min-h-28 flex-col justify-between rounded-[var(--radius-sm)] border border-hairline bg-elevated p-4 transition-all duration-[var(--duration-fast)] hover:border-strong-border hover:bg-panel hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-xs uppercase tracking-[0.06em] text-ink-muted">
@@ -348,6 +407,75 @@ export default function StorefrontHomePage() {
                     </div>
                   </Link>
                 ))}
+              </div>
+            </section>
+
+            {/* Atelier Materiality & Craftsmanship */}
+            <section aria-labelledby="home-craft-heading" className="space-y-8 border-t border-hairline pt-12">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div className="space-y-1">
+                  <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">
+                    Artisanal Provenance
+                  </p>
+                  <h2
+                    id="home-craft-heading"
+                    className="font-display text-2xl font-normal tracking-[-0.015em] text-ink sm:text-3xl"
+                  >
+                    Materiality &amp; Architectural Craft
+                  </h2>
+                </div>
+                <Link
+                  href="/journal"
+                  className="inline-flex min-h-11 items-center text-sm font-medium text-link hover:underline"
+                >
+                  Read Atelier Journal
+                </Link>
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                <Surface variant="elevated" border="hairline" padding="md" className="space-y-3 transition-colors hover:border-strong-border">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">01 / RAW SILK</span>
+                    <span className="font-mono text-[10px] uppercase text-gold">South Sulawesi</span>
+                  </div>
+                  <h3 className="font-display text-lg font-medium text-ink">Textured Slub Weave</h3>
+                  <p className="text-xs leading-relaxed text-ink-secondary">
+                    Artisanal hand-loomed fibers with irregular natural slub, yielding crisp structural volume and breathability in tropical heat.
+                  </p>
+                </Surface>
+
+                <Surface variant="elevated" border="hairline" padding="md" className="space-y-3 transition-colors hover:border-strong-border">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">02 / CASHMERE</span>
+                    <span className="font-mono text-[10px] uppercase text-gold">Grade-A Combed</span>
+                  </div>
+                  <h3 className="font-display text-lg font-medium text-ink">Double-Faced Weight</h3>
+                  <p className="text-xs leading-relaxed text-ink-secondary">
+                    Pure combed fibers finished without synthetic softeners, creating a fluid architectural drape that softens with every wear.
+                  </p>
+                </Surface>
+
+                <Surface variant="elevated" border="hairline" padding="md" className="space-y-3 transition-colors hover:border-strong-border">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">03 / SELVEDGE</span>
+                    <span className="font-mono text-[10px] uppercase text-gold">Okayama Mills</span>
+                  </div>
+                  <h3 className="font-display text-lg font-medium text-ink">14oz Shuttle Loom</h3>
+                  <p className="text-xs leading-relaxed text-ink-secondary">
+                    Pure rope-dyed indigo woven at low tension on vintage wooden shuttle looms, finished with custom ARVEN redline ticking.
+                  </p>
+                </Surface>
+
+                <Surface variant="elevated" border="hairline" padding="md" className="space-y-3 transition-colors hover:border-strong-border">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">04 / VACHETTA</span>
+                    <span className="font-mono text-[10px] uppercase text-gold">Tuscan Tannery</span>
+                  </div>
+                  <h3 className="font-display text-lg font-medium text-ink">Vegetable Tanning</h3>
+                  <p className="text-xs leading-relaxed text-ink-secondary">
+                    Conditioned exclusively with natural chestnut and mimosa barks for raw edges that develop a deep golden patina over time.
+                  </p>
+                </Surface>
               </div>
             </section>
           </>

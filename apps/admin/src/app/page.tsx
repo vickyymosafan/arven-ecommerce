@@ -259,15 +259,18 @@ export default function AdminOverviewPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5">
-                      <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
-                        Gross Sales
-                      </p>
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5 transition-all duration-[var(--duration-fast)] hover:border-gold/50 hover:shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
+                          Gross Sales
+                        </p>
+                        <span className="font-mono text-[10px] text-gold uppercase tracking-[0.04em]">IDR</span>
+                      </div>
                       <p className="font-mono text-2xl font-medium tabular-nums text-ink">
                         {formatIDR(analytics.grossSalesIdr ?? 0)}
                       </p>
                     </Surface>
-                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5">
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5 transition-all duration-[var(--duration-fast)] hover:border-strong-border hover:shadow-sm">
                       <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
                         Paid Orders
                       </p>
@@ -275,15 +278,18 @@ export default function AdminOverviewPage() {
                         {analytics.paidOrders}
                       </p>
                     </Surface>
-                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5">
-                      <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
-                        AOV
-                      </p>
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5 transition-all duration-[var(--duration-fast)] hover:border-gold/50 hover:shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
+                          AOV
+                        </p>
+                        <span className="font-mono text-[10px] text-gold uppercase tracking-[0.04em]">IDR</span>
+                      </div>
                       <p className="font-mono text-2xl font-medium tabular-nums text-ink">
                         {formatIDR(analytics.averageOrderValueIdr ?? 0)}
                       </p>
                     </Surface>
-                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5">
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5 transition-all duration-[var(--duration-fast)] hover:border-strong-border hover:shadow-sm">
                       <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
                         Pending Payment
                       </p>
@@ -291,7 +297,7 @@ export default function AdminOverviewPage() {
                         {analytics.pendingPaymentOrders}
                       </p>
                     </Surface>
-                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5">
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5 transition-all duration-[var(--duration-fast)] hover:border-strong-border hover:shadow-sm">
                       <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
                         Open Returns
                       </p>

@@ -3,7 +3,7 @@
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react';
 import { cn } from '../lib/cn.js';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'accent' | 'danger' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'accent' | 'danger' | 'ghost' | 'gold';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ButtonStyleOptions {
@@ -24,6 +24,8 @@ const variantClasses: Record<ButtonVariant, string> = {
     'bg-[var(--btn-danger-bg)] text-[var(--btn-danger-fg)] border border-transparent hover:opacity-90',
   ghost:
     'bg-transparent text-ink border border-transparent hover:bg-panel hover:border-[var(--arven-border-control)]',
+  gold:
+    'bg-gold text-[var(--color-charcoal-900)] border border-gold-hover hover:bg-gold-hover active:opacity-95 font-medium',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

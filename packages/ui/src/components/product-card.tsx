@@ -68,7 +68,7 @@ export function ProductCard({ product, href, className }: ProductCardProps) {
   return (
     <article
       className={cn(
-        'group flex flex-col justify-between rounded-[var(--radius-none)] border border-hairline bg-elevated transition-colors duration-[var(--duration-base)] hover:border-strong-border',
+        'group flex flex-col justify-between rounded-[var(--radius-none)] border border-hairline bg-elevated transition-all duration-[var(--duration-moderate)] hover:border-strong-border hover:shadow-[var(--shadow-raised)]',
         className,
       )}
     >
@@ -85,7 +85,7 @@ export function ProductCard({ product, href, className }: ProductCardProps) {
                 alt={mediaAlt}
                 decoding="async"
                 onError={() => setImageError(true)}
-                className="h-full w-full object-cover transition-transform duration-[var(--duration-base)] ease-[var(--ease-editorial)] motion-safe:group-hover:scale-[1.02]"
+                className="h-full w-full object-cover transition-transform duration-[var(--duration-moderate)] ease-[var(--ease-editorial)] motion-safe:group-hover:scale-[1.03]"
               />
             ) : (
               <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-subtle p-6 text-center">
@@ -113,6 +113,7 @@ export function ProductCard({ product, href, className }: ProductCardProps) {
           <div className="pointer-events-none absolute top-3 left-3 right-3 flex flex-wrap items-start justify-between gap-1.5">
             <div className="flex flex-wrap items-center gap-1.5">
               {product.isFeatured ? <Badge tone="info">Featured</Badge> : null}
+              {product.has3dEnabled ? <Badge tone="gold">3D Atelier</Badge> : null}
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               {product.stockStatus === 'LOW_STOCK' ? (

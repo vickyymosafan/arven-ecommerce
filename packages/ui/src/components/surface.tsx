@@ -1,7 +1,7 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '../lib/cn.js';
 
-export type SurfaceVariant = 'canvas' | 'subtle' | 'panel' | 'elevated';
+export type SurfaceVariant = 'canvas' | 'subtle' | 'panel' | 'elevated' | 'glass';
 export type SurfacePadding = 'none' | 'sm' | 'md' | 'lg';
 export type SurfaceBorder = 'none' | 'hairline' | 'control' | 'strong';
 
@@ -17,6 +17,7 @@ const variantMap: Record<SurfaceVariant, string> = {
   subtle: 'bg-subtle text-ink',
   panel: 'bg-panel text-ink',
   elevated: 'bg-elevated text-ink shadow-[var(--shadow-raised)]',
+  glass: 'bg-glass text-ink shadow-[var(--shadow-glass)]',
 };
 
 const paddingMap: Record<SurfacePadding, string> = {

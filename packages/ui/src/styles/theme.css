@@ -27,6 +27,13 @@
   --color-link: var(--arven-accent-link);
   --color-focus: var(--arven-focus-ring);
 
+  --color-gold: var(--arven-accent-gold);
+  --color-gold-hover: var(--arven-accent-gold-hover);
+  --color-gold-subtle: var(--arven-accent-gold-subtle);
+  --color-glass-bg: var(--arven-glass-bg);
+  --color-glass-border: var(--arven-glass-border);
+  --shadow-glass: var(--arven-shadow-glass);
+
   --color-info-fg: var(--arven-status-info-fg);
   --color-info-bg: var(--arven-status-info-bg);
   --color-success-fg: var(--arven-status-success-fg);
@@ -51,5 +58,22 @@
   ::selection {
     background-color: var(--arven-accent-link);
     color: var(--color-white);
+  }
+}
+
+@layer utilities {
+  .bg-glass {
+    background-color: var(--arven-glass-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  .border-glass {
+    border-color: var(--arven-glass-border);
+  }
+  .hairline-b {
+    border-bottom: 1px solid var(--arven-border-hairline);
+  }
+  .hairline-t {
+    border-top: 1px solid var(--arven-border-hairline);
   }
 }

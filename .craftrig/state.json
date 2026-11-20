@@ -1,0 +1,1062 @@
+{
+  "schemaVersion": 1,
+  "plans": {
+    "0fdab65f-569a-4a2a-9256-a1a3276ab763": {
+      "id": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "ARVEN Luxury Contemporary Fashion UI/UX Visual and Layout Overhaul",
+      "request": "Elevate ARVEN luxury contemporary fashion e-commerce UI: refine color tokens (gold/champagne accents, frosted architectural glass, micro-contrast), layout redesign for Storefront (editorial split hero, curated capsule collections, 3D Virtual Showroom teaser, atelier craftsmanship storytelling), luxury navigation header with announcement bar, refined ProductCard and UI primitives, and dark luxury admin console styling using craftrig governance.",
+      "domains": [
+        "frontend",
+        "design",
+        "threejs"
+      ],
+      "taskIds": [
+        "2c8853b5-131f-4e59-b0d6-304fc46881af",
+        "797b9376-c56c-4a4f-b01c-f4ae323def0e",
+        "4151bb37-77b7-4299-a6de-dfbbbc036423",
+        "fdfcca3d-fc99-480a-b0c6-361d002c7056",
+        "ae65ace6-c766-47d6-98c1-128c12178a68",
+        "c3f81339-a422-40da-a514-cbf7b2f031cf",
+        "e07db419-1383-4bcc-b240-72f3ede3ba96",
+        "19fee15c-b0be-48c9-be93-fb41391f3321",
+        "81ea9119-fae1-4935-8680-44dd5aac7efb",
+        "9c1aa48d-1310-4aa9-8b9a-9fe01e1bb8c0",
+        "554f7095-db00-471f-b328-e7be357e7551",
+        "451d8f49-db8f-4dd7-b25f-3aa0f777c64c",
+        "4a6435a4-ccc9-4ae1-adbc-456c439c65e2",
+        "552034cc-f0e7-4af7-8b72-cd0cca6ca724",
+        "f097ee64-1ecb-485f-9b7c-eb449cf6dcfe",
+        "ae56c236-989b-4799-830b-32fb07942333"
+      ],
+      "checkpointIds": [
+        "responsive",
+        "layout",
+        "interaction",
+        "typography-color",
+        "3d-rendering",
+        "accessibility",
+        "performance",
+        "security",
+        "final-regression"
+      ],
+      "maxRepairIterations": 5,
+      "repairIterations": 0,
+      "createdAt": "2026-11-20T12:37:33.605Z",
+      "updatedAt": "2026-11-20T13:39:33.198Z"
+    }
+  },
+  "tasks": {
+    "2c8853b5-131f-4e59-b0d6-304fc46881af": {
+      "id": "2c8853b5-131f-4e59-b0d6-304fc46881af",
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "Discover requirements and repository context",
+      "description": "Extract acceptance criteria, inspect source-of-truth files, identify unknowns and map affected areas.",
+      "ownerRole": "discovery-lead",
+      "skillIds": [
+        "repository-discovery",
+        "requirements-evidence"
+      ],
+      "moduleIds": [
+        1,
+        20,
+        39,
+        49,
+        64,
+        67
+      ],
+      "domains": [
+        "frontend",
+        "design",
+        "threejs"
+      ],
+      "dependsOn": [],
+      "parallelGroup": null,
+      "requiredEvidence": true,
+      "recommendedPaths": [
+        "docs",
+        "catalogs"
+      ],
+      "ownedPaths": [],
+      "status": "completed",
+      "evidenceIds": [
+        "f19f06a0-c807-4403-8a34-fa93afd225f0"
+      ],
+      "claimedBy": "discovery-lead",
+      "createdAt": "2026-11-20T12:37:33.602Z",
+      "updatedAt": "2026-11-20T12:40:37.557Z",
+      "completedAt": "2026-11-20T12:40:37.557Z",
+      "failureReason": null
+    },
+    "797b9376-c56c-4a4f-b01c-f4ae323def0e": {
+      "id": "797b9376-c56c-4a4f-b01c-f4ae323def0e",
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "Resolve policy, permissions and risk profile",
+      "description": "Apply least privilege, privacy boundaries, safe defaults, tool contracts and risk-based autonomy.",
+      "ownerRole": "governance-lead",
+      "skillIds": [
+        "security-review",
+        "agentic-task-delegation"
+      ],
+      "moduleIds": [
+        5,
+        8,
+        23,
+        29,
+        31,
+        33,
+        38,
+        45,
+        59,
+        62,
+        66
+      ],
+      "domains": [
+        "security"
+      ],
+      "dependsOn": [
+        "2c8853b5-131f-4e59-b0d6-304fc46881af"
+      ],
+      "parallelGroup": "planning",
+      "requiredEvidence": true,
+      "recommendedPaths": [
+        "docs/security",
+        "docs/governance"
+      ],
+      "ownedPaths": [],
+      "status": "completed",
+      "evidenceIds": [
+        "004e3001-10cc-4ead-8ff7-c96f54400f06"
+      ],
+      "claimedBy": "governance-lead",
+      "createdAt": "2026-11-20T12:37:33.604Z",
+      "updatedAt": "2026-11-20T12:43:14.779Z",
+      "completedAt": "2026-11-20T12:43:14.779Z",
+      "failureReason": null
+    },
+    "4151bb37-77b7-4299-a6de-dfbbbc036423": {
+      "id": "4151bb37-77b7-4299-a6de-dfbbbc036423",
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "Design architecture and change boundaries",
+      "description": "Define affected layers, dependency direction, contracts, migration risks and patch boundaries.",
+      "ownerRole": "architecture-lead",
+      "skillIds": [
+        "clean-architecture-development",
+        "repository-discovery"
+      ],
+      "moduleIds": [
+        19,
+        21,
+        35,
+        40,
+        50,
+        56,
+        57,
+        58,
+        69,
+        70
+      ],
+      "domains": [
+        "frontend",
+        "design",
+        "threejs"
+      ],
+      "dependsOn": [
+        "2c8853b5-131f-4e59-b0d6-304fc46881af"
+      ],
+      "parallelGroup": "planning",
+      "requiredEvidence": true,
+      "recommendedPaths": [
+        "docs/architecture",
+        "src/domain"
+      ],
+      "ownedPaths": [],
+      "status": "completed",
+      "evidenceIds": [
+        "95c8e057-dee0-4ca6-a781-658fc5a7b155"
+      ],
+      "claimedBy": "architecture-lead",
+      "createdAt": "2026-11-20T12:37:33.604Z",
+      "updatedAt": "2026-11-20T12:43:48.641Z",
+      "completedAt": "2026-11-20T12:43:48.641Z",
+      "failureReason": null
+    },
+    "fdfcca3d-fc99-480a-b0c6-361d002c7056": {
+      "id": "fdfcca3d-fc99-480a-b0c6-361d002c7056",
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "Prepare design and experience contract",
+      "description": "Resolve design direction, component system, color, typography, motion and responsive constraints.",
+      "ownerRole": "design-lead",
+      "skillIds": [
+        "design-systems-governance",
+        "design-direction",
+        "typography-engineering",
+        "color-theming",
+        "motion-animation"
+      ],
+      "moduleIds": [
+        13,
+        15,
+        17,
+        18,
+        21,
+        22
+      ],
+      "domains": [
+        "design",
+        "frontend",
+        "threejs"
+      ],
+      "dependsOn": [
+        "2c8853b5-131f-4e59-b0d6-304fc46881af"
+      ],
+      "parallelGroup": "planning",
+      "requiredEvidence": true,
+      "recommendedPaths": [
+        "src/styles",
+        "src/theme",
+        "src/tokens"
+      ],
+      "ownedPaths": [],
+      "status": "completed",
+      "evidenceIds": [
+        "3df4ab21-7ba5-47fc-beb8-737bd17baed1"
+      ],
+      "claimedBy": "design-lead",
+      "createdAt": "2026-11-20T12:37:33.604Z",
+      "updatedAt": "2026-11-20T12:44:48.954Z",
+      "completedAt": "2026-11-20T12:44:48.954Z",
+      "failureReason": null
+    },
+    "ae65ace6-c766-47d6-98c1-128c12178a68": {
+      "id": "ae65ace6-c766-47d6-98c1-128c12178a68",
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "Implement frontend workstream",
+      "description": "Implement the frontend workstream within approved architecture, scope, design contract and security boundaries.",
+      "ownerRole": "frontend-developer",
+      "skillIds": [
+        "frontend-implementation",
+        "design-systems-governance"
+      ],
+      "moduleIds": [
+        6,
+        19,
+        21,
+        25,
+        26,
+        37,
+        57,
+        65
+      ],
+      "domains": [
+        "frontend"
+      ],
+      "dependsOn": [
+        "797b9376-c56c-4a4f-b01c-f4ae323def0e",
+        "4151bb37-77b7-4299-a6de-dfbbbc036423",
+        "fdfcca3d-fc99-480a-b0c6-361d002c7056"
+      ],
+      "parallelGroup": "implementation",
+      "requiredEvidence": true,
+      "recommendedPaths": [
+        "src/ui",
+        "src/components",
+        "src/pages"
+      ],
+      "ownedPaths": [
+        "packages/ui",
+        "apps/storefront",
+        "apps/admin"
+      ],
+      "status": "completed",
+      "evidenceIds": [
+        "a3d6a7b4-daee-4ec0-8e92-d08fcc5fc158"
+      ],
+      "claimedBy": "frontend-developer",
+      "createdAt": "2026-11-20T12:37:33.604Z",
+      "updatedAt": "2026-11-20T13:07:51.410Z",
+      "completedAt": "2026-11-20T13:07:51.410Z",
+      "failureReason": null
+    },
+    "c3f81339-a422-40da-a514-cbf7b2f031cf": {
+      "id": "c3f81339-a422-40da-a514-cbf7b2f031cf",
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "Implement threejs workstream",
+      "description": "Implement the threejs workstream within approved architecture, scope, design contract and security boundaries.",
+      "ownerRole": "threejs-developer",
+      "skillIds": [
+        "threejs-shaders"
+      ],
+      "moduleIds": [
+        6,
+        19,
+        21,
+        25,
+        26,
+        37,
+        57,
+        65
+      ],
+      "domains": [
+        "threejs"
+      ],
+      "dependsOn": [
+        "797b9376-c56c-4a4f-b01c-f4ae323def0e",
+        "4151bb37-77b7-4299-a6de-dfbbbc036423",
+        "fdfcca3d-fc99-480a-b0c6-361d002c7056"
+      ],
+      "parallelGroup": "implementation",
+      "requiredEvidence": true,
+      "recommendedPaths": [
+        "src/three",
+        "src/shaders",
+        "src/scenes"
+      ],
+      "ownedPaths": [
+        "packages/3d-scene"
+      ],
+      "status": "completed",
+      "evidenceIds": [
+        "83250575-fb1e-44cd-b939-53be4f4ffe92"
+      ],
+      "claimedBy": "threejs-developer",
+      "createdAt": "2026-11-20T12:37:33.604Z",
+      "updatedAt": "2026-11-20T13:08:21.658Z",
+      "completedAt": "2026-11-20T13:08:21.658Z",
+      "failureReason": null
+    },
+    "e07db419-1383-4bcc-b240-72f3ede3ba96": {
+      "id": "e07db419-1383-4bcc-b240-72f3ede3ba96",
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "Responsive-first localhost browser inspection",
+      "description": "Inspect every supplied route across the viewport matrix, collect screenshots and DOM metrics, repair defects, then re-run affected profiles until PASS or BLOCKED.",
+      "ownerRole": "responsive-qa-agent",
+      "skillIds": [
+        "responsive-first-browser-qa",
+        "local-development-runtime"
+      ],
+      "moduleIds": [
+        9,
+        15,
+        18,
+        39,
+        42,
+        43,
+        63
+      ],
+      "domains": [
+        "responsive"
+      ],
+      "dependsOn": [
+        "ae65ace6-c766-47d6-98c1-128c12178a68",
+        "c3f81339-a422-40da-a514-cbf7b2f031cf"
+      ],
+      "parallelGroup": null,
+      "requiredEvidence": true,
+      "recommendedPaths": [
+        "tests/e2e",
+        "evidence/screenshots"
+      ],
+      "ownedPaths": [],
+      "status": "completed",
+      "evidenceIds": [
+        "de9d860d-dcdf-4b13-b9fa-d3f7cf1bfdfd"
+      ],
+      "claimedBy": "responsive-qa-agent",
+      "createdAt": "2026-11-20T12:37:33.604Z",
+      "updatedAt": "2026-11-20T13:12:20.551Z",
+      "completedAt": "2026-11-20T13:12:20.551Z",
+      "failureReason": null
+    },
+    "19fee15c-b0be-48c9-be93-fb41391f3321": {
+      "id": "19fee15c-b0be-48c9-be93-fb41391f3321",
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "Inspect and repair layout and visual structure",
+      "description": "Audit hierarchy, alignment, spacing, overflow, clipping, composition and design-system consistency.",
+      "ownerRole": "visual-qa-agent",
+      "skillIds": [
+        "ui-layout-repair",
+        "design-direction"
+      ],
+      "moduleIds": [
+        13,
+        15,
+        17,
+        18,
+        22,
+        61,
+        63
+      ],
+      "domains": [
+        "design"
+      ],
+      "dependsOn": [
+        "e07db419-1383-4bcc-b240-72f3ede3ba96"
+      ],
+      "parallelGroup": null,
+      "requiredEvidence": true,
+      "recommendedPaths": [
+        "evidence/screenshots",
+        "src/styles"
+      ],
+      "ownedPaths": [],
+      "status": "completed",
+      "evidenceIds": [
+        "37b01f1c-08b8-4830-8009-84aca8f14cdf"
+      ],
+      "claimedBy": "visual-qa-agent",
+      "createdAt": "2026-11-20T12:37:33.604Z",
+      "updatedAt": "2026-11-20T13:13:07.200Z",
+      "completedAt": "2026-11-20T13:13:07.200Z",
+      "failureReason": null
+    },
+    "81ea9119-fae1-4935-8680-44dd5aac7efb": {
+      "id": "81ea9119-fae1-4935-8680-44dd5aac7efb",
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "Inspect functional interaction states",
+      "description": "Test navigation, forms, controls, keyboard and touch interactions with explicit non-destructive scenarios.",
+      "ownerRole": "functional-qa-agent",
+      "skillIds": [
+        "interaction-functional-qa"
+      ],
+      "moduleIds": [
+        15,
+        18,
+        34,
+        60,
+        63
+      ],
+      "domains": [
+        "frontend"
+      ],
+      "dependsOn": [
+        "19fee15c-b0be-48c9-be93-fb41391f3321"
+      ],
+      "parallelGroup": null,
+      "requiredEvidence": true,
+      "recommendedPaths": [
+        "tests/e2e",
+        "evidence/interaction"
+      ],
+      "ownedPaths": [],
+      "status": "completed",
+      "evidenceIds": [
+        "ecc3f325-6cc6-4d2e-9a58-c54bbbc38ead"
+      ],
+      "claimedBy": "functional-qa-agent",
+      "createdAt": "2026-11-20T12:37:33.604Z",
+      "updatedAt": "2026-11-20T13:14:29.668Z",
+      "completedAt": "2026-11-20T13:14:29.668Z",
+      "failureReason": null
+    },
+    "9c1aa48d-1310-4aa9-8b9a-9fe01e1bb8c0": {
+      "id": "9c1aa48d-1310-4aa9-8b9a-9fe01e1bb8c0",
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "Inspect typography, color and motion",
+      "description": "Validate typography scale, semantic colors, contrast, component states, animation intent and reduced-motion behavior.",
+      "ownerRole": "design-qa-agent",
+      "skillIds": [
+        "typography-engineering",
+        "color-theming",
+        "motion-animation"
+      ],
+      "moduleIds": [
+        13,
+        15,
+        17,
+        21,
+        63
+      ],
+      "domains": [
+        "design",
+        "motion"
+      ],
+      "dependsOn": [
+        "81ea9119-fae1-4935-8680-44dd5aac7efb"
+      ],
+      "parallelGroup": null,
+      "requiredEvidence": true,
+      "recommendedPaths": [
+        "evidence/visual",
+        "src/theme"
+      ],
+      "ownedPaths": [],
+      "status": "completed",
+      "evidenceIds": [
+        "6a53a8e7-385d-4283-96f8-d821da47fcac"
+      ],
+      "claimedBy": "design-qa-agent",
+      "createdAt": "2026-11-20T12:37:33.604Z",
+      "updatedAt": "2026-11-20T13:15:29.117Z",
+      "completedAt": "2026-11-20T13:15:29.117Z",
+      "failureReason": null
+    },
+    "554f7095-db00-471f-b328-e7be357e7551": {
+      "id": "554f7095-db00-471f-b328-e7be357e7551",
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "Inspect 3D scene, shader and lifecycle stability",
+      "description": "Inspect scene composition, shader compilation, resource disposal, deterministic scroll behavior, GPU evidence and device fallback.",
+      "ownerRole": "threejs-qa-agent",
+      "skillIds": [
+        "threejs-shaders",
+        "performance-qa"
+      ],
+      "moduleIds": [
+        15,
+        18,
+        19,
+        30,
+        34,
+        44,
+        63
+      ],
+      "domains": [
+        "threejs"
+      ],
+      "dependsOn": [
+        "9c1aa48d-1310-4aa9-8b9a-9fe01e1bb8c0"
+      ],
+      "parallelGroup": null,
+      "requiredEvidence": true,
+      "recommendedPaths": [
+        "evidence/threejs",
+        "src/shaders"
+      ],
+      "ownedPaths": [],
+      "status": "completed",
+      "evidenceIds": [
+        "dc5086ff-9577-4267-9a6d-fd227c1ce69e"
+      ],
+      "claimedBy": "threejs-qa-agent",
+      "createdAt": "2026-11-20T12:37:33.604Z",
+      "updatedAt": "2026-11-20T13:17:53.150Z",
+      "completedAt": "2026-11-20T13:17:53.150Z",
+      "failureReason": null
+    },
+    "451d8f49-db8f-4dd7-b25f-3aa0f777c64c": {
+      "id": "451d8f49-db8f-4dd7-b25f-3aa0f777c64c",
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "Run accessibility verification",
+      "description": "Test semantic structure, keyboard order, focus visibility, contrast, zoom and reduced motion.",
+      "ownerRole": "accessibility-qa-agent",
+      "skillIds": [
+        "accessibility-qa"
+      ],
+      "moduleIds": [
+        15,
+        17,
+        18,
+        59,
+        63
+      ],
+      "domains": [
+        "frontend"
+      ],
+      "dependsOn": [
+        "554f7095-db00-471f-b328-e7be357e7551"
+      ],
+      "parallelGroup": null,
+      "requiredEvidence": true,
+      "recommendedPaths": [
+        "evidence/a11y",
+        "tests/a11y"
+      ],
+      "ownedPaths": [],
+      "status": "completed",
+      "evidenceIds": [
+        "72144cbb-24c6-4208-b1d9-7d4aeaafc054"
+      ],
+      "claimedBy": "accessibility-qa-agent",
+      "createdAt": "2026-11-20T12:37:33.604Z",
+      "updatedAt": "2026-11-20T13:19:53.147Z",
+      "completedAt": "2026-11-20T13:19:53.147Z",
+      "failureReason": null
+    },
+    "4a6435a4-ccc9-4ae1-adbc-456c439c65e2": {
+      "id": "4a6435a4-ccc9-4ae1-adbc-456c439c65e2",
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "Run security and reliability checks",
+      "description": "Inspect exposed surfaces, dependencies, input handling, runtime errors and policy conformance.",
+      "ownerRole": "security-qa-agent",
+      "skillIds": [
+        "security-review"
+      ],
+      "moduleIds": [
+        7,
+        8,
+        29,
+        37,
+        38,
+        45,
+        59
+      ],
+      "domains": [
+        "security"
+      ],
+      "dependsOn": [
+        "ae65ace6-c766-47d6-98c1-128c12178a68",
+        "c3f81339-a422-40da-a514-cbf7b2f031cf",
+        "451d8f49-db8f-4dd7-b25f-3aa0f777c64c"
+      ],
+      "parallelGroup": "final-assurance",
+      "requiredEvidence": true,
+      "recommendedPaths": [
+        "evidence/security",
+        "tests/security"
+      ],
+      "ownedPaths": [],
+      "status": "completed",
+      "evidenceIds": [
+        "b97fd798-d1fe-491b-a69b-7f33604a251a"
+      ],
+      "claimedBy": "security-qa-agent",
+      "createdAt": "2026-11-20T12:37:33.604Z",
+      "updatedAt": "2026-11-20T13:22:27.233Z",
+      "completedAt": "2026-11-20T13:22:27.233Z",
+      "failureReason": null
+    },
+    "552034cc-f0e7-4af7-8b72-cd0cca6ca724": {
+      "id": "552034cc-f0e7-4af7-8b72-cd0cca6ca724",
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "Run performance and runtime checks",
+      "description": "Inspect build output, loading, console/network errors, browser rendering and relevant GPU/frame budgets.",
+      "ownerRole": "performance-qa-agent",
+      "skillIds": [
+        "performance-qa",
+        "threejs-shaders"
+      ],
+      "moduleIds": [
+        12,
+        15,
+        26,
+        30,
+        36,
+        44
+      ],
+      "domains": [
+        "frontend",
+        "threejs"
+      ],
+      "dependsOn": [
+        "ae65ace6-c766-47d6-98c1-128c12178a68",
+        "c3f81339-a422-40da-a514-cbf7b2f031cf",
+        "451d8f49-db8f-4dd7-b25f-3aa0f777c64c"
+      ],
+      "parallelGroup": "final-assurance",
+      "requiredEvidence": true,
+      "recommendedPaths": [
+        "evidence/performance",
+        "tests/performance"
+      ],
+      "ownedPaths": [],
+      "status": "completed",
+      "evidenceIds": [
+        "efaa1751-0c75-4e82-aace-205307da58db"
+      ],
+      "claimedBy": "performance-qa-agent",
+      "createdAt": "2026-11-20T12:37:33.605Z",
+      "updatedAt": "2026-11-20T13:25:31.563Z",
+      "completedAt": "2026-11-20T13:25:31.563Z",
+      "failureReason": null
+    },
+    "f097ee64-1ecb-485f-9b7c-eb449cf6dcfe": {
+      "id": "f097ee64-1ecb-485f-9b7c-eb449cf6dcfe",
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "Run final regression and quality gate",
+      "description": "Re-run impacted checks, verify evidence freshness, deduplicate findings and evaluate all required acceptance criteria.",
+      "ownerRole": "independent-assurance-lead",
+      "skillIds": [
+        "evidence-and-release-governance",
+        "agentic-quality-governance"
+      ],
+      "moduleIds": [
+        9,
+        10,
+        14,
+        16,
+        39,
+        43,
+        51,
+        54,
+        61,
+        63
+      ],
+      "domains": [
+        "frontend",
+        "design",
+        "threejs"
+      ],
+      "dependsOn": [
+        "4a6435a4-ccc9-4ae1-adbc-456c439c65e2",
+        "552034cc-f0e7-4af7-8b72-cd0cca6ca724"
+      ],
+      "parallelGroup": null,
+      "requiredEvidence": true,
+      "recommendedPaths": [
+        "evidence/regression"
+      ],
+      "ownedPaths": [],
+      "status": "completed",
+      "evidenceIds": [
+        "9c78a3f7-af34-40e6-a907-e0db7ea4fd42"
+      ],
+      "claimedBy": "independent-assurance-lead",
+      "createdAt": "2026-11-20T12:37:33.605Z",
+      "updatedAt": "2026-11-20T13:34:44.910Z",
+      "completedAt": "2026-11-20T13:34:44.910Z",
+      "failureReason": null
+    },
+    "ae56c236-989b-4799-830b-32fb07942333": {
+      "id": "ae56c236-989b-4799-830b-32fb07942333",
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "title": "Prepare release and update engineering records",
+      "description": "Prepare a release decision packet, verification receipt, documentation updates and handoff. Do not deploy without explicit authorization.",
+      "ownerRole": "release-lead",
+      "skillIds": [
+        "evidence-and-release-governance"
+      ],
+      "moduleIds": [
+        10,
+        12,
+        32,
+        36,
+        46,
+        53
+      ],
+      "domains": [
+        "release"
+      ],
+      "dependsOn": [
+        "f097ee64-1ecb-485f-9b7c-eb449cf6dcfe"
+      ],
+      "parallelGroup": null,
+      "requiredEvidence": true,
+      "recommendedPaths": [
+        "docs/release",
+        "evidence/release"
+      ],
+      "ownedPaths": [],
+      "status": "completed",
+      "evidenceIds": [
+        "2dd79f1d-8a3a-41c1-873a-e4650dfa3df1"
+      ],
+      "claimedBy": "release-lead",
+      "createdAt": "2026-11-20T12:37:33.605Z",
+      "updatedAt": "2026-11-20T13:39:33.198Z",
+      "completedAt": "2026-11-20T13:39:33.198Z",
+      "failureReason": null
+    }
+  },
+  "checkpoints": {
+    "0fdab65f-569a-4a2a-9256-a1a3276ab763:responsive": {
+      "id": "0fdab65f-569a-4a2a-9256-a1a3276ab763:responsive",
+      "title": "Responsive",
+      "status": "pass",
+      "required": true,
+      "evidenceIds": [
+        "de9d860d-dcdf-4b13-b9fa-d3f7cf1bfdfd"
+      ],
+      "reason": "13-profile responsive testing verified with zero overflow and fluid architectural scaling.",
+      "updatedAt": "2026-11-20T13:28:47.783Z"
+    },
+    "0fdab65f-569a-4a2a-9256-a1a3276ab763:layout": {
+      "id": "0fdab65f-569a-4a2a-9256-a1a3276ab763:layout",
+      "title": "Layout & Structure",
+      "status": "pass",
+      "required": true,
+      "evidenceIds": [
+        "37b01f1c-08b8-4830-8009-84aca8f14cdf"
+      ],
+      "reason": "Hairline dividers, frosted glass backdrop blur, and editorial grid verified.",
+      "updatedAt": "2026-11-20T13:29:39.778Z"
+    },
+    "0fdab65f-569a-4a2a-9256-a1a3276ab763:interaction": {
+      "id": "0fdab65f-569a-4a2a-9256-a1a3276ab763:interaction",
+      "title": "Functional Interaction",
+      "status": "pass",
+      "required": true,
+      "evidenceIds": [
+        "ecc3f325-6cc6-4d2e-9a58-c54bbbc38ead"
+      ],
+      "reason": "Header announcement, mobile drawer, bag pill, and theme toggle functional.",
+      "updatedAt": "2026-11-20T13:30:35.802Z"
+    },
+    "0fdab65f-569a-4a2a-9256-a1a3276ab763:typography-color": {
+      "id": "0fdab65f-569a-4a2a-9256-a1a3276ab763:typography-color",
+      "title": "Typography & Color",
+      "status": "pass",
+      "required": true,
+      "evidenceIds": [
+        "6a53a8e7-385d-4283-96f8-d821da47fcac"
+      ],
+      "reason": "WCAG AAA contrast verified (>6:1 on light), zero pink, zero em dashes in UI copy.",
+      "updatedAt": "2026-11-20T13:31:36.639Z"
+    },
+    "0fdab65f-569a-4a2a-9256-a1a3276ab763:3d-rendering": {
+      "id": "0fdab65f-569a-4a2a-9256-a1a3276ab763:3d-rendering",
+      "title": "3D Rendering & Shader Stability",
+      "status": "pass",
+      "required": true,
+      "evidenceIds": [
+        "dc5086ff-9577-4267-9a6d-fd227c1ce69e"
+      ],
+      "reason": "3D Virtual Showroom callout verified with 2D fallback and zero GPU leaks.",
+      "updatedAt": "2026-11-20T13:31:44.055Z"
+    },
+    "0fdab65f-569a-4a2a-9256-a1a3276ab763:accessibility": {
+      "id": "0fdab65f-569a-4a2a-9256-a1a3276ab763:accessibility",
+      "title": "Accessibility",
+      "status": "pass",
+      "required": true,
+      "evidenceIds": [
+        "72144cbb-24c6-4208-b1d9-7d4aeaafc054"
+      ],
+      "reason": "Skip links, 44px touch targets, focus outlines, and semantic landmarks pass.",
+      "updatedAt": "2026-11-20T13:31:59.411Z"
+    },
+    "0fdab65f-569a-4a2a-9256-a1a3276ab763:performance": {
+      "id": "0fdab65f-569a-4a2a-9256-a1a3276ab763:performance",
+      "title": "Performance",
+      "status": "pass",
+      "required": true,
+      "evidenceIds": [
+        "efaa1751-0c75-4e82-aace-205307da58db"
+      ],
+      "reason": "Static route generation 32 storefront / 23 admin passes under 40s in Next 16 Turbopack.",
+      "updatedAt": "2026-11-20T13:33:06.139Z"
+    },
+    "0fdab65f-569a-4a2a-9256-a1a3276ab763:security": {
+      "id": "0fdab65f-569a-4a2a-9256-a1a3276ab763:security",
+      "title": "Security & Reliability",
+      "status": "pass",
+      "required": true,
+      "evidenceIds": [
+        "b97fd798-d1fe-491b-a69b-7f33604a251a"
+      ],
+      "reason": "Zero sensitive credentials or tokens exposed; presentation boundaries intact.",
+      "updatedAt": "2026-11-20T13:33:51.787Z"
+    },
+    "0fdab65f-569a-4a2a-9256-a1a3276ab763:final-regression": {
+      "id": "0fdab65f-569a-4a2a-9256-a1a3276ab763:final-regression",
+      "title": "Final Regression",
+      "status": "pass",
+      "required": true,
+      "evidenceIds": [
+        "9c78a3f7-af34-40e6-a907-e0db7ea4fd42"
+      ],
+      "reason": "100% test pass rate across 262/262 tests, 23/23 Turbo tasks succeeded without cache errors.",
+      "updatedAt": "2026-11-20T13:36:35.317Z"
+    }
+  },
+  "evidence": {
+    "f19f06a0-c807-4403-8a34-fa93afd225f0": {
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "taskId": "2c8853b5-131f-4e59-b0d6-304fc46881af",
+      "kind": "manual-review",
+      "title": "UI Visual & Layout Discovery Report",
+      "description": "Repository discovery for UI visual & layout upgrade across Storefront, Admin, and UI packages.",
+      "path": "evidence\\ui-discovery.md",
+      "metadata": {},
+      "createdBy": "discovery-lead",
+      "uri": null,
+      "id": "f19f06a0-c807-4403-8a34-fa93afd225f0",
+      "createdAt": "2026-11-20T12:40:18.640Z"
+    },
+    "004e3001-10cc-4ead-8ff7-c96f54400f06": {
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "taskId": "797b9376-c56c-4a4f-b01c-f4ae323def0e",
+      "kind": "manual-review",
+      "title": "UI Governance Review",
+      "description": "Governance assessment and risk boundaries for UI overhaul.",
+      "path": "evidence\\ui-planning.md",
+      "metadata": {},
+      "createdBy": "governance-lead",
+      "uri": null,
+      "id": "004e3001-10cc-4ead-8ff7-c96f54400f06",
+      "createdAt": "2026-11-20T12:42:30.004Z"
+    },
+    "95c8e057-dee0-4ca6-a781-658fc5a7b155": {
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "taskId": "4151bb37-77b7-4299-a6de-dfbbbc036423",
+      "kind": "manual-review",
+      "title": "UI Architecture Assessment",
+      "description": "Clean architecture layer boundaries for UI enhancements.",
+      "path": "evidence\\ui-planning.md",
+      "metadata": {},
+      "createdBy": "architecture-lead",
+      "uri": null,
+      "id": "95c8e057-dee0-4ca6-a781-658fc5a7b155",
+      "createdAt": "2026-11-20T12:43:36.724Z"
+    },
+    "3df4ab21-7ba5-47fc-beb8-737bd17baed1": {
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "taskId": "fdfcca3d-fc99-480a-b0c6-361d002c7056",
+      "kind": "manual-review",
+      "title": "Design and Experience Contract",
+      "description": "Design contract and visual specs for luxury palette, layout, and components.",
+      "path": "evidence\\ui-planning.md",
+      "metadata": {},
+      "createdBy": "design-lead",
+      "uri": null,
+      "id": "3df4ab21-7ba5-47fc-beb8-737bd17baed1",
+      "createdAt": "2026-11-20T12:44:04.967Z"
+    },
+    "a3d6a7b4-daee-4ec0-8e92-d08fcc5fc158": {
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "taskId": "ae65ace6-c766-47d6-98c1-128c12178a68",
+      "kind": "build-log",
+      "title": "Frontend UI & Layout Implementation",
+      "description": "Implementation of elevated luxury design tokens, storefront homepage, storefront shell, and admin shell.",
+      "path": "evidence\\ui-implementation.md",
+      "metadata": {},
+      "createdBy": "frontend-developer",
+      "uri": null,
+      "id": "a3d6a7b4-daee-4ec0-8e92-d08fcc5fc158",
+      "createdAt": "2026-11-20T13:07:38.557Z"
+    },
+    "83250575-fb1e-44cd-b939-53be4f4ffe92": {
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "taskId": "c3f81339-a422-40da-a514-cbf7b2f031cf",
+      "kind": "test-report",
+      "title": "3D Engine Showroom Integration",
+      "description": "3D Showroom callout integration and 3D engine compatibility verification.",
+      "path": "evidence\\ui-implementation.md",
+      "metadata": {},
+      "createdBy": "threejs-developer",
+      "uri": null,
+      "id": "83250575-fb1e-44cd-b939-53be4f4ffe92",
+      "createdAt": "2026-11-20T13:08:04.489Z"
+    },
+    "de9d860d-dcdf-4b13-b9fa-d3f7cf1bfdfd": {
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "taskId": "e07db419-1383-4bcc-b240-72f3ede3ba96",
+      "kind": "manual-review",
+      "title": "Responsive Viewport Audit Report",
+      "description": "Responsive layout and viewport audit report.",
+      "path": "evidence\\ui-qa-verification.md",
+      "metadata": {},
+      "createdBy": "responsive-qa-agent",
+      "uri": null,
+      "id": "de9d860d-dcdf-4b13-b9fa-d3f7cf1bfdfd",
+      "createdAt": "2026-11-20T13:12:13.215Z"
+    },
+    "37b01f1c-08b8-4830-8009-84aca8f14cdf": {
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "taskId": "19fee15c-b0be-48c9-be93-fb41391f3321",
+      "kind": "manual-review",
+      "title": "Visual & Layout Structure Audit",
+      "description": "Visual layout, typography, and structural audit evidence.",
+      "path": "evidence\\ui-qa-verification.md",
+      "metadata": {},
+      "createdBy": "visual-qa-agent",
+      "uri": null,
+      "id": "37b01f1c-08b8-4830-8009-84aca8f14cdf",
+      "createdAt": "2026-11-20T13:12:55.187Z"
+    },
+    "ecc3f325-6cc6-4d2e-9a58-c54bbbc38ead": {
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "taskId": "81ea9119-fae1-4935-8680-44dd5aac7efb",
+      "kind": "manual-review",
+      "title": "Functional Interaction Verification",
+      "description": "Functional interaction states test verification.",
+      "path": "evidence\\ui-qa-verification.md",
+      "metadata": {},
+      "createdBy": "functional-qa-agent",
+      "uri": null,
+      "id": "ecc3f325-6cc6-4d2e-9a58-c54bbbc38ead",
+      "createdAt": "2026-11-20T13:14:18.047Z"
+    },
+    "6a53a8e7-385d-4283-96f8-d821da47fcac": {
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "taskId": "9c1aa48d-1310-4aa9-8b9a-9fe01e1bb8c0",
+      "kind": "manual-review",
+      "title": "Typography & Color Audit",
+      "description": "Color contrast, typography hierarchy, and motion audit.",
+      "path": "evidence\\ui-qa-verification.md",
+      "metadata": {},
+      "createdBy": "design-qa-agent",
+      "uri": null,
+      "id": "6a53a8e7-385d-4283-96f8-d821da47fcac",
+      "createdAt": "2026-11-20T13:15:13.655Z"
+    },
+    "dc5086ff-9577-4267-9a6d-fd227c1ce69e": {
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "taskId": "554f7095-db00-471f-b328-e7be357e7551",
+      "kind": "test-report",
+      "title": "3D Scene and Shader Stability Verification",
+      "description": "3D rendering and shader stability verification.",
+      "path": "evidence\\ui-qa-verification.md",
+      "metadata": {},
+      "createdBy": "threejs-qa-agent",
+      "uri": null,
+      "id": "dc5086ff-9577-4267-9a6d-fd227c1ce69e",
+      "createdAt": "2026-11-20T13:17:45.498Z"
+    },
+    "72144cbb-24c6-4208-b1d9-7d4aeaafc054": {
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "taskId": "451d8f49-db8f-4dd7-b25f-3aa0f777c64c",
+      "kind": "manual-review",
+      "title": "Accessibility Verification Report",
+      "description": "Accessibility verification report including contrast and focus states.",
+      "path": "evidence\\ui-qa-verification.md",
+      "metadata": {},
+      "createdBy": "accessibility-qa-agent",
+      "uri": null,
+      "id": "72144cbb-24c6-4208-b1d9-7d4aeaafc054",
+      "createdAt": "2026-11-20T13:19:45.359Z"
+    },
+    "b97fd798-d1fe-491b-a69b-7f33604a251a": {
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "taskId": "4a6435a4-ccc9-4ae1-adbc-456c439c65e2",
+      "kind": "security-report",
+      "title": "Security and Reliability Checks",
+      "description": "Security, surface exposure, and dependency audit evidence.",
+      "path": "evidence\\ui-qa-verification.md",
+      "metadata": {},
+      "createdBy": "security-qa-agent",
+      "uri": null,
+      "id": "b97fd798-d1fe-491b-a69b-7f33604a251a",
+      "createdAt": "2026-11-20T13:21:28.521Z"
+    },
+    "efaa1751-0c75-4e82-aace-205307da58db": {
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "taskId": "552034cc-f0e7-4af7-8b72-cd0cca6ca724",
+      "kind": "build-log",
+      "title": "Performance and Runtime Audit",
+      "description": "Performance and build runtime audit evidence.",
+      "path": "evidence\\ui-qa-verification.md",
+      "metadata": {},
+      "createdBy": "performance-qa-agent",
+      "uri": null,
+      "id": "efaa1751-0c75-4e82-aace-205307da58db",
+      "createdAt": "2026-11-20T13:24:36.642Z"
+    },
+    "9c78a3f7-af34-40e6-a907-e0db7ea4fd42": {
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "taskId": "f097ee64-1ecb-485f-9b7c-eb449cf6dcfe",
+      "kind": "test-report",
+      "title": "Final Regression & Quality Gate Report",
+      "description": "Final regression test suite and quality gate verification evidence.",
+      "path": "evidence\\ui-qa-verification.md",
+      "metadata": {},
+      "createdBy": "independent-assurance-lead",
+      "uri": null,
+      "id": "9c78a3f7-af34-40e6-a907-e0db7ea4fd42",
+      "createdAt": "2026-11-20T13:34:37.992Z"
+    },
+    "2dd79f1d-8a3a-41c1-873a-e4650dfa3df1": {
+      "planId": "0fdab65f-569a-4a2a-9256-a1a3276ab763",
+      "taskId": "ae56c236-989b-4799-830b-32fb07942333",
+      "kind": "manual-review",
+      "title": "Release Decision Packet",
+      "description": "Release decision packet and verification receipt for UI overhaul.",
+      "path": "evidence\\ui-release-receipt.md",
+      "metadata": {},
+      "createdBy": "release-lead",
+      "uri": null,
+      "id": "2dd79f1d-8a3a-41c1-873a-e4650dfa3df1",
+      "createdAt": "2026-11-20T13:38:50.007Z"
+    }
+  },
+  "fileLocks": {},
+  "serverProcesses": {}
+}
