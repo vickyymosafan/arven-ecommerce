@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { cookies } from 'next/headers';
 import { connection } from 'next/server';
 import type { OutfitStudioCatalogDto } from '@arven/contracts';
 import { LoadingState } from '@arven/ui';
@@ -39,13 +40,19 @@ async function ResolvedOutfitStudio({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   await connection();
-  const resolvedSearch = await searchParams;
-  const initialCatalog = await fetchOutfitStudioCatalogServer();
+  const [resolvedSearch, cookieStore, initialCatalog] = await Promise.all([
+    searchParams,
+    cookies(),
+    fetchOutfitStudioCatalogServer(),
+  ]);
+  const initialHasSession =
+    cookieStore.has('__Host-arven_sid') || cookieStore.has('arven_sid');
 
   return (
     <OutfitStudioView
       initialCatalog={initialCatalog}
       initialSearchParams={resolvedSearch}
+      initialHasSession={initialHasSession}
     />
   );
 }

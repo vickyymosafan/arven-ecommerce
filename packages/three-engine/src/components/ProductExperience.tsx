@@ -19,26 +19,32 @@ import type {
   CustomizationPresetDto,
   Product3DAssetConfigDto,
 } from '@arven/contracts';
-
-interface OrbitControlsHandle {
-  target: THREE.Vector3;
-  update: () => void;
-}
 import {
   detectWebGLCapabilities,
   prefersReducedMotion,
   resolveDeviceQualityTier,
   type DeviceQualityTier,
 } from '../capabilities.js';
+import { inferSilhouetteFromSlug } from '../glb-binary.js';
 import {
   applyMaterialPresetToScene,
   type AppliedSlotOutcome,
 } from '../material-preset-controller.js';
+import {
+  acquireAtelierStudioEnv,
+  releaseAtelierStudioEnv,
+  upgradeGarmentSceneToAtelierPbr,
+} from '../materials/atelier-pbr-materials.js';
 import { ResourceTracker } from '../resource-tracker.js';
 import {
   AccessibleProductControls,
   type CameraPresetKey,
 } from './AccessibleProductControls.js';
+
+interface OrbitControlsHandle {
+  target: THREE.Vector3;
+  update: () => void;
+}
 
 export interface Arven3DDiagnosticsSnapshot {
   readonly productId: string;
@@ -69,6 +75,7 @@ export interface ProductExperienceProps {
   readonly assetId: string;
   readonly version: number;
   readonly productName: string;
+  readonly productSlug?: string;
   readonly modelUrl: string;
   readonly mobileModelUrl: string | null;
   readonly posterUrl: string;
@@ -106,17 +113,20 @@ function getCameraOffsetForPreset(
   const baseline = config.coordinateSystem.cameraBaseline;
   const basePos = new THREE.Vector3(...baseline.position);
   const target = new THREE.Vector3(...baseline.target);
-  const baseDistance = Math.max(0.9, basePos.distanceTo(target));
+  const baseDistance = Math.max(0.55, basePos.distanceTo(target));
 
   if (preset === 'front') {
-    return new THREE.Vector3(0, baseDistance * 0.08, baseDistance);
+    return new THREE.Vector3(0, baseDistance * 0.06, baseDistance);
   }
   if (preset === 'back') {
-    return new THREE.Vector3(0, baseDistance * 0.08, -baseDistance);
+    return new THREE.Vector3(0, baseDistance * 0.06, -baseDistance);
+  }
+  if (preset === 'side') {
+    return new THREE.Vector3(baseDistance * 0.98, baseDistance * 0.08, baseDistance * 0.14);
   }
   if (preset === 'detail') {
-    const minDist = Math.max(baseline.minDistance, baseDistance * 0.56);
-    return new THREE.Vector3(minDist * 0.36, minDist * 0.16, minDist);
+    const minDist = Math.max(baseline.minDistance, baseDistance * 0.68);
+    return new THREE.Vector3(minDist * 0.36, minDist * 0.22, minDist * 0.9);
   }
   return basePos.sub(target);
 }
@@ -125,6 +135,7 @@ interface InnerSceneProps {
   readonly productId: string;
   readonly assetId: string;
   readonly version: number;
+  readonly productSlugOrName: string;
   readonly resolvedModelUrl: string;
   readonly activeTier: DeviceQualityTier;
   readonly config: Product3DAssetConfigDto;
@@ -145,6 +156,7 @@ function ProductSceneContent({
   productId,
   assetId,
   version,
+  productSlugOrName,
   resolvedModelUrl,
   activeTier,
   config,
@@ -160,9 +172,10 @@ function ProductSceneContent({
   onContextLostCountChange,
   onFallbackTriggered,
 }: InnerSceneProps) {
-  const { gl, camera, invalidate } = useThree();
+  const { gl, scene, camera, invalidate } = useThree();
   const orbitRef = useRef<OrbitControlsHandle | null>(null);
   const [loadedScene, setLoadedScene] = useState<THREE.Group | null>(null);
+  const [sceneRevision, setSceneRevision] = useState(0);
   const trackerRef = useRef<ResourceTracker | null>(null);
   const lastAppliedSlotsRef = useRef<AppliedSlotOutcome[]>([]);
   const contextLossCountRef = useRef(0);
@@ -171,6 +184,29 @@ function ProductSceneContent({
   if (!trackerRef.current) {
     trackerRef.current = new ResourceTracker();
   }
+
+  const lightingWarm = config.lightingPreset === 'arven_warm_editorial_v1';
+  const envKey = lightingWarm
+    ? 'arven_product_studio_warm_v2'
+    : 'arven_product_studio_neutral_v2';
+
+  const resolvedSilhouette = useMemo(
+    () => config.silhouette ?? inferSilhouetteFromSlug(productSlugOrName),
+    [config.silhouette, productSlugOrName],
+  );
+
+  // Mount ref-counted procedural Atelier Studio PMREM IBL (zero CDN dependencies!)
+  useEffect(() => {
+    const sharedEnv = acquireAtelierStudioEnv(envKey, gl, lightingWarm);
+    if (sharedEnv.texture) {
+      scene.environment = sharedEnv.texture;
+    }
+    invalidate();
+    return () => {
+      scene.environment = null;
+      releaseAtelierStudioEnv(envKey);
+    };
+  }, [envKey, gl, invalidate, lightingWarm, scene]);
 
   const updateDiagnostics = useCallback(
     (
@@ -254,7 +290,8 @@ function ProductSceneContent({
     };
   }, [gl, invalidate, onContextLostCountChange, onFallbackTriggered, updateDiagnostics]);
 
-  // Load and parse GLB via self-hosted decoders + dispose GPU memory cleanly on swap/unmount
+  // Load & parse GLB via self-hosted decoders, upgrade to MeshPhysicalMaterial PBR weave/leather,
+  // and track every geometry, material & procedural texture cleanly for deterministic disposal.
   useEffect(() => {
     let cancelled = false;
     const abortController = new AbortController();
@@ -276,7 +313,7 @@ function ProductSceneContent({
         updateDiagnostics('loading');
         const response = await fetch(resolvedModelUrl, {
           signal: abortController.signal,
-          cache: 'force-cache',
+          cache: 'no-cache',
         });
         if (!response.ok) {
           throw new Error(`HTTP_${response.status}`);
@@ -296,6 +333,15 @@ function ProductSceneContent({
             }
             // Dispose any previous model before binding new scene
             trackerRef.current?.disposeAll();
+
+            // Upgrade baseline glTF materials to calibrated MeshPhysicalMaterial PBR fabric/leather
+            upgradeGarmentSceneToAtelierPbr(gltf.scene, {
+              silhouette: resolvedSilhouette,
+              productSlug: productSlugOrName,
+              lite: activeTier === 'lite',
+            });
+
+            // Track all geometries, upgraded physical materials, and procedural PBR DataTextures
             trackerRef.current?.trackObject3D(gltf.scene);
 
             const outcomes = applyMaterialPresetToScene(
@@ -305,9 +351,11 @@ function ProductSceneContent({
             );
             lastAppliedSlotsRef.current = outcomes;
             setLoadedScene(gltf.scene);
+            setSceneRevision((rev) => rev + 1);
             updateDiagnostics('ready', outcomes);
             onSceneReady(outcomes);
             invalidate();
+            requestAnimationFrame(() => invalidate());
           },
           (parseError) => {
             if (cancelled) return;
@@ -335,7 +383,7 @@ function ProductSceneContent({
       ktx2Loader.dispose();
       updateDiagnostics('fallback', []);
     };
-  }, [resolvedModelUrl, gl, dracoPath, ktx2Path]);
+  }, [resolvedModelUrl, gl, dracoPath, ktx2Path, resolvedSilhouette, productSlugOrName, activeTier]);
 
   // Apply customization presets deterministically without re-fetching geometry
   useEffect(() => {
@@ -381,8 +429,8 @@ function ProductSceneContent({
         const spherical = new THREE.Spherical().setFromVector3(offset);
         spherical.theta += deltaAzimuthRad;
         spherical.phi = Math.max(
-          0.35,
-          Math.min(Math.PI * 0.48, spherical.phi + deltaPolarRad),
+          0.32,
+          Math.min(Math.PI * 0.49, spherical.phi + deltaPolarRad),
         );
         offset.setFromSpherical(spherical);
         camera.position.copy(target).add(offset);
@@ -408,39 +456,70 @@ function ProductSceneContent({
     };
   }, [applyCameraPreset, camera, config, controlsCommandRef, invalidate]);
 
-  const lightingWarm = config.lightingPreset === 'arven_warm_editorial_v1';
+  const plinthRadius =
+    resolvedSilhouette === 'sneaker'
+      ? 0.32
+      : resolvedSilhouette === 'crossbody'
+        ? 0.28
+        : 0.46;
 
   return (
     <>
-      <color attach="background" args={['#17191B']} />
-      <ambientLight intensity={lightingWarm ? 0.65 : 0.72} color="#F8F7F3" />
+      <color attach="background" args={['#1B1D20']} />
+      <fog attach="fog" args={['#1B1D20', 4.5, 11.5]} />
+
+      {/* Calibrated 3-point fashion photography studio lighting rig */}
+      <hemisphereLight
+        args={[lightingWarm ? '#FFF3E4' : '#FAF8F3', '#232629', 0.58]}
+      />
+      {/* Key studio softbox light (front-right elevated) */}
       <directionalLight
-        position={[2.4, 3.2, 2.8]}
-        intensity={1.75}
-        color={lightingWarm ? '#FFEBD6' : '#FFFDF9'}
+        position={[2.4, 3.4, 2.8]}
+        intensity={1.9}
+        color={lightingWarm ? '#FFEED8' : '#FFFDF8'}
+      />
+      {/* Cool architectural fill light (front-left) */}
+      <directionalLight
+        position={[-2.6, 2.0, 1.4]}
+        intensity={0.85}
+        color="#DDE6F0"
+      />
+      {/* Warm Atelier Gold / bronze rim backlight (separates dark Charcoal/Obsidian garments crisply) */}
+      <directionalLight
+        position={[-0.6, 2.1, -3.0]}
+        intensity={1.35}
+        color="#DFC496"
       />
       <directionalLight
-        position={[-2.2, 1.9, -1.5]}
-        intensity={0.9}
-        color="#DCE3EA"
+        position={[1.4, 1.4, -2.6]}
+        intensity={0.75}
+        color="#EFE6D6"
       />
-      <directionalLight
-        position={[0, 1.5, -2.8]}
-        intensity={0.95}
-        color="#C5A572"
-      />
+
+      {/* Sculpted editorial exhibition studio plinth beneath Y = 0 */}
+      <group position={[0, -0.018, 0]}>
+        <mesh receiveShadow>
+          <cylinderGeometry args={[plinthRadius, plinthRadius * 1.03, 0.032, 48]} />
+          <meshStandardMaterial color="#1D1F22" roughness={0.86} metalness={0.02} />
+        </mesh>
+        <mesh position={[0, 0.0175, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[plinthRadius - 0.014, plinthRadius, 48]} />
+          <meshStandardMaterial color="#C5A572" roughness={0.28} metalness={0.86} />
+        </mesh>
+      </group>
 
       {loadedScene ? <primitive object={loadedScene} /> : null}
 
       <ContactShadows
-        position={[0, -0.002, 0]}
-        opacity={0.85}
-        scale={2.2}
-        blur={1.5}
-        far={1.4}
-        frames={Infinity}
+        key={`product-shadow-${sceneRevision}`}
+        position={[0, -0.001, 0]}
+        opacity={0.76}
+        scale={plinthRadius * 3.8}
+        blur={1.8}
+        far={1.5}
+        frames={1}
         resolution={activeTier === 'lite' ? 128 : 256}
-        color="#000000"
+        color="#070809"
       />
 
       <OrbitControls
@@ -452,8 +531,8 @@ function ProductSceneContent({
         dampingFactor={0.08}
         minDistance={config.coordinateSystem.cameraBaseline.minDistance}
         maxDistance={config.coordinateSystem.cameraBaseline.maxDistance}
-        minPolarAngle={0.35}
-        maxPolarAngle={Math.PI * 0.48}
+        minPolarAngle={0.28}
+        maxPolarAngle={Math.PI * 0.49}
         target={config.coordinateSystem.cameraBaseline.target}
       />
     </>
@@ -465,6 +544,7 @@ export function ProductExperience({
   assetId,
   version,
   productName,
+  productSlug,
   modelUrl,
   mobileModelUrl,
   posterUrl,
@@ -656,7 +736,6 @@ export function ProductExperience({
     [activeTier, onFallbackTo2D, onTelemetryEvent],
   );
 
-  // Fallback poster state when WebGL unavailable, unrecovered loss, or load error
   if (webglReady === false || loadState === 'fallback' || loadState === 'error') {
     return (
       <div
@@ -730,18 +809,18 @@ export function ProductExperience({
         style={{
           touchAction: isMobileViewport && !touchOrbitActive ? 'pan-y' : 'none',
         }}
-        className="relative aspect-[3/4] w-full bg-[#17191B] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#82B0DC] after:pointer-events-none after:absolute after:inset-0 after:z-20 focus-visible:after:border-2 focus-visible:after:border-[#82B0DC]"
+        className="relative aspect-[3/4] w-full bg-[#1B1D20] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#82B0DC] after:pointer-events-none after:absolute after:inset-0 after:z-20 focus-visible:after:border-2 focus-visible:after:border-[#82B0DC]"
       >
         {webglReady ? (
           <Canvas
             frameloop="demand"
-            dpr={[1, 2]}
+            dpr={activeTier === 'lite' ? [1, 1.5] : [1, 2]}
             shadows={false}
             gl={{
               antialias: true,
               powerPreference: 'high-performance',
               toneMapping: THREE.ACESFilmicToneMapping,
-              toneMappingExposure: 1.0,
+              toneMappingExposure: 1.08,
             }}
             camera={{
               fov: config.coordinateSystem.cameraBaseline.fovDeg,
@@ -754,6 +833,7 @@ export function ProductExperience({
               productId={productId}
               assetId={assetId}
               version={version}
+              productSlugOrName={productSlug ?? productName}
               resolvedModelUrl={resolvedModelUrl}
               activeTier={activeTier}
               config={config}
@@ -790,7 +870,7 @@ export function ProductExperience({
 
         <div className="pointer-events-none absolute top-3 left-3 flex flex-wrap items-center gap-2">
           <span className="border border-[#46494C] bg-[#17191B]/90 px-2.5 py-1 font-mono text-xs tabular-nums text-[#C5A572]">
-            3D STUDIO · v{String(version).padStart(4, '0')}
+            3D ATELIER · v{String(version).padStart(4, '0')}
           </span>
           {activePreset ? (
             <span className="border border-[#46494C] bg-[#17191B]/90 px-2.5 py-1 font-mono text-xs text-[#F8F7F3]">
@@ -811,7 +891,17 @@ export function ProductExperience({
         activeTier={activeTier}
         isMobileViewport={isMobileViewport}
         touchOrbitActive={touchOrbitActive}
-        onToggleTouchOrbit={() => setTouchOrbitActive((prev) => !prev)}
+        onToggleTouchOrbit={() => {
+          setTouchOrbitActive((prev) => {
+            const next = !prev;
+            setLiveAnnouncement(
+              next
+                ? 'Mode putar 3D diaktifkan. Sentuh dan seret untuk memutar model.'
+                : 'Mode gulir halaman diaktifkan kembali.',
+            );
+            return next;
+          });
+        }}
         reducedMotion={reducedMotion}
         liveAnnouncement={liveAnnouncement}
       />

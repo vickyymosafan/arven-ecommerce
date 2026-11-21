@@ -1,3 +1,4 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -37,12 +38,43 @@ function formatIssueField(
     .join('.');
 }
 
+const ADMIN_3D_UPLOAD_PATH_RE = /^\/api\/v1\/admin\/3d-assets\/[^/]+\/upload-staging(?:$|\?)/;
+const DEFAULT_JSON_LIMIT_BYTES = 1024 * 1024;
+
 export function configureApiApp(
   app: NestExpressApplication,
   config: RuntimeConfig,
 ): NestExpressApplication {
   app.set('trust proxy', 1);
   app.enableShutdownHooks();
+
+  // Support base64-encoded glTF 2.0 staging uploads (up to 5 MB default + 3 MB lite) strictly
+  // on the MFA+RBAC+CSRF protected admin 3D staging endpoint while capping all other JSON routes to 1 MiB.
+  app.use((req: IncomingMessage, res: ServerResponse, next: () => void) => {
+    const rawLen = req.headers['content-length'];
+    const byteLength = typeof rawLen === 'string' ? Number.parseInt(rawLen, 10) : 0;
+    const requestUrl = req.url ?? '';
+    if (
+      Number.isFinite(byteLength) &&
+      byteLength > DEFAULT_JSON_LIMIT_BYTES &&
+      !ADMIN_3D_UPLOAD_PATH_RE.test(requestUrl)
+    ) {
+      res.statusCode = HttpStatus.PAYLOAD_TOO_LARGE;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(
+        JSON.stringify({
+          error: {
+            code: 'PAYLOAD_TOO_LARGE',
+            message: 'Request body exceeds the 1 MiB limit for this endpoint',
+          },
+        }),
+      );
+      return;
+    }
+    next();
+  });
+
+  app.useBodyParser('json', { limit: '12mb' });
 
   app.use(
     helmet({

@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import type { MaterialOverrideEntryInput, MaterialSlotSpecDto } from '@arven/contracts';
+import {
+  computeTextileSheenColor,
+  type FabricPhysicalRecipe,
+} from './materials/atelier-pbr-materials.js';
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -14,6 +18,8 @@ export interface AppliedSlotOutcome {
 /**
  * Deterministically applies approved CustomizationPreset overrides to matching
  * Three.js materials without mutating non-customizable hardware/stitching slots.
+ * Also re-tints MeshPhysicalMaterial textile sheen cleanly so dark/light colorways
+ * preserve fabric realism on swap.
  */
 export function applyMaterialPresetToScene(
   root: THREE.Object3D,
@@ -59,12 +65,22 @@ export function applyMaterialPresetToScene(
 
       mat.color.set(targetHex);
 
+      if (mat instanceof THREE.MeshPhysicalMaterial && mat.sheen > 0) {
+        mat.sheenColor.copy(computeTextileSheenColor(mat.color));
+      }
+
+      const recipe = mat.userData['arvenPbrRecipe'] as FabricPhysicalRecipe | undefined;
+
       if (override?.roughness !== undefined && slot.customizable) {
-        mat.roughness = clamp(
-          override.roughness,
-          slot.roughnessRange[0],
-          slot.roughnessRange[1],
-        );
+        // When a leather/waxed physical recipe has calibrated low roughness below generic slot min,
+        // preserve physical leather fidelity unless the override explicitly targets leather range.
+        const minR = recipe ? Math.min(slot.roughnessRange[0], recipe.roughness) : slot.roughnessRange[0];
+        const maxR = Math.max(slot.roughnessRange[1], recipe?.roughness ?? slot.roughnessRange[1]);
+        const targetRoughness =
+          recipe && recipe.roughness < 0.6 && override.roughness >= 0.8
+            ? recipe.roughness
+            : override.roughness;
+        mat.roughness = clamp(targetRoughness, minR, maxR);
       }
       if (override?.metalness !== undefined && slot.customizable) {
         mat.metalness = clamp(

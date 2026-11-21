@@ -1582,8 +1582,8 @@ export const ARVEN_SEED_SHOWROOM_ZONES: readonly ShowroomZoneSeedDefinition[] = 
     lightingPreset: 'arven_studio_neutral_v1',
     cameraBaseline: {
       fovDeg: 45,
-      position: [0, 1.8, 5.4],
-      target: [0, 1.0, -1.2],
+      position: [0, 1.92, 5.2],
+      target: [0, 1.32, -1.35],
       minDistance: 1.5,
       maxDistance: 10,
     },
@@ -1619,8 +1619,8 @@ export const ARVEN_SEED_SHOWROOM_ZONES: readonly ShowroomZoneSeedDefinition[] = 
     lightingPreset: 'arven_warm_editorial_v1',
     cameraBaseline: {
       fovDeg: 45,
-      position: [0, 1.85, 5.6],
-      target: [0, 1.0, -1.4],
+      position: [0, 1.98, 5.55],
+      target: [0, 1.35, -1.5],
       minDistance: 1.5,
       maxDistance: 10,
     },
@@ -1667,9 +1667,9 @@ export const ARVEN_SEED_SHOWROOM_ZONES: readonly ShowroomZoneSeedDefinition[] = 
     lightingPreset: 'arven_studio_neutral_v1',
     cameraBaseline: {
       fovDeg: 45,
-      position: [0, 1.75, 5.2],
-      target: [0, 0.95, -1.2],
-      minDistance: 1.4,
+      position: [0, 1.62, 4.55],
+      target: [0, 1.12, -1.2],
+      minDistance: 1.3,
       maxDistance: 10,
     },
     portals: [
@@ -2258,17 +2258,23 @@ async function seedCatalog3DAssets(tx: PrismaTransactionClient): Promise<{
     }
 
     const silhouette = inferSilhouetteFromSlug(item.slug);
+    const secondaryDefaultHex =
+      item.colorHex.toUpperCase() === '#F8F7F3' || item.colorHex.toUpperCase() === '#E9E4DA'
+        ? '#DDD7CB'
+        : '#2F3235';
     const defaultGlb = buildArvenGarmentGlbBuffer({
       silhouette,
+      productSlug: item.slug,
       primaryHex: item.colorHex,
-      secondaryHex: '#35383A',
+      secondaryHex: secondaryDefaultHex,
       accentHex: '#C5A572',
       profile: 'default',
     });
     const liteGlb = buildArvenGarmentGlbBuffer({
       silhouette,
+      productSlug: item.slug,
       primaryHex: item.colorHex,
-      secondaryHex: '#35383A',
+      secondaryHex: secondaryDefaultHex,
       accentHex: '#C5A572',
       profile: 'lite',
     });
@@ -2302,6 +2308,7 @@ async function seedCatalog3DAssets(tx: PrismaTransactionClient): Promise<{
         title: item.name,
         subtitle: `${item.material} · ${item.fit}`,
         primaryHex: item.colorHex,
+        silhouette,
       }),
       'utf8',
     );
@@ -2422,16 +2429,37 @@ async function seedCatalog3DAssets(tx: PrismaTransactionClient): Promise<{
           ? '#D8D3C8'
           : '#35383A';
 
+      const primaryRoughness =
+        silhouette === 'sneaker'
+          ? 0.46
+          : silhouette === 'crossbody'
+            ? 0.42
+            : silhouette === 'shirt'
+              ? 0.78
+              : silhouette === 'trouser'
+                ? 0.84
+                : item.slug.includes('field')
+                  ? 0.64
+                  : 0.91;
+      const secondaryRoughness =
+        silhouette === 'sneaker'
+          ? 0.8
+          : silhouette === 'crossbody'
+            ? 0.86
+            : silhouette === 'shirt'
+              ? 0.76
+              : 0.9;
+
       const materialOverrides = {
         mat_fabric_primary: {
           baseColorHex: swatchHex,
-          roughness: 0.85,
-          metalness: 0.02,
+          roughness: primaryRoughness,
+          metalness: silhouette === 'sneaker' || silhouette === 'crossbody' ? 0.02 : 0.0,
         },
         mat_fabric_secondary: {
           baseColorHex: secondaryHex,
-          roughness: 0.88,
-          metalness: 0.02,
+          roughness: secondaryRoughness,
+          metalness: 0.0,
         },
       };
 

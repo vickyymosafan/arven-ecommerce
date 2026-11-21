@@ -47,12 +47,14 @@ export interface OutfitStudioViewProps {
   readonly initialCatalog: OutfitStudioCatalogDto | null;
   readonly initialSearchParams?: Record<string, string | string[] | undefined>;
   readonly initialError?: string | null;
+  readonly initialHasSession?: boolean;
 }
 
 export function OutfitStudioView({
   initialCatalog,
   initialSearchParams = {},
   initialError = null,
+  initialHasSession = true,
 }: OutfitStudioViewProps) {
   const { toast } = useToast();
 
@@ -101,10 +103,10 @@ export function OutfitStudioView({
   const [cartError, setCartError] = useState<string | null>(null);
 
   // Customer auth & saved scenes
-  const [authChecked, setAuthChecked] = useState(false);
+  const [authChecked, setAuthChecked] = useState(!initialHasSession);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [scenes, setScenes] = useState<OutfitSceneDto[]>([]);
-  const [loadingScenes, setLoadingScenes] = useState(true);
+  const [loadingScenes, setLoadingScenes] = useState(initialHasSession);
   const [scenesError, setScenesError] = useState<string | null>(null);
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
   const [savingScene, setSavingScene] = useState(false);
@@ -217,6 +219,9 @@ export function OutfitStudioView({
   }, []);
 
   useEffect(() => {
+    if (!initialHasSession) {
+      return;
+    }
     let active = true;
     storefrontApi
       .getCurrentUser()
@@ -256,7 +261,7 @@ export function OutfitStudioView({
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialHasSession]);
 
   // Keep URL search params synchronized with current draft
   useEffect(() => {
@@ -293,6 +298,7 @@ export function OutfitStudioView({
       result[slot] = {
         slot,
         productId: match.garment.productId,
+        productSlug: match.garment.productSlug,
         variantId: match.variant.id,
         assetId: match.garment.assetId,
         modelUrl: match.garment.modelUrl,

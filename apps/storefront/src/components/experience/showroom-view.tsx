@@ -343,6 +343,7 @@ export function ShowroomView({
                       role="radio"
                       aria-checked={selected}
                       tabIndex={selected ? 0 : -1}
+                      data-testid={`showroom-zone-btn-${zone.code}`}
                       onClick={() => handleZoneChange(zone.code)}
                       onKeyDown={(event) => handleZoneRadioKeyDown(event, idx)}
                       className={cn(
@@ -371,13 +372,14 @@ export function ShowroomView({
 
             {/* Stage Viewport */}
             {viewMode === '3d' ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <Showroom3DIsland
                   zones={zones}
                   activeZoneCode={activeZone.code}
                   zoneTitle={activeZone.title}
                   selectedHotspotId={selectedHotspot?.id ?? null}
                   reducedMotion={reducedMotion}
+                  showControlDock={false}
                   onHotspotSelect={(hotspot) => handleOpenHotspot(hotspot)}
                   onZoneRequest={handleZoneChange}
                   onWebGLFallback={handleWebGLFallback}
@@ -386,20 +388,21 @@ export function ShowroomView({
                   }}
                 />
 
-                {/* Accessible Camera & Portal Control Dock */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border border-[#46494C] bg-[#222528] p-3">
+                {/* Single Unified Camera & Portal Control Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#46494C] pt-3">
                   <div
                     role="group"
-                    aria-label="Kontrol kamera ruang pamer"
+                    aria-label="Kontrol Navigasi Kamera Ruang Pamer"
                     className="flex flex-wrap items-center gap-2"
                   >
                     <button
                       type="button"
                       onClick={() => {
                         controlsRef.current?.rotateBy(-Math.PI / 4);
-                        setLiveAnnouncement('Kamera diputar 45 derajat ke kiri.');
+                        setLiveAnnouncement('Kamera diputar ke kiri 45 derajat');
                       }}
-                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-sm)] border border-[#9E9C92] bg-[#17191B] px-3 py-2 text-xs font-medium text-[#F8F7F3] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC] cursor-pointer"
+                      data-testid="showroom-cam-rotate-left"
+                      className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-[#9E9C92] bg-[#17191B] px-3.5 py-2 text-xs font-medium text-[#F8F7F3] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC]"
                     >
                       Putar Kiri 45°
                     </button>
@@ -407,29 +410,32 @@ export function ShowroomView({
                       type="button"
                       onClick={() => {
                         controlsRef.current?.rotateBy(Math.PI / 4);
-                        setLiveAnnouncement('Kamera diputar 45 derajat ke kanan.');
+                        setLiveAnnouncement('Kamera diputar ke kanan 45 derajat');
                       }}
-                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-sm)] border border-[#9E9C92] bg-[#17191B] px-3 py-2 text-xs font-medium text-[#F8F7F3] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC] cursor-pointer"
+                      data-testid="showroom-cam-rotate-right"
+                      className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-[#9E9C92] bg-[#17191B] px-3.5 py-2 text-xs font-medium text-[#F8F7F3] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC]"
                     >
                       Putar Kanan 45°
                     </button>
                     <button
                       type="button"
                       onClick={() => {
-                        controlsRef.current?.moveForward(1.0);
-                        setLiveAnnouncement('Kamera bergerak maju.');
+                        controlsRef.current?.moveForward(1.2);
+                        setLiveAnnouncement('Kamera melangkah maju');
                       }}
-                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-sm)] border border-[#9E9C92] bg-[#17191B] px-3 py-2 text-xs font-medium text-[#F8F7F3] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC] cursor-pointer"
+                      data-testid="showroom-cam-step-forward"
+                      className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-[#9E9C92] bg-[#17191B] px-3.5 py-2 text-xs font-medium text-[#F8F7F3] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC]"
                     >
                       Maju
                     </button>
                     <button
                       type="button"
                       onClick={() => {
-                        controlsRef.current?.moveForward(-1.0);
-                        setLiveAnnouncement('Kamera bergerak mundur.');
+                        controlsRef.current?.moveForward(-1.2);
+                        setLiveAnnouncement('Kamera melangkah mundur');
                       }}
-                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-sm)] border border-[#9E9C92] bg-[#17191B] px-3 py-2 text-xs font-medium text-[#F8F7F3] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC] cursor-pointer"
+                      data-testid="showroom-cam-step-backward"
+                      className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-[#9E9C92] bg-[#17191B] px-3.5 py-2 text-xs font-medium text-[#F8F7F3] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC]"
                     >
                       Mundur
                     </button>
@@ -437,9 +443,10 @@ export function ShowroomView({
                       type="button"
                       onClick={() => {
                         controlsRef.current?.resetView();
-                        setLiveAnnouncement('Tampilan kamera direset.');
+                        setLiveAnnouncement('Tampilan kamera direset');
                       }}
-                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-sm)] border border-[#9E9C92] bg-[#17191B] px-3 py-2 text-xs font-medium text-[#F8F7F3] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC] cursor-pointer"
+                      data-testid="showroom-cam-reset"
+                      className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-[#9E9C92] bg-[#17191B] px-3.5 py-2 text-xs font-medium text-[#F8F7F3] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC]"
                     >
                       Reset Tampilan
                     </button>
@@ -448,7 +455,7 @@ export function ShowroomView({
                   {activeZone.portals.length > 0 ? (
                     <div
                       role="group"
-                      aria-label="Portal antar zona"
+                      aria-label="Pintasan Portal Zona"
                       className="flex flex-wrap items-center gap-2"
                     >
                       {activeZone.portals.map((portal) => (
@@ -456,14 +463,19 @@ export function ShowroomView({
                           key={portal.targetZoneCode}
                           type="button"
                           onClick={() => handleZoneChange(portal.targetZoneCode)}
-                          className="inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-[var(--radius-sm)] border border-[#C5A572] bg-[#17191B] px-3 py-2 text-xs font-medium text-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC] cursor-pointer"
+                          data-testid={`showroom-portal-btn-${portal.targetZoneCode}`}
+                          className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border border-[#C5A572] bg-[#222528] px-3.5 py-2 text-xs font-medium text-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC]"
                         >
-                          <span>Portal: {portal.label}</span>
+                          Portal: {portal.label}
                         </button>
                       ))}
                     </div>
                   ) : null}
                 </div>
+
+                <p className="text-xs text-[#B2B0A6]">
+                  Klik langsung garmen 3D di atas plinth travertine atau pilih penanda produk di bawah untuk melihat detail dan harga.
+                </p>
               </div>
             ) : (
               <ShowroomFallback

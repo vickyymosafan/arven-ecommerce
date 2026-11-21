@@ -5,6 +5,9 @@ const TEXTURE_KEYS = [
   'alphaMap',
   'aoMap',
   'bumpMap',
+  'clearcoatMap',
+  'clearcoatNormalMap',
+  'clearcoatRoughnessMap',
   'displacementMap',
   'emissiveMap',
   'envMap',
@@ -12,6 +15,10 @@ const TEXTURE_KEYS = [
   'metalnessMap',
   'normalMap',
   'roughnessMap',
+  'sheenColorMap',
+  'sheenRoughnessMap',
+  'specularColorMap',
+  'specularIntensityMap',
 ] as const;
 
 export interface ResourceDisposalSummary {

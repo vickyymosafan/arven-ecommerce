@@ -135,34 +135,50 @@ export interface RegisterCustomerResponse {
 }
 
 let cachedCsrfToken: string | null = null;
+let inflightCsrfPromise: Promise<string> | null = null;
 
 export function clearCsrfTokenCache(): void {
   cachedCsrfToken = null;
+  inflightCsrfPromise = null;
 }
 
 export async function fetchCsrfToken(forceRefresh = false): Promise<string> {
   if (cachedCsrfToken && !forceRefresh) {
     return cachedCsrfToken;
   }
-
-  const response = await fetch('/api/v1/csrf-token', {
-    method: 'GET',
-    credentials: 'include',
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    throw new ApiClientError({
-      status: response.status,
-      code: 'CSRF_FETCH_FAILED',
-      message: 'Unable to initialize request security token. Please try again.',
-      requestId: response.headers.get('x-request-id'),
-    });
+  if (inflightCsrfPromise && !forceRefresh) {
+    return inflightCsrfPromise;
   }
 
-  const payload = (await response.json()) as RawSuccessEnvelope<{ csrfToken: string }>;
-  cachedCsrfToken = payload.data.csrfToken;
-  return cachedCsrfToken;
+  const request = (async () => {
+    const response = await fetch('/api/v1/csrf-token', {
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      throw new ApiClientError({
+        status: response.status,
+        code: 'CSRF_FETCH_FAILED',
+        message: 'Unable to initialize request security token. Please try again.',
+        requestId: response.headers.get('x-request-id'),
+      });
+    }
+
+    const payload = (await response.json()) as RawSuccessEnvelope<{ csrfToken: string }>;
+    cachedCsrfToken = payload.data.csrfToken;
+    return cachedCsrfToken;
+  })();
+
+  inflightCsrfPromise = request;
+  try {
+    return await request;
+  } finally {
+    if (inflightCsrfPromise === request) {
+      inflightCsrfPromise = null;
+    }
+  }
 }
 
 function isMutatingMethod(method: string): boolean {

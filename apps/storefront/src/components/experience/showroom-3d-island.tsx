@@ -45,14 +45,34 @@ const DynamicShowroomExperience = dynamic(
 export interface Showroom3DIslandProps extends ShowroomExperienceProps {
   readonly className?: string;
   readonly zoneTitle?: string;
+  /**
+   * When rendered inside ShowroomView (which provides its own unified zone & camera toolbar),
+   * set to `false` to prevent duplicated control bars while retaining mobile touch-orbit toggle.
+   */
+  readonly showControlDock?: boolean;
 }
 
 function probeWebGLSupport(): boolean {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return false;
   }
+  const isTestEnv =
+    typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+  const win = window as Window & {
+    __ARVEN_WEBGL_CAPABILITY__?: {
+      readonly supported: boolean;
+      readonly maxTextureSize: number;
+      readonly rendererLabel: string | null;
+      readonly reason: string | null;
+    };
+  };
+  if (!isTestEnv && win.__ARVEN_WEBGL_CAPABILITY__) {
+    return win.__ARVEN_WEBGL_CAPABILITY__.supported;
+  }
   try {
     const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
     const gl =
       (canvas.getContext('webgl2', {
         failIfMajorPerformanceCaveat: false,
@@ -61,15 +81,16 @@ function probeWebGLSupport(): boolean {
         failIfMajorPerformanceCaveat: false,
       }) as WebGLRenderingContext | null);
 
-    if (!gl) {
-      return false;
+    const supported = Boolean(gl);
+    if (!isTestEnv) {
+      win.__ARVEN_WEBGL_CAPABILITY__ = {
+        supported,
+        maxTextureSize: gl ? Number(gl.getParameter(gl.MAX_TEXTURE_SIZE)) || 2048 : 0,
+        rendererLabel: supported ? 'webgl_ready' : null,
+        reason: supported ? null : 'webgl_context_unavailable',
+      };
     }
-
-    const loseExt = gl.getExtension('WEBGL_lose_context');
-    if (loseExt) {
-      loseExt.loseContext();
-    }
-    return true;
+    return supported;
   } catch {
     return false;
   }
@@ -136,6 +157,7 @@ export function Showroom3DIsland({
   onControlsReady,
   className,
   zoneTitle,
+  showControlDock = true,
 }: Showroom3DIslandProps) {
   const [webglSupported, setWebglSupported] = useState<boolean | null>(null);
   const [runtimeFallbackReason, setRuntimeFallbackReason] = useState<string | null>(null);
@@ -302,6 +324,11 @@ export function Showroom3DIsland({
     setLiveAnnouncement('Kamera melangkah maju.');
   }, []);
 
+  const handleStepBackward = useCallback(() => {
+    controlsHandleRef.current?.moveForward(-1.2);
+    setLiveAnnouncement('Kamera melangkah mundur.');
+  }, []);
+
   const handleResetView = useCallback(() => {
     controlsHandleRef.current?.resetView();
     setLiveAnnouncement('Tampilan kamera direset.');
@@ -451,12 +478,12 @@ export function Showroom3DIsland({
         )}
       </div>
 
-      <div
-        className="space-y-3 border-t border-[#46494C] bg-[#17191B] px-3 py-3 sm:px-4"
-        data-testid="showroom-3d-controls"
-      >
-        {zones.length > 0 ? (
-          <div className="flex flex-wrap items-center justify-between gap-2">
+      {showControlDock ? (
+        <div
+          className="space-y-3 border-t border-[#46494C] bg-[#17191B] px-3 py-3 sm:px-4"
+          data-testid="showroom-3d-controls"
+        >
+          {zones.length > 0 ? (
             <div
               role="radiogroup"
               aria-label="Pilih Zona Ruang Pamer"
@@ -466,7 +493,7 @@ export function Showroom3DIsland({
                 const selected = zone.code === activeZone?.code;
                 return (
                   <button
-                    key={zone.id}
+                    key={zone.code}
                     ref={(el) => {
                       zoneButtonRefs.current[index] = el;
                     }}
@@ -475,107 +502,142 @@ export function Showroom3DIsland({
                     aria-checked={selected}
                     tabIndex={selected ? 0 : -1}
                     onClick={() => handleZoneSelect(zone.code, zone.title)}
-                    onKeyDown={(e) => handleZoneRadioKeyDown(e, index)}
+                    onKeyDown={(event) => handleZoneRadioKeyDown(event, index)}
                     data-testid={`showroom-zone-btn-${zone.code}`}
                     className={[
-                      'inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-2 px-3 py-2 text-xs font-medium tracking-[0.04em] transition-[background-color,border-color,color] duration-[var(--duration-fast)]',
+                      'inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center px-3 py-2 text-xs font-medium transition-[background-color,border-color,color] duration-[var(--duration-fast)]',
                       'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC]',
                       selected
-                        ? 'border-2 border-[#C5A572] bg-[#35383A] text-[#F8F7F3]'
-                        : 'border border-[#9E9C92] bg-[#17191B] text-[#F8F7F3] hover:border-[#F8F7F3] hover:bg-[#35383A]',
+                        ? 'border-2 border-[#C5A572] bg-[#35383A] font-semibold text-[#F8F7F3]'
+                        : 'border border-[#9E9C92] bg-[#17191B] text-[#E9E4DA] hover:border-[#F8F7F3] hover:bg-[#35383A]',
                     ].join(' ')}
                   >
-                    {selected ? (
-                      <span
-                        aria-hidden="true"
-                        className="h-1.5 w-1.5 bg-[#C5A572]"
-                      />
-                    ) : null}
-                    <span>{zone.title}</span>
+                    {zone.title}
                   </button>
                 );
               })}
             </div>
+          ) : null}
 
-            {activeZone && activeZone.portals.length > 0 ? (
-              <div
-                role="group"
-                aria-label="Pintasan Portal Zona"
-                className="flex flex-wrap items-center gap-2"
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div
+              role="group"
+              aria-label="Kontrol Navigasi Kamera Ruang Pamer"
+              className="flex flex-wrap items-center gap-2"
+            >
+              <button
+                type="button"
+                onClick={handleRotateLeft}
+                disabled={isFallbackActive || !activeZone}
+                aria-label="Rotate Left"
+                data-testid="showroom-cam-rotate-left"
+                className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center border border-[#9E9C92] bg-[#17191B] px-3 py-2 text-xs font-medium text-[#F8F7F3] transition-[background-color,border-color,color] duration-[var(--duration-fast)] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC] disabled:cursor-not-allowed disabled:border-[#46494C] disabled:bg-[#222528] disabled:text-[#B2B0A6]"
               >
-                {activeZone.portals.map((portal) => (
-                  <button
-                    key={portal.targetZoneCode}
-                    type="button"
-                    onClick={() =>
-                      handleZoneSelect(portal.targetZoneCode, portal.label)
-                    }
-                    data-testid={`showroom-portal-btn-${portal.targetZoneCode}`}
-                    className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center border border-[#C5A572] bg-[#222528] px-3 py-2 text-xs font-medium text-[#F8F7F3] transition-[background-color,border-color,color] duration-[var(--duration-fast)] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC]"
-                  >
-                    Portal: {portal.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
+                Putar Kiri
+              </button>
+              <button
+                type="button"
+                onClick={handleRotateRight}
+                disabled={isFallbackActive || !activeZone}
+                aria-label="Rotate Right"
+                data-testid="showroom-cam-rotate-right"
+                className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center border border-[#9E9C92] bg-[#17191B] px-3 py-2 text-xs font-medium text-[#F8F7F3] transition-[background-color,border-color,color] duration-[var(--duration-fast)] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC] disabled:cursor-not-allowed disabled:border-[#46494C] disabled:bg-[#222528] disabled:text-[#B2B0A6]"
+              >
+                Putar Kanan
+              </button>
+              <button
+                type="button"
+                onClick={handleStepForward}
+                disabled={isFallbackActive || !activeZone}
+                aria-label="Step Forward"
+                data-testid="showroom-cam-step-forward"
+                className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center border border-[#9E9C92] bg-[#17191B] px-3 py-2 text-xs font-medium text-[#F8F7F3] transition-[background-color,border-color,color] duration-[var(--duration-fast)] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC] disabled:cursor-not-allowed disabled:border-[#46494C] disabled:bg-[#222528] disabled:text-[#B2B0A6]"
+              >
+                Maju
+              </button>
+              <button
+                type="button"
+                onClick={handleStepBackward}
+                disabled={isFallbackActive || !activeZone}
+                aria-label="Step Backward"
+                data-testid="showroom-cam-step-backward"
+                className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center border border-[#9E9C92] bg-[#17191B] px-3 py-2 text-xs font-medium text-[#F8F7F3] transition-[background-color,border-color,color] duration-[var(--duration-fast)] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC] disabled:cursor-not-allowed disabled:border-[#46494C] disabled:bg-[#222528] disabled:text-[#B2B0A6]"
+              >
+                Mundur
+              </button>
+              <button
+                type="button"
+                onClick={handleResetView}
+                disabled={isFallbackActive || !activeZone}
+                aria-label="Reset View"
+                data-testid="showroom-cam-reset"
+                className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center border border-[#9E9C92] bg-[#17191B] px-3 py-2 text-xs font-medium text-[#F8F7F3] transition-[background-color,border-color,color] duration-[var(--duration-fast)] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC] disabled:cursor-not-allowed disabled:border-[#46494C] disabled:bg-[#222528] disabled:text-[#B2B0A6]"
+              >
+                Reset Tampilan
+              </button>
+            </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div
-            role="group"
-            aria-label="Kontrol Navigasi Kamera Ruang Pamer"
-            className="flex flex-wrap items-center gap-2"
+            <div className="flex flex-wrap items-center gap-2">
+              {activeZone && activeZone.portals.length > 0 ? (
+                <div
+                  role="group"
+                  aria-label="Pintasan Portal Zona"
+                  className="flex flex-wrap items-center gap-2"
+                >
+                  {activeZone.portals.map((portal) => (
+                    <button
+                      key={portal.targetZoneCode}
+                      type="button"
+                      onClick={() =>
+                        handleZoneSelect(portal.targetZoneCode, portal.label)
+                      }
+                      data-testid={`showroom-portal-btn-${portal.targetZoneCode}`}
+                      className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center border border-[#C5A572] bg-[#222528] px-3 py-2 text-xs font-medium text-[#F8F7F3] transition-[background-color,border-color,color] duration-[var(--duration-fast)] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC]"
+                    >
+                      Portal: {portal.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              <button
+                type="button"
+                aria-pressed={touchOrbitActive}
+                onClick={handleToggleTouchOrbit}
+                data-testid="showroom-touch-toggle"
+                className={[
+                  'inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center px-3 py-2 text-xs font-medium transition-[background-color,border-color,color] duration-[var(--duration-fast)] md:hidden',
+                  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC]',
+                  touchOrbitActive
+                    ? 'border-2 border-[#C5A572] bg-[#35383A] text-[#F8F7F3]'
+                    : 'border border-[#9E9C92] bg-[#17191B] text-[#F8F7F3] hover:border-[#F8F7F3] hover:bg-[#35383A]',
+                ].join(' ')}
+              >
+                {touchOrbitActive ? 'Kunci Gulir Halaman' : 'Aktifkan Putar 3D'}
+              </button>
+            </div>
+          </div>
+
+          <p
+            className="sr-only"
+            aria-live="polite"
+            data-testid="showroom-live-region"
           >
-            <button
-              type="button"
-              onClick={handleRotateLeft}
-              disabled={isFallbackActive || !activeZone}
-              aria-label="Rotate Left"
-              data-testid="showroom-cam-rotate-left"
-              className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center border border-[#9E9C92] bg-[#17191B] px-3 py-2 text-xs font-medium text-[#F8F7F3] transition-[background-color,border-color,color] duration-[var(--duration-fast)] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC] disabled:cursor-not-allowed disabled:border-[#46494C] disabled:bg-[#222528] disabled:text-[#B2B0A6]"
-            >
-              Putar Kiri
-            </button>
-            <button
-              type="button"
-              onClick={handleRotateRight}
-              disabled={isFallbackActive || !activeZone}
-              aria-label="Rotate Right"
-              data-testid="showroom-cam-rotate-right"
-              className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center border border-[#9E9C92] bg-[#17191B] px-3 py-2 text-xs font-medium text-[#F8F7F3] transition-[background-color,border-color,color] duration-[var(--duration-fast)] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC] disabled:cursor-not-allowed disabled:border-[#46494C] disabled:bg-[#222528] disabled:text-[#B2B0A6]"
-            >
-              Putar Kanan
-            </button>
-            <button
-              type="button"
-              onClick={handleStepForward}
-              disabled={isFallbackActive || !activeZone}
-              aria-label="Step Forward"
-              data-testid="showroom-cam-step-forward"
-              className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center border border-[#9E9C92] bg-[#17191B] px-3 py-2 text-xs font-medium text-[#F8F7F3] transition-[background-color,border-color,color] duration-[var(--duration-fast)] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC] disabled:cursor-not-allowed disabled:border-[#46494C] disabled:bg-[#222528] disabled:text-[#B2B0A6]"
-            >
-              Langkah Maju
-            </button>
-            <button
-              type="button"
-              onClick={handleResetView}
-              disabled={isFallbackActive || !activeZone}
-              aria-label="Reset View"
-              data-testid="showroom-cam-reset"
-              className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center border border-[#9E9C92] bg-[#17191B] px-3 py-2 text-xs font-medium text-[#F8F7F3] transition-[background-color,border-color,color] duration-[var(--duration-fast)] hover:border-[#F8F7F3] hover:bg-[#35383A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC] disabled:cursor-not-allowed disabled:border-[#46494C] disabled:bg-[#222528] disabled:text-[#B2B0A6]"
-            >
-              Reset Tampilan
-            </button>
-          </div>
-
+            {liveAnnouncement}
+          </p>
+        </div>
+      ) : (
+        <div
+          className="flex flex-wrap items-center justify-between gap-2 border-t border-[#46494C] bg-[#17191B] px-3 py-2 sm:px-4 md:hidden"
+          data-testid="showroom-3d-mobile-controls"
+        >
           <button
             type="button"
             aria-pressed={touchOrbitActive}
             onClick={handleToggleTouchOrbit}
             data-testid="showroom-touch-toggle"
             className={[
-              'inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center px-3 py-2 text-xs font-medium transition-[background-color,border-color,color] duration-[var(--duration-fast)] md:hidden',
+              'inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center px-3 py-2 text-xs font-medium transition-[background-color,border-color,color] duration-[var(--duration-fast)]',
               'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC]',
               touchOrbitActive
                 ? 'border-2 border-[#C5A572] bg-[#35383A] text-[#F8F7F3]'
@@ -584,16 +646,15 @@ export function Showroom3DIsland({
           >
             {touchOrbitActive ? 'Kunci Gulir Halaman' : 'Aktifkan Putar 3D'}
           </button>
+          <p
+            className="sr-only"
+            aria-live="polite"
+            data-testid="showroom-live-region"
+          >
+            {liveAnnouncement}
+          </p>
         </div>
-
-        <p
-          className="sr-only"
-          aria-live="polite"
-          data-testid="showroom-live-region"
-        >
-          {liveAnnouncement}
-        </p>
-      </div>
+      )}
     </section>
   );
 }

@@ -13,12 +13,12 @@ import {
 import { Canvas, useThree } from '@react-three/fiber';
 import { ContactShadows, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import type {
+  GarmentSilhouetteInput,
   MaterialOverrideEntryInput,
   MaterialSlotSpecDto,
   OutfitAnchorInput,
@@ -30,7 +30,15 @@ import {
   resolveDeviceQualityTier,
   type DeviceQualityTier,
 } from '../capabilities.js';
+import { inferSilhouetteFromSlug } from '../glb-binary.js';
 import { applyMaterialPresetToScene } from '../material-preset-controller.js';
+import {
+  acquireAtelierStudioEnv,
+  getAtelierStudioEnvRefCount,
+  releaseAtelierStudioEnv,
+  upgradeGarmentSceneToAtelierPbr,
+  upgradeMannequinSceneToAtelierPbr,
+} from '../materials/atelier-pbr-materials.js';
 import { OUTFIT_SLOTS } from '../outfit-compatibility.js';
 import { ResourceTracker } from '../resource-tracker.js';
 
@@ -39,6 +47,7 @@ export const DEFAULT_STUDIO_ENV_KEY = 'arven_outfit_studio_neutral_v1';
 export interface OutfitSlotRenderItem {
   readonly slot: OutfitSlotInput;
   readonly productId: string;
+  readonly productSlug?: string;
   readonly variantId: string;
   readonly assetId: string;
   readonly modelUrl: string;
@@ -83,15 +92,8 @@ export interface OutfitStudioDiagnosticsSnapshot {
   readonly updatedAt: string;
 }
 
-interface SharedEnvEntry {
-  refCount: number;
-  renderTarget: THREE.WebGLRenderTarget | null;
-}
-
-const sharedStudioEnvRegistry = new Map<string, SharedEnvEntry>();
-
 /**
- * Reference-counted shared studio PMREM environment (`<group dispose={null}>` companion).
+ * Reference-counted shared Atelier Studio PMREM environment (`<group dispose={null}>` companion).
  * Guarantees garment swaps never tear down or reallocate the studio environment.
  */
 export function acquireSharedStudioEnv(
@@ -102,26 +104,7 @@ export function acquireSharedStudioEnv(
   readonly refCount: number;
   readonly texture: THREE.Texture | null;
 } {
-  let entry = sharedStudioEnvRegistry.get(envKey);
-  if (!entry) {
-    entry = { refCount: 0, renderTarget: null };
-    sharedStudioEnvRegistry.set(envKey, entry);
-  }
-  entry.refCount += 1;
-
-  if (gl && !entry.renderTarget) {
-    const roomEnv = new RoomEnvironment();
-    const pmrem = new THREE.PMREMGenerator(gl);
-    entry.renderTarget = pmrem.fromScene(roomEnv, 0.04);
-    roomEnv.dispose();
-    pmrem.dispose();
-  }
-
-  return {
-    envKey,
-    refCount: entry.refCount,
-    texture: entry.renderTarget?.texture ?? null,
-  };
+  return acquireAtelierStudioEnv(envKey, gl, false);
 }
 
 /**
@@ -133,26 +116,32 @@ export function releaseSharedStudioEnv(envKey = DEFAULT_STUDIO_ENV_KEY): {
   readonly refCount: number;
   readonly disposed: boolean;
 } {
-  const entry = sharedStudioEnvRegistry.get(envKey);
-  if (!entry) {
-    return { envKey, refCount: 0, disposed: false };
-  }
-
-  entry.refCount -= 1;
-  if (entry.refCount <= 0) {
-    entry.renderTarget?.dispose();
-    entry.renderTarget = null;
-    sharedStudioEnvRegistry.delete(envKey);
-    return { envKey, refCount: 0, disposed: true };
-  }
-
-  return { envKey, refCount: entry.refCount, disposed: false };
+  return releaseAtelierStudioEnv(envKey);
 }
 
 export function getSharedStudioEnvRefCount(
   envKey = DEFAULT_STUDIO_ENV_KEY,
 ): number {
-  return sharedStudioEnvRegistry.get(envKey)?.refCount ?? 0;
+  return getAtelierStudioEnvRefCount(envKey);
+}
+
+function inferSilhouetteForOutfitItem(item: OutfitSlotRenderItem): GarmentSilhouetteInput {
+  if (item.productSlug) {
+    return inferSilhouetteFromSlug(item.productSlug);
+  }
+  switch (item.slot) {
+    case 'bottom':
+      return 'trouser';
+    case 'outerwear':
+      return 'overshirt';
+    case 'footwear':
+      return 'sneaker';
+    case 'accessory':
+      return 'crossbody';
+    case 'top':
+    default:
+      return 'tee';
+  }
 }
 
 interface SlotTrackerEntry {
@@ -351,6 +340,7 @@ function OutfitStudioSceneContent({
   } | null>(null);
 
   const [rigScene, setRigScene] = useState<THREE.Group | null>(null);
+  const [shadowRev, setShadowRev] = useState(0);
   const contextLossCountRef = useRef(0);
   const recoveryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -402,7 +392,7 @@ function OutfitStudioSceneContent({
     };
   }, [invalidate]);
 
-  // Mount refcounted shared studio PMREM environment & self-hosted decoders
+  // Mount refcounted shared Atelier Studio PMREM environment & self-hosted decoders
   useEffect(() => {
     const sharedEnv = acquireSharedStudioEnv(DEFAULT_STUDIO_ENV_KEY, gl);
     if (sharedEnv.texture) {
@@ -488,7 +478,7 @@ function OutfitStudioSceneContent({
     scheduleDualInvalidate,
   ]);
 
-  // Load fixed unisex mannequin rig GLB
+  // Load sculpted unisex mannequin rig GLB & upgrade to tailor-form charcoal linen + bronze PBR
   useEffect(() => {
     const loaders = loadersRef.current;
     const rigTracker = rigTrackerRef.current;
@@ -504,7 +494,7 @@ function OutfitStudioSceneContent({
         emitDiagnostics('loading');
         const response = await fetch(resolvedRigUrl, {
           signal: abortController.signal,
-          cache: 'force-cache',
+          cache: 'no-cache',
         });
         if (!response.ok) {
           throw new Error(`HTTP_${response.status}`);
@@ -524,11 +514,13 @@ function OutfitStudioSceneContent({
             }
             slotMgr.disposeAllSlots();
             rigTracker.disposeAll();
+            upgradeMannequinSceneToAtelierPbr(gltf.scene, activeTier === 'lite');
             gltf.scene.traverse((obj) => {
               obj.frustumCulled = true;
             });
             rigTracker.trackObject3D(gltf.scene);
             setRigScene(gltf.scene);
+            setShadowRev((r) => r + 1);
             onLoadStateChange('ready', null);
             emitDiagnostics('ready');
             scheduleDualInvalidate();
@@ -556,14 +548,14 @@ function OutfitStudioSceneContent({
       abortController.abort();
     };
   }, [
+    activeTier,
     emitDiagnostics,
     onLoadStateChange,
     resolvedRigUrl,
     scheduleDualInvalidate,
   ]);
 
-  // Reconcile the 5 garment slots independently: swap/clear disposes only the changed slot;
-  // preset-only changes update materials in-place without re-fetching geometry.
+  // Reconcile 5 garment slots independently: upgrade each garment to Atelier PBR & dispose per slot
   useEffect(() => {
     const slotMgr = slotManagerRef.current;
     const loaders = loadersRef.current;
@@ -580,6 +572,7 @@ function OutfitStudioSceneContent({
       if (!nextItem) {
         if (existing.object) {
           slotMgr.disposeSlot(slot);
+          setShadowRev((r) => r + 1);
           emitDiagnostics('ready');
           cancelRafs.push(scheduleDualInvalidate());
         }
@@ -610,7 +603,7 @@ function OutfitStudioSceneContent({
         try {
           const response = await fetch(garmentUrl, {
             signal: abortController.signal,
-            cache: 'force-cache',
+            cache: 'no-cache',
           });
           if (!response.ok) {
             throw new Error(`HTTP_${response.status}`);
@@ -629,6 +622,12 @@ function OutfitStudioSceneContent({
                 return;
               }
 
+              upgradeGarmentSceneToAtelierPbr(gltf.scene, {
+                silhouette: inferSilhouetteForOutfitItem(nextItem),
+                productSlug: nextItem.productSlug,
+                lite: activeTier === 'lite',
+              });
+
               applyMaterialPresetToScene(
                 gltf.scene,
                 nextItem.materialSlots,
@@ -641,6 +640,7 @@ function OutfitStudioSceneContent({
                 gltf.scene,
                 rigScene,
               );
+              setShadowRev((r) => r + 1);
               onSlotLoaded?.(slot, nextItem.assetId);
               emitDiagnostics('ready');
               cancelRafs.push(scheduleDualInvalidate());
@@ -683,22 +683,25 @@ function OutfitStudioSceneContent({
 
   return (
     <>
-      <color attach="background" args={['#17191B']} />
-      <ambientLight intensity={0.62} color="#F8F7F3" />
+      <color attach="background" args={['#1B1D20']} />
+      <fog attach="fog" args={['#1B1D20', 5.2, 12.5]} />
+
+      {/* Atelier Fitting Studio 3-point + bronze rim lighting */}
+      <hemisphereLight args={['#FAF8F3', '#24272B', 0.56]} />
       <directionalLight
-        position={[2.4, 3.2, 2.8]}
-        intensity={1.65}
-        color="#FFFDF9"
+        position={[2.4, 3.6, 2.8]}
+        intensity={1.85}
+        color="#FFFDF8"
       />
       <directionalLight
-        position={[-2.2, 1.9, -1.5]}
+        position={[-2.6, 2.1, 1.4]}
         intensity={0.85}
-        color="#DCE3EA"
+        color="#DCE6F0"
       />
       <directionalLight
-        position={[0, 1.8, -2.8]}
-        intensity={0.85}
-        color="#C5A572"
+        position={[-0.6, 2.2, -3.2]}
+        intensity={1.35}
+        color="#DFC496"
       />
 
       <group dispose={null}>
@@ -706,14 +709,15 @@ function OutfitStudioSceneContent({
       </group>
 
       <ContactShadows
-        position={[0, -0.002, 0]}
-        opacity={0.82}
-        scale={2.6}
-        blur={1.6}
-        far={1.8}
-        frames={Infinity}
+        key={`outfit-shadow-${shadowRev}`}
+        position={[0, -0.001, 0]}
+        opacity={0.78}
+        scale={2.4}
+        blur={1.7}
+        far={2.0}
+        frames={1}
         resolution={activeTier === 'lite' ? 128 : 256}
-        color="#000000"
+        color="#070809"
       />
 
       <OrbitControls
@@ -722,9 +726,9 @@ function OutfitStudioSceneContent({
         enablePan={false}
         enableDamping={!reducedMotion}
         dampingFactor={0.08}
-        minDistance={1.3}
-        maxDistance={4.2}
-        minPolarAngle={0.35}
+        minDistance={1.25}
+        maxDistance={4.0}
+        minPolarAngle={0.32}
         maxPolarAngle={Math.PI * 0.52}
         target={[0, 0.9, 0]}
       />
@@ -734,8 +738,8 @@ function OutfitStudioSceneContent({
 
 /**
  * Progressive WebGL Outfit Studio experience (`@arven/three-engine/outfit-studio`).
- * Renders the fixed unisex mannequin rig (`arven_mannequin_unisex_v1`) with
- * refcounted shared studio environment lighting and per-slot `ResourceTracker` disposal.
+ * Renders the sculpted unisex mannequin rig (`arven_mannequin_unisex_v1`) with
+ * refcounted shared Atelier Studio PMREM lighting and per-slot `ResourceTracker` disposal.
  */
 export function OutfitStudioExperience({
   rigId,
@@ -803,19 +807,21 @@ export function OutfitStudioExperience({
 
   const posterFallback = (
     <div
-      data-theme="dark"
-      className="relative h-full min-h-[360px] w-full overflow-hidden bg-[#17191B] text-[#F8F7F3]"
       data-testid="arven-outfit-studio-fallback"
+      className="relative h-full min-h-[360px] w-full overflow-hidden bg-[#17191B]"
     >
       <img
         src={rigPosterUrl}
-        alt={`Poster manekin standar ${rigId}`}
+        alt={`Poster Manekin Standar ${rigId}`}
         className="h-full w-full object-cover"
       />
       <div className="absolute inset-x-0 bottom-0 border-t border-[#46494C] bg-[#17191B]/95 p-4">
-        <p className="text-sm text-[#F8F7F3]">
-          Mode 2D aktif untuk manekin {rigId}. Pemilihan slot dan pembelian tetap berfungsi penuh.
+        <p className="text-sm font-medium text-[#F8F7F3]">
+          Tampilan Manekin 3D tidak tersedia saat ini. Mode poster 2D aktif.
         </p>
+        {errorMsg ? (
+          <p className="mt-1 font-mono text-xs text-[#B2B0A6]">({errorMsg})</p>
+        ) : null}
       </div>
     </div>
   );
@@ -826,9 +832,8 @@ export function OutfitStudioExperience({
 
   return (
     <div
-      data-theme="dark"
-      className="relative h-full min-h-[360px] w-full overflow-hidden bg-[#17191B] text-[#F8F7F3]"
-      data-testid="arven-outfit-studio-canvas-host"
+      data-testid="arven-outfit-studio-canvas-shell"
+      className="relative h-full w-full bg-[#1B1D20]"
     >
       {webglSupported ? (
         <OutfitCanvasErrorBoundary
@@ -839,18 +844,17 @@ export function OutfitStudioExperience({
             frameloop="demand"
             dpr={resolvedTier === 'lite' ? [1, 1.5] : [1, 2]}
             shadows={false}
-            fallback={posterFallback}
             gl={{
               antialias: true,
               powerPreference: 'high-performance',
               toneMapping: THREE.ACESFilmicToneMapping,
-              toneMappingExposure: 1.0,
+              toneMappingExposure: 1.08,
             }}
             camera={{
-              fov: 35,
-              position: [0.65, 1.05, 2.65],
+              fov: 38,
+              position: [0.56, 1.04, 3.28],
               near: 0.05,
-              far: 50,
+              far: 60,
             }}
           >
             <OutfitStudioSceneContent
@@ -872,7 +876,7 @@ export function OutfitStudioExperience({
       ) : (
         <div className="flex h-full min-h-[360px] w-full items-center justify-center bg-[#17191B] p-6 text-center">
           <span className="font-mono text-xs uppercase tracking-[0.06em] text-[#B2B0A6]">
-            Menginisialisasi Studio Manekin 3D...
+            Menginisialisasi Manekin Studio 3D...
           </span>
         </div>
       )}
@@ -881,18 +885,17 @@ export function OutfitStudioExperience({
         <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center px-3">
           <span className="border border-[#46494C] bg-[#17191B]/90 px-3 py-1.5 font-mono text-xs text-[#F8F7F3]">
             {loadState === 'recovering'
-              ? 'Memulihkan tampilan 3D...'
-              : 'Memuat manekin studio 3D...'}
+              ? 'Memulihkan tampilan Manekin 3D...'
+              : 'Memuat manekin & garmen 3D...'}
           </span>
         </div>
       ) : null}
 
-      {loadState === 'error' && errorMsg ? (
-        <div
-          role="alert"
-          className="absolute inset-x-3 bottom-3 border border-[#E48966] bg-[#35231E] px-3 py-2 text-xs text-[#F8F7F3]"
-        >
-          Gagal memuat model manekin 3D ({errorMsg}). Anda tetap dapat memilih slot pakaian di samping.
+      {loadState === 'error' ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center px-3">
+          <span className="border border-[#E48966] bg-[#17191B]/95 px-3 py-1.5 font-mono text-xs text-[#F8F7F3]">
+            Gagal memuat manekin 3D ({errorMsg ?? 'error'}). Kontrol pemilihan slot tetap aktif.
+          </span>
         </div>
       ) : null}
     </div>

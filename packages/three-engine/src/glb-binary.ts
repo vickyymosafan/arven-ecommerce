@@ -5,6 +5,28 @@ import type {
   MaterialSlotSpecDto,
   Product3DAssetConfigDto,
 } from '@arven/contracts';
+import {
+  buildSculptedGarmentParts,
+  resolveGarmentStyleVariant,
+} from './geometry/garment-builders.js';
+import {
+  buildSculptedMannequinParts,
+  buildSculptedShowroomParts,
+  type ShowroomZoneGlbBuildOptions,
+  type ShowroomZonePedestalSpec,
+  type ShowroomZonePortalSpec,
+} from './geometry/mannequin-and-showroom-builders.js';
+import {
+  hexToLinearRgba,
+  type SculptMeshAccumulator,
+} from './geometry/mesh-sculptor.js';
+
+export {
+  hexToLinearRgba,
+  type ShowroomZoneGlbBuildOptions,
+  type ShowroomZonePedestalSpec,
+  type ShowroomZonePortalSpec,
+};
 
 const GLB_MAGIC_UINT32 = 0x46546c67; // 'glTF'
 const GLB_VERSION_2 = 2;
@@ -15,6 +37,10 @@ export const GLB_DEFAULT_MAX_BYTES = 10 * 1024 * 1024;
 export const GLB_LITE_MAX_BYTES = Math.floor(3.5 * 1024 * 1024);
 export const GLB_DEFAULT_MAX_TRIANGLES = 80_000;
 export const GLB_LITE_MAX_TRIANGLES = 25_000;
+export const MANNEQUIN_DEFAULT_MAX_TRIANGLES = 30_000;
+export const MANNEQUIN_LITE_MAX_TRIANGLES = 12_000;
+export const SHOWROOM_ZONE_DEFAULT_MAX_BYTES = 6_291_456;
+export const SHOWROOM_ZONE_LITE_MAX_BYTES = 3_670_016;
 
 export const DEFAULT_ARVEN_MATERIAL_SLOTS: readonly MaterialSlotSpecDto[] = [
   {
@@ -23,7 +49,7 @@ export const DEFAULT_ARVEN_MATERIAL_SLOTS: readonly MaterialSlotSpecDto[] = [
     materialName: 'mat_fabric_primary',
     customizable: true,
     defaultBaseColorHex: '#17191B',
-    roughnessRange: [0.65, 0.95],
+    roughnessRange: [0.35, 0.96],
     metalnessRange: [0.0, 0.1],
   },
   {
@@ -32,7 +58,7 @@ export const DEFAULT_ARVEN_MATERIAL_SLOTS: readonly MaterialSlotSpecDto[] = [
     materialName: 'mat_fabric_secondary',
     customizable: true,
     defaultBaseColorHex: '#35383A',
-    roughnessRange: [0.6, 0.95],
+    roughnessRange: [0.4, 0.96],
     metalnessRange: [0.0, 0.1],
   },
   {
@@ -41,14 +67,14 @@ export const DEFAULT_ARVEN_MATERIAL_SLOTS: readonly MaterialSlotSpecDto[] = [
     materialName: 'mat_hardware_accent',
     customizable: false,
     defaultBaseColorHex: '#C5A572',
-    roughnessRange: [0.25, 0.55],
-    metalnessRange: [0.4, 0.9],
+    roughnessRange: [0.2, 0.55],
+    metalnessRange: [0.4, 0.92],
   },
 ] as const;
 
 export const DEFAULT_ARVEN_PROVENANCE: AssetProvenanceDto = {
   sourceType: 'in_house_cad',
-  modelAuthor: 'ARVEN Atelier 3D Team',
+  modelAuthor: 'ARVEN Atelier 3D Fashion Engineering Team',
   modelLicense: 'ARVEN Proprietary Commercial Asset License v1.0',
   textureLicense: 'CC0-1.0',
   hdriLicense: 'CC0-1.0',
@@ -57,9 +83,14 @@ export const DEFAULT_ARVEN_PROVENANCE: AssetProvenanceDto = {
 
 export interface GlbBuildOptions {
   readonly silhouette?: GarmentSilhouetteInput;
+  readonly productSlug?: string;
   readonly primaryHex?: string;
   readonly secondaryHex?: string;
   readonly accentHex?: string;
+  readonly profile?: 'default' | 'lite';
+}
+
+export interface MannequinGlbBuildOptions {
   readonly profile?: 'default' | 'lite';
 }
 
@@ -80,295 +111,6 @@ export interface GlbValidationResult {
   readonly boundsMin: [number, number, number];
   readonly boundsMax: [number, number, number];
   readonly errors: string[];
-}
-
-function srgbChannelToLinear(c: number): number {
-  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-}
-
-export function hexToLinearRgba(hex: string): [number, number, number, number] {
-  const clean = hex.trim().replace('#', '');
-  if (!/^[0-9a-fA-F]{6}$/.test(clean)) {
-    return [0.08, 0.09, 0.1, 1.0];
-  }
-  const r = Number.parseInt(clean.slice(0, 2), 16) / 255;
-  const g = Number.parseInt(clean.slice(2, 4), 16) / 255;
-  const b = Number.parseInt(clean.slice(4, 6), 16) / 255;
-  return [
-    srgbChannelToLinear(r),
-    srgbChannelToLinear(g),
-    srgbChannelToLinear(b),
-    1.0,
-  ];
-}
-
-interface MeshAccumulator {
-  readonly positions: number[];
-  readonly normals: number[];
-  readonly colors: number[];
-  readonly indices: number[];
-}
-
-function createMeshAccumulator(): MeshAccumulator {
-  return { positions: [], normals: [], colors: [], indices: [] };
-}
-
-function appendBox(
-  acc: MeshAccumulator,
-  cx: number,
-  cy: number,
-  cz: number,
-  sx: number,
-  sy: number,
-  sz: number,
-  color?: readonly [number, number, number, number],
-): void {
-  const hx = sx / 2;
-  const hy = sy / 2;
-  const hz = sz / 2;
-
-  const faces: ReadonlyArray<{
-    readonly normal: [number, number, number];
-    readonly corners: ReadonlyArray<[number, number, number]>;
-  }> = [
-    // +Z front
-    {
-      normal: [0, 0, 1],
-      corners: [
-        [cx - hx, cy - hy, cz + hz],
-        [cx + hx, cy - hy, cz + hz],
-        [cx + hx, cy + hy, cz + hz],
-        [cx - hx, cy + hy, cz + hz],
-      ],
-    },
-    // -Z back
-    {
-      normal: [0, 0, -1],
-      corners: [
-        [cx + hx, cy - hy, cz - hz],
-        [cx - hx, cy - hy, cz - hz],
-        [cx - hx, cy + hy, cz - hz],
-        [cx + hx, cy + hy, cz - hz],
-      ],
-    },
-    // +X right
-    {
-      normal: [1, 0, 0],
-      corners: [
-        [cx + hx, cy - hy, cz + hz],
-        [cx + hx, cy - hy, cz - hz],
-        [cx + hx, cy + hy, cz - hz],
-        [cx + hx, cy + hy, cz + hz],
-      ],
-    },
-    // -X left
-    {
-      normal: [-1, 0, 0],
-      corners: [
-        [cx - hx, cy - hy, cz - hz],
-        [cx - hx, cy - hy, cz + hz],
-        [cx - hx, cy + hy, cz + hz],
-        [cx - hx, cy + hy, cz - hz],
-      ],
-    },
-    // +Y top
-    {
-      normal: [0, 1, 0],
-      corners: [
-        [cx - hx, cy + hy, cz + hz],
-        [cx + hx, cy + hy, cz + hz],
-        [cx + hx, cy + hy, cz - hz],
-        [cx - hx, cy + hy, cz - hz],
-      ],
-    },
-    // -Y bottom
-    {
-      normal: [0, -1, 0],
-      corners: [
-        [cx - hx, cy - hy, cz - hz],
-        [cx + hx, cy - hy, cz - hz],
-        [cx + hx, cy - hy, cz + hz],
-        [cx - hx, cy - hy, cz + hz],
-      ],
-    },
-  ];
-
-  for (const face of faces) {
-    const baseVertex = acc.positions.length / 3;
-    const verticalShade =
-      face.normal[1] > 0.5 ? 1.0 : face.normal[1] < -0.5 ? 0.65 : 0.85;
-    for (const [vx, vy, vz] of face.corners) {
-      acc.positions.push(vx, vy, vz);
-      acc.normals.push(face.normal[0], face.normal[1], face.normal[2]);
-      if (color) {
-        acc.colors.push(
-          Math.min(1, color[0] * verticalShade),
-          Math.min(1, color[1] * verticalShade),
-          Math.min(1, color[2] * verticalShade),
-          color[3],
-        );
-      }
-    }
-    acc.indices.push(
-      baseVertex,
-      baseVertex + 1,
-      baseVertex + 2,
-      baseVertex,
-      baseVertex + 2,
-      baseVertex + 3,
-    );
-  }
-}
-
-function appendTaperedCylinder(
-  acc: MeshAccumulator,
-  cx: number,
-  yBottom: number,
-  cz: number,
-  radiusBottom: number,
-  radiusTop: number,
-  height: number,
-  segments: number,
-  color?: readonly [number, number, number, number],
-): void {
-  const yTop = yBottom + height;
-  const sideStart = acc.positions.length / 3;
-
-  for (let i = 0; i <= segments; i += 1) {
-    const theta = (i / segments) * Math.PI * 2;
-    const cos = Math.cos(theta);
-    const sin = Math.sin(theta);
-
-    const bx = cx + radiusBottom * cos;
-    const bz = cz + radiusBottom * sin;
-    const tx = cx + radiusTop * cos;
-    const tz = cz + radiusTop * sin;
-
-    acc.positions.push(bx, yBottom, bz, tx, yTop, tz);
-    acc.normals.push(cos, 0, sin, cos, 0, sin);
-    if (color) {
-      acc.colors.push(
-        color[0] * 0.82,
-        color[1] * 0.82,
-        color[2] * 0.82,
-        color[3],
-        color[0],
-        color[1],
-        color[2],
-        color[3],
-      );
-    }
-  }
-
-  for (let i = 0; i < segments; i += 1) {
-    const b0 = sideStart + i * 2;
-    const t0 = b0 + 1;
-    const b1 = b0 + 2;
-    const t1 = b0 + 3;
-    acc.indices.push(b0, b1, t1, b0, t1, t0);
-  }
-
-  // Top & bottom caps
-  const topCenterIdx = acc.positions.length / 3;
-  acc.positions.push(cx, yTop, cz);
-  acc.normals.push(0, 1, 0);
-  if (color) {
-    acc.colors.push(color[0], color[1], color[2], color[3]);
-  }
-  for (let i = 0; i <= segments; i += 1) {
-    const theta = (i / segments) * Math.PI * 2;
-    acc.positions.push(cx + radiusTop * Math.cos(theta), yTop, cz + radiusTop * Math.sin(theta));
-    acc.normals.push(0, 1, 0);
-    if (color) {
-      acc.colors.push(color[0], color[1], color[2], color[3]);
-    }
-  }
-  for (let i = 0; i < segments; i += 1) {
-    acc.indices.push(topCenterIdx, topCenterIdx + 1 + i + 1, topCenterIdx + 1 + i);
-  }
-
-  const botCenterIdx = acc.positions.length / 3;
-  acc.positions.push(cx, yBottom, cz);
-  acc.normals.push(0, -1, 0);
-  if (color) {
-    acc.colors.push(color[0] * 0.72, color[1] * 0.72, color[2] * 0.72, color[3]);
-  }
-  for (let i = 0; i <= segments; i += 1) {
-    const theta = (i / segments) * Math.PI * 2;
-    acc.positions.push(
-      cx + radiusBottom * Math.cos(theta),
-      yBottom,
-      cz + radiusBottom * Math.sin(theta),
-    );
-    acc.normals.push(0, -1, 0);
-    if (color) {
-      acc.colors.push(color[0] * 0.72, color[1] * 0.72, color[2] * 0.72, color[3]);
-    }
-  }
-  for (let i = 0; i < segments; i += 1) {
-    acc.indices.push(botCenterIdx, botCenterIdx + 1 + i, botCenterIdx + 1 + i + 1);
-  }
-}
-
-function buildSilhouetteParts(silhouette: GarmentSilhouetteInput, lite: boolean): {
-  readonly body: MeshAccumulator;
-  readonly secondary: MeshAccumulator;
-  readonly hardware: MeshAccumulator;
-} {
-  const body = createMeshAccumulator();
-  const secondary = createMeshAccumulator();
-  const hardware = createMeshAccumulator();
-
-  if (silhouette === 'trouser') {
-    // Wide-leg double-pleated trouser centered at y=[0, 1.05]
-    appendBox(body, -0.13, 0.45, 0, 0.21, 0.9, 0.19);
-    appendBox(body, 0.13, 0.45, 0, 0.21, 0.9, 0.19);
-    appendBox(body, 0, 0.92, 0, 0.44, 0.16, 0.2);
-    appendBox(secondary, 0, 1.02, 0, 0.45, 0.06, 0.21);
-    appendBox(hardware, 0.05, 1.02, 0.11, 0.04, 0.04, 0.02);
-  } else if (silhouette === 'sneaker') {
-    // Minimalist low-profile leather court sneaker resting on y=0
-    appendBox(secondary, 0, 0.035, 0, 0.22, 0.07, 0.52);
-    appendBox(body, 0, 0.11, 0.02, 0.2, 0.11, 0.48);
-    appendBox(body, 0, 0.18, -0.09, 0.18, 0.08, 0.24);
-    const eyeletCount = lite ? 3 : 5;
-    for (let i = 0; i < eyeletCount; i += 1) {
-      const z = -0.02 + i * 0.045;
-      appendBox(hardware, -0.045, 0.19, z, 0.018, 0.012, 0.018);
-      appendBox(hardware, 0.045, 0.19, z, 0.018, 0.012, 0.018);
-    }
-  } else if (silhouette === 'crossbody') {
-    // Architectural structured calfskin crossbody bag
-    appendBox(body, 0, 0.26, 0, 0.44, 0.34, 0.15);
-    appendBox(body, 0, 0.3, 0.082, 0.43, 0.22, 0.025);
-    appendBox(secondary, 0, 0.56, 0, 0.48, 0.04, 0.05);
-    appendBox(secondary, -0.225, 0.41, 0, 0.035, 0.3, 0.05);
-    appendBox(secondary, 0.225, 0.41, 0, 0.035, 0.3, 0.05);
-    appendBox(hardware, 0, 0.21, 0.1, 0.06, 0.045, 0.02);
-  } else if (silhouette === 'overshirt' || silhouette === 'shirt') {
-    // Tailored boxy overshirt / poplin shirt
-    appendBox(body, 0, 0.46, 0, 0.54, 0.72, 0.22);
-    appendBox(body, -0.36, 0.53, 0, 0.17, 0.56, 0.17);
-    appendBox(body, 0.36, 0.53, 0, 0.17, 0.56, 0.17);
-    appendBox(secondary, 0, 0.85, 0, 0.24, 0.08, 0.19);
-    if (!lite) {
-      appendBox(secondary, -0.13, 0.56, 0.118, 0.14, 0.16, 0.02);
-      appendBox(secondary, 0.13, 0.56, 0.118, 0.14, 0.16, 0.02);
-    }
-    const buttonCount = lite ? 3 : 5;
-    for (let i = 0; i < buttonCount; i += 1) {
-      appendBox(hardware, 0, 0.74 - i * 0.13, 0.118, 0.026, 0.026, 0.018);
-    }
-  } else {
-    // Heavyweight crew tee
-    appendBox(body, 0, 0.45, 0, 0.52, 0.68, 0.2);
-    appendBox(body, -0.35, 0.64, 0, 0.2, 0.22, 0.17);
-    appendBox(body, 0.35, 0.64, 0, 0.2, 0.22, 0.17);
-    appendBox(secondary, 0, 0.81, 0, 0.24, 0.055, 0.18);
-    appendBox(hardware, -0.06, 0.16, 0.105, 0.09, 0.024, 0.012);
-  }
-
-  return { body, secondary, hardware };
 }
 
 function alignToFourBytes(len: number): number {
@@ -404,34 +146,6 @@ function computePositionMinMax(positions: readonly number[]): {
   };
 }
 
-export const MANNEQUIN_DEFAULT_MAX_TRIANGLES = 30_000;
-export const MANNEQUIN_LITE_MAX_TRIANGLES = 12_000;
-export const SHOWROOM_ZONE_DEFAULT_MAX_BYTES = 6_291_456;
-export const SHOWROOM_ZONE_LITE_MAX_BYTES = 3_670_016;
-
-export interface MannequinGlbBuildOptions {
-  readonly profile?: 'default' | 'lite';
-}
-
-export interface ShowroomZonePedestalSpec {
-  readonly label: string;
-  readonly position: readonly [number, number, number];
-}
-
-export interface ShowroomZonePortalSpec {
-  readonly targetZoneCode: string;
-  readonly position: readonly [number, number, number];
-}
-
-export interface ShowroomZoneGlbBuildOptions {
-  readonly code: string;
-  readonly title?: string;
-  readonly lightingPreset?: LightingPresetInput | string;
-  readonly profile?: 'default' | 'lite';
-  readonly pedestals?: ReadonlyArray<ShowroomZonePedestalSpec>;
-  readonly portals?: ReadonlyArray<ShowroomZonePortalSpec>;
-}
-
 interface GlbPartSpec {
   readonly nodeName: string;
   readonly meshName: string;
@@ -439,8 +153,9 @@ interface GlbPartSpec {
   readonly baseColorFactor: readonly [number, number, number, number];
   readonly roughnessFactor: number;
   readonly metallicFactor: number;
+  readonly emissiveFactor?: readonly [number, number, number];
   readonly doubleSided?: boolean;
-  readonly acc: MeshAccumulator;
+  readonly acc: SculptMeshAccumulator;
 }
 
 interface GlbExtraNodeSpec {
@@ -479,11 +194,17 @@ function packGlbParts(options: {
   };
 
   for (const [index, entry] of options.parts.entries()) {
+    const vertexCount = entry.acc.positions.length / 3;
     const posArray = new Float32Array(entry.acc.positions);
     const normArray = new Float32Array(entry.acc.normals);
-    const hasColors = entry.acc.colors.length === (entry.acc.positions.length / 3) * 4;
+    const hasUvs = entry.acc.uvs.length === vertexCount * 2;
+    const uvArray = hasUvs ? new Float32Array(entry.acc.uvs) : null;
+    const hasColors = entry.acc.colors.length === vertexCount * 4;
     const colorArray = hasColors ? new Float32Array(entry.acc.colors) : null;
-    const idxArray = new Uint16Array(entry.acc.indices);
+    const useUint32 = vertexCount > 65_535;
+    const idxArray = useUint32
+      ? new Uint32Array(entry.acc.indices)
+      : new Uint16Array(entry.acc.indices);
 
     const posSeg = appendBinSegment(
       new Uint8Array(posArray.buffer, posArray.byteOffset, posArray.byteLength),
@@ -491,6 +212,9 @@ function packGlbParts(options: {
     const normSeg = appendBinSegment(
       new Uint8Array(normArray.buffer, normArray.byteOffset, normArray.byteLength),
     );
+    const uvSeg = uvArray
+      ? appendBinSegment(new Uint8Array(uvArray.buffer, uvArray.byteOffset, uvArray.byteLength))
+      : null;
     const colorSeg = colorArray
       ? appendBinSegment(
           new Uint8Array(colorArray.buffer, colorArray.byteOffset, colorArray.byteLength),
@@ -515,6 +239,19 @@ function packGlbParts(options: {
       byteLength: normSeg.length,
       target: 34962,
     });
+
+    const uvViewIdx = uvSeg
+      ? (() => {
+          const viewIdx = bufferViews.length;
+          bufferViews.push({
+            buffer: 0,
+            byteOffset: uvSeg.offset,
+            byteLength: uvSeg.length,
+            target: 34962,
+          });
+          return viewIdx;
+        })()
+      : null;
 
     const colorViewIdx = colorSeg
       ? (() => {
@@ -543,7 +280,7 @@ function packGlbParts(options: {
       bufferView: posViewIdx,
       byteOffset: 0,
       componentType: 5126, // FLOAT
-      count: entry.acc.positions.length / 3,
+      count: vertexCount,
       type: 'VEC3',
       min,
       max,
@@ -557,6 +294,21 @@ function packGlbParts(options: {
       count: entry.acc.normals.length / 3,
       type: 'VEC3',
     });
+
+    const uvAccIdx =
+      uvViewIdx !== null
+        ? (() => {
+            const accIdx = accessors.length;
+            accessors.push({
+              bufferView: uvViewIdx,
+              byteOffset: 0,
+              componentType: 5126,
+              count: entry.acc.uvs.length / 2,
+              type: 'VEC2',
+            });
+            return accIdx;
+          })()
+        : null;
 
     const colorAccIdx =
       colorViewIdx !== null
@@ -577,12 +329,12 @@ function packGlbParts(options: {
     accessors.push({
       bufferView: idxViewIdx,
       byteOffset: 0,
-      componentType: 5123, // UNSIGNED_SHORT
+      componentType: useUint32 ? 5125 : 5123, // UNSIGNED_INT or UNSIGNED_SHORT
       count: entry.acc.indices.length,
       type: 'SCALAR',
     });
 
-    materials.push({
+    const matRecord: Record<string, unknown> = {
       name: entry.materialName,
       doubleSided: entry.doubleSided ?? false,
       pbrMetallicRoughness: {
@@ -590,12 +342,19 @@ function packGlbParts(options: {
         metallicFactor: entry.metallicFactor,
         roughnessFactor: entry.roughnessFactor,
       },
-    });
+    };
+    if (entry.emissiveFactor) {
+      matRecord['emissiveFactor'] = [...entry.emissiveFactor];
+    }
+    materials.push(matRecord);
 
     const attributes: Record<string, number> = {
       POSITION: posAccIdx,
       NORMAL: normAccIdx,
     };
+    if (uvAccIdx !== null) {
+      attributes['TEXCOORD_0'] = uvAccIdx;
+    }
     if (colorAccIdx !== null) {
       attributes['COLOR_0'] = colorAccIdx;
     }
@@ -710,282 +469,296 @@ function packGlbParts(options: {
   return Buffer.from(output.buffer, output.byteOffset, output.byteLength);
 }
 
+function getGlbBaselinePbrFactors(
+  silhouette: GarmentSilhouetteInput,
+  productSlug?: string,
+): {
+  readonly primaryRoughness: number;
+  readonly primaryMetalness: number;
+  readonly secondaryRoughness: number;
+  readonly secondaryMetalness: number;
+  readonly hardwareRoughness: number;
+  readonly hardwareMetalness: number;
+} {
+  const variant = resolveGarmentStyleVariant(silhouette, productSlug);
+  switch (variant) {
+    case 'sneaker':
+      return {
+        primaryRoughness: 0.46,
+        primaryMetalness: 0.02,
+        secondaryRoughness: 0.8,
+        secondaryMetalness: 0.0,
+        hardwareRoughness: 0.3,
+        hardwareMetalness: 0.84,
+      };
+    case 'crossbody':
+      return {
+        primaryRoughness: 0.42,
+        primaryMetalness: 0.02,
+        secondaryRoughness: 0.86,
+        secondaryMetalness: 0.0,
+        hardwareRoughness: 0.24,
+        hardwareMetalness: 0.88,
+      };
+    case 'shirt':
+      return {
+        primaryRoughness: 0.78,
+        primaryMetalness: 0.0,
+        secondaryRoughness: 0.76,
+        secondaryMetalness: 0.0,
+        hardwareRoughness: 0.28,
+        hardwareMetalness: 0.65,
+      };
+    case 'trouser':
+      return {
+        primaryRoughness: 0.84,
+        primaryMetalness: 0.0,
+        secondaryRoughness: 0.86,
+        secondaryMetalness: 0.0,
+        hardwareRoughness: 0.32,
+        hardwareMetalness: 0.78,
+      };
+    case 'field_jacket':
+      return {
+        primaryRoughness: 0.64,
+        primaryMetalness: 0.02,
+        secondaryRoughness: 0.68,
+        secondaryMetalness: 0.02,
+        hardwareRoughness: 0.38,
+        hardwareMetalness: 0.78,
+      };
+    case 'overshirt':
+      return {
+        primaryRoughness: 0.92,
+        primaryMetalness: 0.0,
+        secondaryRoughness: 0.9,
+        secondaryMetalness: 0.0,
+        hardwareRoughness: 0.34,
+        hardwareMetalness: 0.76,
+      };
+    case 'tee':
+    default:
+      return {
+        primaryRoughness: 0.9,
+        primaryMetalness: 0.0,
+        secondaryRoughness: 0.92,
+        secondaryMetalness: 0.0,
+        hardwareRoughness: 0.3,
+        hardwareMetalness: 0.84,
+      };
+  }
+}
+
+const GLB_BUILD_MEMO = new Map<string, Buffer>();
+const MAX_GLB_MEMO_ENTRIES = 64;
+
+function getOrBuildMemoizedGlb(cacheKey: string, factory: () => Buffer): Buffer {
+  const existing = GLB_BUILD_MEMO.get(cacheKey);
+  if (existing) {
+    return Buffer.from(existing);
+  }
+  const built = factory();
+  if (GLB_BUILD_MEMO.size >= MAX_GLB_MEMO_ENTRIES) {
+    const oldestKey = GLB_BUILD_MEMO.keys().next().value;
+    if (typeof oldestKey === 'string') {
+      GLB_BUILD_MEMO.delete(oldestKey);
+    }
+  }
+  GLB_BUILD_MEMO.set(cacheKey, built);
+  return Buffer.from(built);
+}
+
 /**
  * Builds a deterministic, strictly spec-compliant binary glTF 2.0 (.glb) buffer
- * containing ARVEN's canonical named mesh and material slots (`mat_fabric_primary`,
- * `mat_fabric_secondary`, `mat_hardware_accent`) for both worker verification and WebGL rendering.
+ * containing anatomically sculpted, UV-mapped, vertex-AO shaded ARVEN garment geometry
+ * mapped to canonical slots (`mat_fabric_primary`, `mat_fabric_secondary`, `mat_hardware_accent`).
  */
 export function buildArvenGarmentGlbBuffer(options: GlbBuildOptions = {}): Uint8Array {
   const silhouette = options.silhouette ?? 'tee';
   const lite = options.profile === 'lite';
-  const parts = buildSilhouetteParts(silhouette, lite);
+  const primaryHex = options.primaryHex ?? '#17191B';
+  const secondaryHex = options.secondaryHex ?? '#35383A';
+  const accentHex = options.accentHex ?? '#C5A572';
+  const cacheKey = `garment|${silhouette}|${options.productSlug ?? ''}|${lite ? 'lite' : 'default'}|${primaryHex}|${secondaryHex}|${accentHex}`;
 
-  return packGlbParts({
-    sceneName: 'arven_garment_stage',
-    generator: 'ARVEN Atelier GLB Builder v1.0',
-    parts: [
-      {
-        nodeName: 'mesh_garment_body',
-        meshName: 'mesh_garment_body',
-        materialName: 'mat_fabric_primary',
-        baseColorFactor: hexToLinearRgba(options.primaryHex ?? '#17191B'),
-        roughnessFactor: 0.85,
-        metallicFactor: 0.02,
-        acc: parts.body,
-      },
-      {
-        nodeName: 'mesh_collar_rib',
-        meshName: 'mesh_collar_rib',
-        materialName: 'mat_fabric_secondary',
-        baseColorFactor: hexToLinearRgba(options.secondaryHex ?? '#35383A'),
-        roughnessFactor: silhouette === 'sneaker' ? 0.68 : 0.88,
-        metallicFactor: 0.02,
-        acc: parts.secondary,
-      },
-      {
-        nodeName: 'mesh_buttons',
-        meshName: 'mesh_buttons',
-        materialName: 'mat_hardware_accent',
-        baseColorFactor: hexToLinearRgba(options.accentHex ?? '#C5A572'),
-        roughnessFactor: 0.34,
-        metallicFactor: 0.72,
-        acc: parts.hardware,
-      },
-    ],
+  return getOrBuildMemoizedGlb(cacheKey, () => {
+    const parts = buildSculptedGarmentParts(silhouette, lite, options.productSlug);
+    const pbr = getGlbBaselinePbrFactors(silhouette, options.productSlug);
+
+    return packGlbParts({
+      sceneName: 'arven_garment_stage',
+      generator: 'ARVEN Atelier Sculpted Garment GLB Builder v2.0',
+      parts: [
+        {
+          nodeName: 'mesh_garment_body',
+          meshName: 'mesh_garment_body',
+          materialName: 'mat_fabric_primary',
+          baseColorFactor: hexToLinearRgba(primaryHex),
+          roughnessFactor: pbr.primaryRoughness,
+          metallicFactor: pbr.primaryMetalness,
+          acc: parts.body,
+        },
+        {
+          nodeName: 'mesh_collar_rib',
+          meshName: 'mesh_collar_rib',
+          materialName: 'mat_fabric_secondary',
+          baseColorFactor: hexToLinearRgba(secondaryHex),
+          roughnessFactor: pbr.secondaryRoughness,
+          metallicFactor: pbr.secondaryMetalness,
+          acc: parts.secondary,
+        },
+        {
+          nodeName: 'mesh_buttons',
+          meshName: 'mesh_buttons',
+          materialName: 'mat_hardware_accent',
+          baseColorFactor: hexToLinearRgba(accentHex),
+          roughnessFactor: pbr.hardwareRoughness,
+          metallicFactor: pbr.hardwareMetalness,
+          acc: parts.hardware,
+        },
+      ],
+    });
   });
 }
 
 /**
- * Builds the standardized ARVEN unisex mannequin rig GLB (`arven_mannequin_unisex_v1`)
- * resting on Y = 0 (1 unit = 1m, +Y up, +Z forward) with named anchor nodes for Outfit Studio.
+ * Builds the standardized ARVEN sculpted unisex mannequin rig GLB (`arven_mannequin_unisex_v1`)
+ * resting squarely at Y = 0.000 (1 unit = 1m, +Y up, +Z forward) with all 6 Outfit Studio anchor nodes.
  */
 export function buildArvenMannequinGlbBuffer(
   options: MannequinGlbBuildOptions = {},
 ): Buffer {
   const lite = options.profile === 'lite';
-  const radialSegs = lite ? 8 : 16;
+  const cacheKey = `mannequin|${lite ? 'lite' : 'default'}`;
 
-  const body = createMeshAccumulator();
-  const accents = createMeshAccumulator();
+  return getOrBuildMemoizedGlb(cacheKey, () => {
+    const parts = buildSculptedMannequinParts(lite);
 
-  // Feet resting squarely at Y = 0
-  appendBox(body, -0.11, 0.04, 0.03, 0.1, 0.08, 0.24);
-  appendBox(body, 0.11, 0.04, 0.03, 0.1, 0.08, 0.24);
-
-  // Legs (left & right lower + upper legs)
-  appendTaperedCylinder(body, -0.11, 0.08, 0, 0.055, 0.068, 0.4, radialSegs);
-  appendTaperedCylinder(body, 0.11, 0.08, 0, 0.055, 0.068, 0.4, radialSegs);
-  appendTaperedCylinder(body, -0.11, 0.48, 0, 0.068, 0.088, 0.4, radialSegs);
-  appendTaperedCylinder(body, 0.11, 0.48, 0, 0.068, 0.088, 0.4, radialSegs);
-
-  // Pelvis & waist block
-  appendTaperedCylinder(body, 0, 0.86, 0, 0.17, 0.155, 0.18, radialSegs);
-
-  // Torso (waist -> chest/shoulders)
-  appendTaperedCylinder(body, 0, 1.04, 0, 0.15, 0.195, 0.42, radialSegs);
-
-  // Arms (left & right upper + forearm)
-  appendTaperedCylinder(body, -0.25, 1.12, 0, 0.048, 0.058, 0.32, radialSegs);
-  appendTaperedCylinder(body, 0.25, 1.12, 0, 0.048, 0.058, 0.32, radialSegs);
-  appendTaperedCylinder(body, -0.27, 0.82, 0.02, 0.038, 0.048, 0.3, radialSegs);
-  appendTaperedCylinder(body, 0.27, 0.82, 0.02, 0.038, 0.048, 0.3, radialSegs);
-
-  // Neck & sculpted editorial head
-  appendTaperedCylinder(body, 0, 1.46, 0, 0.055, 0.05, 0.09, radialSegs);
-  appendTaperedCylinder(body, 0, 1.55, 0.01, 0.085, 0.072, 0.2, radialSegs);
-
-  // Subtle bronze architectural joint collars & plinth ring
-  appendTaperedCylinder(accents, 0, 0.0, 0, 0.36, 0.35, 0.016, radialSegs);
-  appendTaperedCylinder(accents, 0, 1.45, 0, 0.064, 0.064, 0.018, radialSegs);
-  appendTaperedCylinder(accents, 0, 1.03, 0, 0.156, 0.156, 0.018, radialSegs);
-  appendTaperedCylinder(accents, -0.27, 0.84, 0.02, 0.044, 0.044, 0.018, radialSegs);
-
-  return packGlbParts({
-    sceneName: 'arven_mannequin_unisex_v1',
-    generator: 'ARVEN Atelier Mannequin Rig Builder v1.0',
-    parts: [
-      {
-        nodeName: 'mesh_mannequin_body',
-        meshName: 'mesh_mannequin_body',
-        materialName: 'mat_mannequin_matte',
-        baseColorFactor: hexToLinearRgba('#35383A'),
-        roughnessFactor: 0.78,
-        metallicFactor: 0.06,
-        acc: body,
-      },
-      {
-        nodeName: 'mesh_mannequin_accents',
-        meshName: 'mesh_mannequin_accents',
-        materialName: 'mat_mannequin_joint',
-        baseColorFactor: hexToLinearRgba('#C5A572'),
-        roughnessFactor: 0.36,
-        metallicFactor: 0.68,
-        acc: accents,
-      },
-    ],
-    extraNodes: [
-      { name: 'spine_upper', translation: [0, 0.62, 0] },
-      { name: 'pelvis', translation: [0, 0, 0] },
-      { name: 'feet', translation: [0, 0, 0] },
-      { name: 'shoulder_left', translation: [-0.24, 0.78, 0.05] },
-      { name: 'shoulder_right', translation: [0.24, 0.78, 0.05] },
-      { name: 'wrist_left', translation: [-0.28, 0.84, 0.03] },
-      {
-        name: 'arven_mannequin_unisex_v1',
-        childNames: [
-          'mesh_mannequin_body',
-          'mesh_mannequin_accents',
-          'spine_upper',
-          'pelvis',
-          'feet',
-          'shoulder_left',
-          'shoulder_right',
-          'wrist_left',
-        ],
-      },
-    ],
-    rootNodeNames: ['arven_mannequin_unisex_v1'],
+    return packGlbParts({
+      sceneName: 'arven_mannequin_unisex_v1',
+      generator: 'ARVEN Atelier Sculpted Mannequin Rig Builder v2.0',
+      parts: [
+        {
+          nodeName: 'mesh_mannequin_body',
+          meshName: 'mesh_mannequin_body',
+          materialName: 'mat_mannequin_matte',
+          baseColorFactor: hexToLinearRgba('#383B3D'),
+          roughnessFactor: 0.84,
+          metallicFactor: 0.04,
+          acc: parts.body,
+        },
+        {
+          nodeName: 'mesh_mannequin_accents',
+          meshName: 'mesh_mannequin_accents',
+          materialName: 'mat_mannequin_joint',
+          baseColorFactor: hexToLinearRgba('#C5A572'),
+          roughnessFactor: 0.32,
+          metallicFactor: 0.84,
+          acc: parts.accents,
+        },
+      ],
+      extraNodes: [
+        { name: 'spine_upper', translation: [0, 0.69, 0] },
+        { name: 'pelvis', translation: [0, 0, 0] },
+        { name: 'feet', translation: [0, 0, 0] },
+        { name: 'shoulder_left', translation: [-0.21, 0.80, 0.015] },
+        { name: 'shoulder_right', translation: [0.21, 0.80, 0.015] },
+        { name: 'wrist_left', translation: [-0.26, 0.84, 0.024] },
+        {
+          name: 'arven_mannequin_unisex_v1',
+          childNames: [
+            'mesh_mannequin_body',
+            'mesh_mannequin_accents',
+            'spine_upper',
+            'pelvis',
+            'feet',
+            'shoulder_left',
+            'shoulder_right',
+            'wrist_left',
+          ],
+        },
+      ],
+      rootNodeNames: ['arven_mannequin_unisex_v1'],
+    });
   });
 }
 
-function hashZoneCode(code: string): number {
-  let hash = 2166136261;
-  for (let i = 0; i < code.length; i += 1) {
-    hash ^= code.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
-}
-
 /**
- * Builds a deterministic architectural gallery zone GLB with baked `COLOR_0` vertex
- * colors, floor plinths, colonnade walls, product pedestals, and portal arch markers.
+ * Builds a deterministic, richly detailed architectural gallery zone GLB with baked `COLOR_0`
+ * vertex AO, `TEXCOORD_0` world-scale UVs, fluted columns/arches/slats, chamfered travertine
+ * pedestals, coffered skylight louvers, brushed bronze inlays, and sculpted portal archways.
  */
 export function buildArvenShowroomZoneGlbBuffer(
   options: ShowroomZoneGlbBuildOptions,
 ): Buffer {
-  const lite = options.profile === 'lite';
-  const warm = options.lightingPreset === 'arven_warm_editorial_v1';
-  const zoneSeed = hashZoneCode(options.code);
-  const segs = lite ? 8 : 14;
+  const cacheKey = `showroom|${JSON.stringify(options)}`;
+  return getOrBuildMemoizedGlb(cacheKey, () => {
+    const built = buildSculptedShowroomParts(options);
+    const warm = options.lightingPreset === 'arven_warm_editorial_v1';
+    const rootName = `zone_${options.code}`;
 
-  const structure = createMeshAccumulator();
-  const accents = createMeshAccumulator();
+    const extraNodes: GlbExtraNodeSpec[] = [
+      ...built.portalTranslations.map((p) => ({
+        name: p.name,
+        translation: p.translation,
+      })),
+      {
+        name: rootName,
+        childNames: [
+          'mesh_zone_floor',
+          'mesh_zone_architecture',
+          'mesh_zone_accents',
+          'mesh_zone_skylight',
+          ...built.portalNodeNames,
+        ],
+      },
+    ];
 
-  const floorTone = warm
-    ? hexToLinearRgba('#2A2825')
-    : hexToLinearRgba('#222528');
-  const wallTone = warm
-    ? hexToLinearRgba('#3B3833')
-    : hexToLinearRgba('#35383A');
-  const plinthTone = warm
-    ? hexToLinearRgba('#4D4942')
-    : hexToLinearRgba('#46494C');
-  const bronzeTone = hexToLinearRgba('#C5A572');
-  const ivoryTone = hexToLinearRgba('#E9E4DA');
-
-  // Gallery floor slab (top at Y = 0)
-  appendBox(structure, 0, -0.06, 0, 12, 0.12, 12, floorTone);
-  // Central recessed architectural dais
-  appendBox(structure, 0, 0.02, -0.4, 6.4, 0.04, 5.2, plinthTone);
-
-  // Back gallery wall with architectural recessed niche (open on +Z for unobstructed orbit)
-  appendBox(structure, 0, 2.1, -5.6, 12, 4.2, 0.32, wallTone);
-  appendBox(structure, 0, 3.85, -5.25, 11.4, 0.24, 0.45, plinthTone);
-
-  // Side colonnade piers (varies rhythm deterministically per zone)
-  const pierCount = lite ? 2 : 3;
-  for (let i = 0; i < pierCount; i += 1) {
-    const z = -4.2 + i * (lite ? 3.8 : 2.6) + ((zoneSeed % 3) * 0.08);
-    appendBox(structure, -5.4, 2.0, z, 0.42, 4.0, 0.65, wallTone);
-    appendBox(structure, 5.4, 2.0, z, 0.42, 4.0, 0.65, wallTone);
-    appendBox(accents, -5.18, 2.0, z, 0.03, 3.6, 0.08, bronzeTone);
-    appendBox(accents, 5.18, 2.0, z, 0.03, 3.6, 0.08, bronzeTone);
-  }
-
-  // Overhead architectural skylight frame
-  appendBox(structure, 0, 4.18, -2.0, 7.6, 0.16, 4.6, plinthTone);
-  appendBox(accents, 0, 4.08, -2.0, 6.6, 0.04, 3.6, ivoryTone);
-
-  // Product pedestals
-  const pedestals: ReadonlyArray<ShowroomZonePedestalSpec> =
-    options.pedestals && options.pedestals.length > 0
-      ? options.pedestals
-      : [
-          { label: 'pedestal_1', position: [-2.2, 0, -1.2] },
-          { label: 'pedestal_2', position: [0, 0, -1.8] },
-          { label: 'pedestal_3', position: [2.2, 0, -1.2] },
-        ];
-
-  for (const pedestal of pedestals) {
-    const [px, py, pz] = pedestal.position;
-    const baseY = Math.max(0, py);
-    appendBox(structure, px, baseY + 0.05, pz, 0.92, 0.1, 0.92, plinthTone);
-    appendTaperedCylinder(
-      structure,
-      px,
-      baseY + 0.1,
-      pz,
-      0.34,
-      0.32,
-      0.72,
-      segs,
-      wallTone,
-    );
-    appendBox(accents, px, baseY + 0.835, pz, 0.72, 0.03, 0.72, bronzeTone);
-  }
-
-  // Portal arch frames
-  const portals = options.portals ?? [];
-  const portalNodeNames: string[] = [];
-  const extraNodes: GlbExtraNodeSpec[] = [];
-
-  for (const portal of portals) {
-    const [px, py, pz] = portal.position;
-    const baseY = Math.max(0, py);
-    appendBox(structure, px - 0.65, baseY + 1.25, pz, 0.18, 2.5, 0.24, wallTone);
-    appendBox(structure, px + 0.65, baseY + 1.25, pz, 0.18, 2.5, 0.24, wallTone);
-    appendBox(structure, px, baseY + 2.58, pz, 1.48, 0.2, 0.28, plinthTone);
-    appendBox(accents, px, baseY + 2.46, pz + 0.11, 1.12, 0.04, 0.04, bronzeTone);
-    const portalName = `portal_${portal.targetZoneCode}`;
-    portalNodeNames.push(portalName);
-    extraNodes.push({
-      name: portalName,
-      translation: [px, baseY, pz],
+    return packGlbParts({
+      sceneName: rootName,
+      generator: 'ARVEN Atelier Architectural Showroom Builder v2.0',
+      parts: [
+        {
+          nodeName: 'mesh_zone_floor',
+          meshName: 'mesh_zone_floor',
+          materialName: 'mat_gallery_floor',
+          baseColorFactor: [1, 1, 1, 1],
+          roughnessFactor: 0.44,
+          metallicFactor: 0.06,
+          acc: built.floor,
+        },
+        {
+          nodeName: 'mesh_zone_architecture',
+          meshName: 'mesh_zone_architecture',
+          materialName: 'mat_gallery_stone',
+          baseColorFactor: [1, 1, 1, 1],
+          roughnessFactor: 0.84,
+          metallicFactor: 0.03,
+          acc: built.architecture,
+        },
+        {
+          nodeName: 'mesh_zone_accents',
+          meshName: 'mesh_zone_accents',
+          materialName: 'mat_gallery_bronze',
+          baseColorFactor: [1, 1, 1, 1],
+          roughnessFactor: 0.3,
+          metallicFactor: 0.86,
+          acc: built.accents,
+        },
+        {
+          nodeName: 'mesh_zone_skylight',
+          meshName: 'mesh_zone_skylight',
+          materialName: 'mat_gallery_skylight',
+          baseColorFactor: [1, 1, 1, 1],
+          roughnessFactor: 0.25,
+          metallicFactor: 0.0,
+          emissiveFactor: warm ? [0.95, 0.85, 0.72] : [0.9, 0.89, 0.85],
+          acc: built.skylight,
+        },
+      ],
+      extraNodes,
+      rootNodeNames: [rootName],
     });
-  }
-
-  const rootName = `zone_${options.code}`;
-  extraNodes.push({
-    name: rootName,
-    childNames: ['mesh_zone_architecture', 'mesh_zone_accents', ...portalNodeNames],
-  });
-
-  return packGlbParts({
-    sceneName: rootName,
-    generator: 'ARVEN Atelier Showroom Zone Builder v1.0',
-    parts: [
-      {
-        nodeName: 'mesh_zone_architecture',
-        meshName: 'mesh_zone_architecture',
-        materialName: 'mat_gallery_stone',
-        baseColorFactor: [1, 1, 1, 1],
-        roughnessFactor: 0.88,
-        metallicFactor: 0.04,
-        acc: structure,
-      },
-      {
-        nodeName: 'mesh_zone_accents',
-        meshName: 'mesh_zone_accents',
-        materialName: 'mat_gallery_bronze',
-        baseColorFactor: [1, 1, 1, 1],
-        roughnessFactor: 0.42,
-        metallicFactor: 0.55,
-        acc: accents,
-      },
-    ],
-    extraNodes,
-    rootNodeNames: [rootName],
   });
 }
 
@@ -1002,7 +775,9 @@ function hasForbiddenPolyglotPrefix(bytes: Uint8Array): string | null {
   ) {
     return 'Executable ELF signature rejected';
   }
-  const headText = new TextDecoder().decode(bytes.subarray(0, Math.min(bytes.length, 512))).toLowerCase();
+  const headText = new TextDecoder()
+    .decode(bytes.subarray(0, Math.min(bytes.length, 512)))
+    .toLowerCase();
   if (
     headText.includes('<script') ||
     headText.includes('<!doctype') ||
@@ -1344,6 +1119,55 @@ export function inferSilhouetteFromSlug(slug: string): GarmentSilhouetteInput {
   return 'tee';
 }
 
+function getCameraBaselineForSilhouette(
+  silhouette: GarmentSilhouetteInput,
+): Product3DAssetConfigDto['coordinateSystem']['cameraBaseline'] {
+  switch (silhouette) {
+    case 'sneaker':
+      return {
+        fovDeg: 35,
+        position: [0.46, 0.24, 0.68],
+        target: [0, 0.065, 0.015],
+        minDistance: 0.36,
+        maxDistance: 2.1,
+      };
+    case 'crossbody':
+      return {
+        fovDeg: 35,
+        position: [0.56, 0.38, 1.26],
+        target: [0, 0.28, 0],
+        minDistance: 0.5,
+        maxDistance: 2.8,
+      };
+    case 'trouser':
+      return {
+        fovDeg: 35,
+        position: [0.76, 0.62, 1.92],
+        target: [0, 0.54, 0],
+        minDistance: 0.8,
+        maxDistance: 3.8,
+      };
+    case 'shirt':
+    case 'overshirt':
+      return {
+        fovDeg: 35,
+        position: [0.72, 0.56, 1.66],
+        target: [0, 0.49, 0],
+        minDistance: 0.72,
+        maxDistance: 3.4,
+      };
+    case 'tee':
+    default:
+      return {
+        fovDeg: 35,
+        position: [0.68, 0.54, 1.54],
+        target: [0, 0.49, 0],
+        minDistance: 0.66,
+        maxDistance: 3.2,
+      };
+  }
+}
+
 export function buildDefaultAssetConfig(options: {
   readonly silhouette: GarmentSilhouetteInput;
   readonly lightingPreset?: LightingPresetInput;
@@ -1360,21 +1184,7 @@ export function buildDefaultAssetConfig(options: {
       frontAxis: '+Z',
       groundY: 0,
       pivot: [0, 0, 0],
-      cameraBaseline: {
-        fovDeg: 35,
-        position:
-          options.silhouette === 'sneaker' || options.silhouette === 'crossbody'
-            ? [0.75, 0.45, 1.35]
-            : [0.85, 0.65, 2.05],
-        target:
-          options.silhouette === 'sneaker'
-            ? [0, 0.12, 0]
-            : options.silhouette === 'crossbody'
-              ? [0, 0.3, 0]
-              : [0, 0.46, 0],
-        minDistance: 0.75,
-        maxDistance: 4.5,
-      },
+      cameraBaseline: getCameraBaselineForSilhouette(options.silhouette),
     },
     silhouette: options.silhouette,
     lightingPreset: options.lightingPreset ?? 'arven_studio_neutral_v1',
@@ -1395,16 +1205,98 @@ export function buildDefaultAssetConfig(options: {
   };
 }
 
+function buildPosterArtworkSvg(
+  silhouette: GarmentSilhouetteInput | 'mannequin' | 'showroom',
+  swatch: string,
+): string {
+  const accent = '#C5A572';
+  const trim = '#E9E4DA';
+  switch (silhouette) {
+    case 'trouser':
+      return `<g transform="translate(260, 215)">
+        <path d="M70,12 L310,12 L322,72 L346,620 L212,620 L190,220 L168,620 L34,620 L58,72 Z" fill="${swatch}" stroke="${accent}" stroke-width="2" />
+        <line x1="70" y1="54" x2="310" y2="54" stroke="${accent}" stroke-width="1.5" />
+        <line x1="122" y1="58" x2="105" y2="612" stroke="${trim}" stroke-width="1" opacity="0.45" />
+        <line x1="258" y1="58" x2="275" y2="612" stroke="${trim}" stroke-width="1" opacity="0.45" />
+        <circle cx="215" cy="33" r="6" fill="${accent}" />
+      </g>`;
+    case 'sneaker':
+      return `<g transform="translate(175, 395)">
+        <path d="M55,215 C55,150 95,120 175,115 L295,62 C345,42 425,48 475,118 L502,215 Z" fill="${swatch}" stroke="${accent}" stroke-width="2" />
+        <rect x="46" y="212" width="464" height="44" rx="12" fill="${trim}" stroke="${accent}" stroke-width="1.5" />
+        <line x1="56" y1="228" x2="500" y2="228" stroke="#5E5C54" stroke-width="1" stroke-dasharray="6 4" />
+        <line x1="240" y1="102" x2="330" y2="78" stroke="${accent}" stroke-width="2" />
+        <line x1="255" y1="118" x2="345" y2="94" stroke="${accent}" stroke-width="2" />
+      </g>`;
+    case 'crossbody':
+      return `<g transform="translate(245, 225)">
+        <path d="M105,310 C105,40 305,40 305,310" fill="none" stroke="${trim}" stroke-width="14" opacity="0.85" />
+        <rect x="75" y="305" width="260" height="220" rx="8" fill="${swatch}" stroke="${accent}" stroke-width="2" />
+        <path d="M75,305 L335,305 L335,442 C335,454 325,462 312,462 L98,462 C85,462 75,454 75,442 Z" fill="${swatch}" stroke="${accent}" stroke-width="1.8" />
+        <rect x="174" y="446" width="62" height="16" rx="2" fill="${accent}" />
+      </g>`;
+    case 'shirt':
+      return `<g transform="translate(190, 215)">
+        <path d="M180,32 L260,12 L340,32 L462,102 L495,435 L425,442 L390,192 L390,565 C330,596 190,596 130,565 L130,192 L95,442 L25,435 L58,102 Z" fill="${swatch}" stroke="${accent}" stroke-width="2" />
+        <path d="M214,24 L260,72 L306,24" fill="none" stroke="${accent}" stroke-width="2" />
+        <line x1="260" y1="72" x2="260" y2="578" stroke="${trim}" stroke-width="1.2" opacity="0.55" />
+      </g>`;
+    case 'overshirt':
+      return `<g transform="translate(190, 220)">
+        <path d="M172,34 L260,16 L348,34 L468,96 L496,432 L422,438 L392,188 L392,545 L128,545 L128,188 L98,438 L24,432 L52,96 Z" fill="${swatch}" stroke="${accent}" stroke-width="2" />
+        <rect x="155" y="195" width="76" height="84" fill="none" stroke="${accent}" stroke-width="1.5" />
+        <rect x="289" y="195" width="76" height="84" fill="none" stroke="${accent}" stroke-width="1.5" />
+        <circle cx="260" cy="145" r="7" fill="${accent}" />
+        <circle cx="260" cy="245" r="7" fill="${accent}" />
+        <circle cx="260" cy="345" r="7" fill="${accent}" />
+        <circle cx="260" cy="445" r="7" fill="${accent}" />
+      </g>`;
+    case 'showroom':
+      return `<g transform="translate(135, 220)">
+        <rect x="0" y="0" width="630" height="510" fill="none" stroke="${accent}" stroke-width="1.2" opacity="0.6" />
+        <path d="M215,510 L215,195 C215,115 415,115 415,195 L415,510" fill="none" stroke="${accent}" stroke-width="2" />
+        <rect x="120" y="335" width="90" height="175" fill="${swatch}" stroke="${accent}" stroke-width="1.5" />
+        <rect x="270" y="310" width="90" height="200" fill="${swatch}" stroke="${accent}" stroke-width="1.5" />
+        <rect x="420" y="335" width="90" height="175" fill="${swatch}" stroke="${accent}" stroke-width="1.5" />
+      </g>`;
+    case 'mannequin':
+      return `<g transform="translate(310, 190)">
+        <ellipse cx="140" cy="52" rx="34" ry="48" fill="${swatch}" stroke="${accent}" stroke-width="1.8" />
+        <path d="M72,135 L208,135 L188,335 L210,415 L178,615 L146,615 L140,425 L134,615 L102,615 L70,415 L92,335 Z" fill="${swatch}" stroke="${accent}" stroke-width="1.8" />
+        <ellipse cx="140" cy="635" rx="95" ry="16" fill="none" stroke="${accent}" stroke-width="2" />
+      </g>`;
+    case 'tee':
+    default:
+      return `<g transform="translate(190, 225)">
+        <path d="M174,36 C210,72 310,72 346,36 L448,96 L486,232 L396,265 L380,192 L380,545 L140,545 L140,192 L124,265 L34,232 L72,96 Z" fill="${swatch}" stroke="${accent}" stroke-width="2" />
+        <path d="M174,36 C210,82 310,82 346,36" fill="none" stroke="${trim}" stroke-width="5" opacity="0.7" />
+        <line x1="140" y1="522" x2="380" y2="522" stroke="${accent}" stroke-width="1" stroke-dasharray="6 5" opacity="0.65" />
+      </g>`;
+  }
+}
+
 /**
- * Generates an architectural SVG poster buffer (or deterministic studio card) for 3D fallback.
+ * Generates a refined architectural atelier SVG studio poster for 3D fallback & SSR preview.
  */
 export function buildStudioPosterSvg(options: {
   readonly title: string;
   readonly subtitle: string;
   readonly primaryHex?: string;
+  readonly silhouette?: GarmentSilhouetteInput | 'mannequin' | 'showroom';
 }): string {
-  const bg = options.primaryHex && options.primaryHex !== '#F8F7F3' ? '#17191B' : '#35383A';
-  const swatch = options.primaryHex ?? '#17191B';
+  const bg = options.primaryHex && options.primaryHex !== '#F8F7F3' ? '#17191B' : '#26292C';
+  const swatch = options.primaryHex ?? '#2B2E31';
+  const inferred: GarmentSilhouetteInput | 'mannequin' | 'showroom' =
+    options.silhouette ??
+    (options.title.toLowerCase().includes('mannequin')
+      ? 'mannequin'
+      : options.subtitle.toLowerCase().includes('showroom') ||
+          options.title.toLowerCase().includes('atrium') ||
+          options.title.toLowerCase().includes('galeri') ||
+          options.title.toLowerCase().includes('annex')
+        ? 'showroom'
+        : inferSilhouetteFromSlug(options.title));
+
   const esc = (raw: string) =>
     raw
       .replaceAll('&', '&amp;')
@@ -1413,14 +1305,22 @@ export function buildStudioPosterSvg(options: {
       .replaceAll('"', '&quot;');
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1125" width="900" height="1125" role="img" aria-label="${esc(options.title)}">
-  <rect width="900" height="1125" fill="${bg}" />
-  <rect x="48" y="48" width="804" height="1029" fill="none" stroke="#C5A572" stroke-width="1.5" opacity="0.7" />
-  <ellipse cx="450" cy="835" rx="220" ry="38" fill="#0D0E10" opacity="0.55" />
-  <rect x="265" y="255" width="370" height="515" fill="${swatch}" stroke="#C5A572" stroke-width="2" />
-  <rect x="385" y="235" width="130" height="44" fill="#35383A" stroke="#F8F7F3" stroke-width="1" />
-  <text x="90" y="122" fill="#C5A572" font-family="sans-serif" font-size="16" letter-spacing="5">ARVEN 3D STUDIO POSTER</text>
-  <text x="90" y="965" fill="#F8F7F3" font-family="serif" font-size="34">${esc(options.title)}</text>
-  <text x="90" y="1010" fill="#B2B0A6" font-family="sans-serif" font-size="18">${esc(options.subtitle)}</text>
+  <defs>
+    <radialGradient id="arven-studio-glow" cx="50%" cy="44%" r="52%">
+      <stop offset="0%" stop-color="#35383A" stop-opacity="0.72" />
+      <stop offset="100%" stop-color="${bg}" stop-opacity="1" />
+    </radialGradient>
+  </defs>
+  <rect width="900" height="1125" fill="url(#arven-studio-glow)" />
+  <rect x="44" y="44" width="812" height="1037" fill="none" stroke="#C5A572" stroke-width="1.2" opacity="0.65" />
+  <line x1="44" y1="152" x2="856" y2="152" stroke="#C5A572" stroke-width="0.75" opacity="0.35" />
+  <line x1="44" y1="888" x2="856" y2="888" stroke="#C5A572" stroke-width="0.75" opacity="0.35" />
+  <ellipse cx="450" cy="832" rx="235" ry="34" fill="#0B0C0D" opacity="0.62" />
+  ${buildPosterArtworkSvg(inferred, swatch)}
+  <text x="84" y="108" fill="#C5A572" font-family="sans-serif" font-size="15" letter-spacing="5">ARVEN 3D ATELIER PLATE</text>
+  <text x="84" y="952" fill="#F8F7F3" font-family="serif" font-size="34">${esc(options.title)}</text>
+  <text x="84" y="998" fill="#B2B0A6" font-family="sans-serif" font-size="18">${esc(options.subtitle)}</text>
+  <text x="84" y="1038" fill="#C5A572" font-family="monospace" font-size="13" letter-spacing="3">BEYOND TRENDS. BEYOND TIME.</text>
 </svg>`;
 }
 

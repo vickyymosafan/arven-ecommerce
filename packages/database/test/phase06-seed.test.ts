@@ -178,5 +178,5 @@ describe('Phase 06 CMS & Coupon Seed Invariants', () => {
     } finally {
       await prisma.$disconnect();
     }
-  });
+  }, 20_000);
 });

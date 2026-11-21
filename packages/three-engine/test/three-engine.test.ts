@@ -7,6 +7,7 @@ import {
   buildArvenGarmentGlbBuffer,
   disposeSceneGraph,
   inspectAndValidateGlbBuffer,
+  upgradeGarmentSceneToAtelierPbr,
 } from '../src/index.js';
 
 describe('ARVEN Three Engine GLB, Presets & Resource Disposal', () => {
@@ -118,5 +119,97 @@ describe('ARVEN Three Engine GLB, Presets & Resource Disposal', () => {
 
     const emptySummary = disposeSceneGraph(group);
     expect(emptySummary.geometriesDisposed).toBe(1);
+  });
+
+  it('builds distinct sculpted UV-mapped glTF 2.0 binaries for all 7 ARVEN garments within LOD budgets', () => {
+    const cases: ReadonlyArray<{
+      readonly silhouette: 'tee' | 'shirt' | 'trouser' | 'overshirt' | 'sneaker' | 'crossbody';
+      readonly slug: string;
+    }> = [
+      { silhouette: 'tee', slug: 'essentials-heavyweight-crew-tee' },
+      { silhouette: 'shirt', slug: 'atelier-oversized-poplin-shirt' },
+      { silhouette: 'trouser', slug: 'form-wide-leg-tailored-trouser' },
+      { silhouette: 'overshirt', slug: 'atelier-boxy-wool-overshirt' },
+      { silhouette: 'overshirt', slug: 'atelier-archive-field-jacket' },
+      { silhouette: 'sneaker', slug: 'movement-minimalist-leather-sneaker' },
+      { silhouette: 'crossbody', slug: 'form-structured-calfskin-crossbody' },
+    ];
+
+    for (const item of cases) {
+      const defBytes = buildArvenGarmentGlbBuffer({
+        silhouette: item.silhouette,
+        productSlug: item.slug,
+        profile: 'default',
+      });
+      const liteBytes = buildArvenGarmentGlbBuffer({
+        silhouette: item.silhouette,
+        productSlug: item.slug,
+        profile: 'lite',
+      });
+
+      const defReport = inspectAndValidateGlbBuffer(defBytes, {
+        profile: 'default',
+        expectedMaterialSlots: DEFAULT_ARVEN_MATERIAL_SLOTS,
+      });
+      const liteReport = inspectAndValidateGlbBuffer(liteBytes, {
+        profile: 'lite',
+        expectedMaterialSlots: DEFAULT_ARVEN_MATERIAL_SLOTS,
+      });
+
+      expect(defReport.valid).toBe(true);
+      expect(liteReport.valid).toBe(true);
+      expect(defReport.triangleCount).toBeGreaterThan(800);
+      expect(liteReport.triangleCount).toBeLessThan(defReport.triangleCount);
+
+      // Verify TEXCOORD_0 and COLOR_0 are embedded inside glTF JSON
+      const view = new DataView(defBytes.buffer, defBytes.byteOffset, defBytes.byteLength);
+      const jsonLen = view.getUint32(12, true);
+      const gltf = JSON.parse(
+        new TextDecoder('utf-8').decode(defBytes.subarray(20, 20 + jsonLen)),
+      ) as {
+        meshes: Array<{ primitives: Array<{ attributes: Record<string, number> }> }>;
+      };
+      for (const mesh of gltf.meshes) {
+        for (const prim of mesh.primitives) {
+          expect(typeof prim.attributes['TEXCOORD_0']).toBe('number');
+          expect(typeof prim.attributes['COLOR_0']).toBe('number');
+        }
+      }
+    }
+  });
+
+  it('upgrades garment materials to MeshPhysicalMaterial with procedural PBR textures and disposes cleanly', () => {
+    const group = new THREE.Group();
+    const geom = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    const bodyMesh = new THREE.Mesh(
+      geom,
+      new THREE.MeshStandardMaterial({ name: 'mat_fabric_primary', color: '#1D1E20' }),
+    );
+    bodyMesh.name = 'mesh_garment_body';
+    const buttonMesh = new THREE.Mesh(
+      geom,
+      new THREE.MeshStandardMaterial({ name: 'mat_hardware_accent', color: '#C5A572' }),
+    );
+    buttonMesh.name = 'mesh_buttons';
+    group.add(bodyMesh, buttonMesh);
+
+    upgradeGarmentSceneToAtelierPbr(group, {
+      silhouette: 'overshirt',
+      productSlug: 'atelier-boxy-wool-overshirt',
+      lite: true,
+    });
+
+    expect(bodyMesh.material).toBeInstanceOf(THREE.MeshPhysicalMaterial);
+    const physBody = bodyMesh.material as THREE.MeshPhysicalMaterial;
+    expect(physBody.normalMap).toBeInstanceOf(THREE.DataTexture);
+    expect(physBody.roughnessMap).toBeInstanceOf(THREE.DataTexture);
+    expect(physBody.sheen).toBeGreaterThan(0.5);
+
+    const tracker = new ResourceTracker();
+    tracker.trackObject3D(group);
+    const summary = tracker.disposeAll();
+    expect(summary.texturesDisposed).toBe(4);
+    expect(summary.materialsDisposed).toBe(2);
+    expect(summary.geometriesDisposed).toBe(1);
   });
 });

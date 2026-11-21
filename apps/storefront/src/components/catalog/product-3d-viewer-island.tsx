@@ -125,6 +125,7 @@ export function Product3DViewerIsland({
         assetId={asset.id}
         version={asset.version}
         productName={asset.productName}
+        productSlug={asset.productSlug}
         modelUrl={asset.modelUrl}
         mobileModelUrl={asset.mobileModelUrl}
         posterUrl={asset.posterUrl}
@@ -139,12 +140,12 @@ export function Product3DViewerIsland({
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#46494C] bg-[#17191B] px-3 py-2 text-xs text-[#B2B0A6] sm:px-4">
         <span className="font-mono tabular-nums">
-          Proporsi default:{' '}
+          Geometri studio:{' '}
           {asset.config.qualityProfiles.default.triangles.toLocaleString('id-ID')} tri |{' '}
           {(asset.bytes / 1024).toFixed(1)} KB
         </span>
         <span className="font-mono text-[#C5A572]">
-          Render sesuai kebutuhan (demand) | Sumber lokal aman
+          Material PBR fisik | Render on-demand
         </span>
       </div>
     </section>

@@ -2,7 +2,7 @@
 
 import type { DeviceQualityTier } from '../capabilities.js';
 
-export type CameraPresetKey = 'three_quarter' | 'front' | 'back' | 'detail';
+export type CameraPresetKey = 'three_quarter' | 'front' | 'back' | 'side' | 'detail';
 
 export interface CameraPresetOption {
   readonly key: CameraPresetKey;
@@ -12,8 +12,9 @@ export interface CameraPresetOption {
 export const ARVEN_CAMERA_PRESETS: readonly CameraPresetOption[] = [
   { key: 'three_quarter', label: 'Tiga Perempat' },
   { key: 'front', label: 'Depan' },
+  { key: 'side', label: 'Samping' },
   { key: 'back', label: 'Belakang' },
-  { key: 'detail', label: 'Detail' },
+  { key: 'detail', label: 'Detail Kain' },
 ] as const;
 
 export interface AccessibleProductControlsProps {

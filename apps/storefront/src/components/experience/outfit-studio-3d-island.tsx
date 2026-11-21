@@ -62,8 +62,23 @@ function probeWebGLSupport(): boolean {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return false;
   }
+  const isTestEnv =
+    typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+  const win = window as Window & {
+    __ARVEN_WEBGL_CAPABILITY__?: {
+      readonly supported: boolean;
+      readonly maxTextureSize: number;
+      readonly rendererLabel: string | null;
+      readonly reason: string | null;
+    };
+  };
+  if (!isTestEnv && win.__ARVEN_WEBGL_CAPABILITY__) {
+    return win.__ARVEN_WEBGL_CAPABILITY__.supported;
+  }
   try {
     const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
     const gl =
       (canvas.getContext('webgl2', {
         failIfMajorPerformanceCaveat: false,
@@ -72,15 +87,16 @@ function probeWebGLSupport(): boolean {
         failIfMajorPerformanceCaveat: false,
       }) as WebGLRenderingContext | null);
 
-    if (!gl) {
-      return false;
+    const supported = Boolean(gl);
+    if (!isTestEnv) {
+      win.__ARVEN_WEBGL_CAPABILITY__ = {
+        supported,
+        maxTextureSize: gl ? Number(gl.getParameter(gl.MAX_TEXTURE_SIZE)) || 2048 : 0,
+        rendererLabel: supported ? 'webgl_ready' : null,
+        reason: supported ? null : 'webgl_context_unavailable',
+      };
     }
-
-    const loseExt = gl.getExtension('WEBGL_lose_context');
-    if (loseExt) {
-      loseExt.loseContext();
-    }
-    return true;
+    return supported;
   } catch {
     return false;
   }
