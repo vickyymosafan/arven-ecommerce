@@ -140,12 +140,12 @@ export function CollectionDetailView({ slug }: { slug: string }) {
               ) : null}
             </div>
 
-            <h1 className="font-display text-3xl font-normal tracking-[-0.015em] text-ink sm:text-5xl">
+            <h1 className="type-display-lg text-ink">
               {collection.name}
             </h1>
 
             {collection.description ? (
-              <p className="max-w-[var(--container-prose)] text-sm leading-relaxed text-ink-secondary">
+              <p className="type-ui max-w-[var(--container-prose)] text-ink-secondary">
                 {collection.description}
               </p>
             ) : null}

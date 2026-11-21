@@ -259,48 +259,42 @@ export default function AdminOverviewPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5 transition-all duration-[var(--duration-fast)] hover:border-gold/50 hover:shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
-                          Gross Sales
-                        </p>
-                        <span className="font-mono text-[10px] text-gold uppercase tracking-[0.04em]">IDR</span>
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5 transition-colors duration-[var(--duration-fast)] hover:border-strong-border">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="type-eyebrow text-ink-muted">Gross Sales</p>
+                        <span className="text-xs font-semibold uppercase tracking-[0.04em] text-gold-fg">
+                          IDR
+                        </span>
                       </div>
                       <p className="font-mono text-2xl font-medium tabular-nums text-ink">
                         {formatIDR(analytics.grossSalesIdr ?? 0)}
                       </p>
                     </Surface>
-                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5 transition-all duration-[var(--duration-fast)] hover:border-strong-border hover:shadow-sm">
-                      <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
-                        Paid Orders
-                      </p>
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5 transition-colors duration-[var(--duration-fast)] hover:border-strong-border">
+                      <p className="type-eyebrow text-ink-muted">Paid Orders</p>
                       <p className="font-mono text-2xl font-medium tabular-nums text-ink">
                         {analytics.paidOrders}
                       </p>
                     </Surface>
-                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5 transition-all duration-[var(--duration-fast)] hover:border-gold/50 hover:shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
-                          AOV
-                        </p>
-                        <span className="font-mono text-[10px] text-gold uppercase tracking-[0.04em]">IDR</span>
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5 transition-colors duration-[var(--duration-fast)] hover:border-strong-border">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="type-eyebrow text-ink-muted">AOV</p>
+                        <span className="text-xs font-semibold uppercase tracking-[0.04em] text-gold-fg">
+                          IDR
+                        </span>
                       </div>
                       <p className="font-mono text-2xl font-medium tabular-nums text-ink">
                         {formatIDR(analytics.averageOrderValueIdr ?? 0)}
                       </p>
                     </Surface>
-                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5 transition-all duration-[var(--duration-fast)] hover:border-strong-border hover:shadow-sm">
-                      <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
-                        Pending Payment
-                      </p>
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5 transition-colors duration-[var(--duration-fast)] hover:border-strong-border">
+                      <p className="type-eyebrow text-ink-muted">Pending Payment</p>
                       <p className="font-mono text-2xl font-medium tabular-nums text-ink">
                         {analytics.pendingPaymentOrders}
                       </p>
                     </Surface>
-                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5 transition-all duration-[var(--duration-fast)] hover:border-strong-border hover:shadow-sm">
-                      <p className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
-                        Open Returns
-                      </p>
+                    <Surface variant="elevated" border="hairline" padding="md" className="space-y-1.5 transition-colors duration-[var(--duration-fast)] hover:border-strong-border">
+                      <p className="type-eyebrow text-ink-muted">Open Returns</p>
                       <p className="font-mono text-2xl font-medium tabular-nums text-ink">
                         {analytics.openReturnsCount}
                       </p>
@@ -402,8 +396,8 @@ export default function AdminOverviewPage() {
           </div>
 
           <section aria-labelledby="ops-modules-heading" className="space-y-4">
-            <h2 id="ops-modules-heading" className="font-display text-2xl font-normal text-ink">
-              Phase 06 Commerce Operations
+            <h2 id="ops-modules-heading" className="type-h2 text-ink">
+              Commerce &amp; Fulfillment
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Surface variant="subtle" border="hairline" padding="md" className="flex flex-col justify-between gap-4">
@@ -477,8 +471,8 @@ export default function AdminOverviewPage() {
           </section>
 
           <section aria-labelledby="catalog-modules-heading" className="space-y-4">
-            <h2 id="catalog-modules-heading" className="font-display text-2xl font-normal text-ink">
-              Phase 03 Catalog Operations
+            <h2 id="catalog-modules-heading" className="type-h2 text-ink">
+              Catalog &amp; Merchandising
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Surface variant="subtle" border="hairline" padding="md" className="flex flex-col justify-between gap-4">
@@ -538,8 +532,8 @@ export default function AdminOverviewPage() {
           </section>
 
           <section aria-labelledby="modules-heading" className="space-y-4">
-            <h2 id="modules-heading" className="font-display text-2xl font-normal text-ink">
-              Phase 02 Governance Workspaces
+            <h2 id="modules-heading" className="type-h2 text-ink">
+              Access &amp; System Governance
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Surface variant="subtle" border="hairline" padding="md" className="flex flex-col justify-between gap-4">

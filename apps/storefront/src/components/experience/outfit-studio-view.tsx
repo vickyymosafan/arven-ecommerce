@@ -713,7 +713,7 @@ export function OutfitStudioView({
             <div className="flex flex-wrap items-center gap-2">
               <a
                 href="#outfit-studio-controls"
-                className="sr-only focus:not-sr-only focus:inline-flex focus:min-h-11 focus:items-center focus:rounded-[var(--radius-sm)] focus:border focus:border-strong-border focus:bg-canvas focus:px-4 focus:py-2 focus:text-xs focus:font-semibold focus:text-ink focus:outline-2 focus:outline-offset-2 focus:outline-focus"
+                className="fixed top-3 left-3 z-[var(--z-toast)] inline-flex min-h-11 -translate-y-[250%] items-center rounded-[var(--radius-xs)] border border-strong-border bg-inverse px-4 py-2 text-xs font-semibold text-ink-inverse shadow-[var(--shadow-raised)] transition-transform duration-[var(--duration-fast)] focus:translate-y-0 focus-visible:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               >
                 Lewati Studio 3D
               </a>

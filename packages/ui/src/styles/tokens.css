@@ -43,14 +43,29 @@
   --color-terracotta-700: #9C3D3D;
   --color-terracotta-900: #35231E;
 
-  /* Champagne / Gold Atelier Accent Primitives */
-  --color-gold-200: #EADBCC;
-  --color-gold-300: #D8C3A5;
-  --color-gold-400: #C5A880;
-  --color-gold-600: #9B7E56;
-  --color-gold-900: #332616;
+  /* Atelier Warm Brass / Champagne Gold Primitives (WCAG 2.2 Calibrated) */
+  --color-gold-100: #F5EFE4;    /* Light soft champagne tint surface */
+  --color-gold-200: #E2C9A4;    /* Dark-mode accessible champagne text (>= 7.4:1 on Graphite) */
+  --color-gold-300: #D8C3A5;    /* Dark-mode accent button & highlight */
+  --color-gold-400: #C5A880;    /* Solid brushed gold fill with Charcoal ink (8.16:1) */
+  --color-gold-500: #B59568;    /* Decorative accent border */
+  --color-gold-700: #6E542E;    /* Light-mode accessible bronze text (6.96:1 on White, 6.48:1 on Ivory) */
+  --color-gold-900: #2C251B;    /* Dark-mode soft espresso-gold tint surface */
 
   --color-scrim-dark-72: rgba(23, 25, 27, 0.72);
+  --color-scrim-dark-82: rgba(23, 25, 27, 0.82);
+
+  /* Modular Fluid Typography Scale (DESIGN.md 4.2, WCAG 1.4.4 max/min <= 2.5) */
+  --text-display-xl: clamp(2.5rem, 3.8vw + 1.15rem, 4.75rem);
+  --text-display-lg: clamp(2rem, 2.6vw + 0.9rem, 3.25rem);
+  --text-h1: clamp(1.75rem, 1.8vw + 0.85rem, 2.5rem);
+  --text-h2: clamp(1.25rem, 0.9vw + 0.9rem, 1.625rem);
+  --text-h3: 1.125rem;
+  --text-body: 1rem;
+  --text-ui: 0.875rem;
+  --text-caption: 0.75rem;
+  --text-micro-label: 0.75rem;
+  --text-sku: 0.8125rem;
 
   /* Spacing Scale (4px base) */
   --space-1: 4px;
@@ -80,7 +95,7 @@
   --radius-md: 8px;
   --radius-full: 9999px;
 
-  /* Elevation & Z-Index */
+  /* Elevation & Z-Index (Flat tonal surfaces by default; shadows for overlays only) */
   --shadow-none: none;
   --shadow-raised: 0 4px 16px rgba(23, 25, 27, 0.08);
   --shadow-overlay: 0 12px 36px rgba(23, 25, 27, 0.18);
@@ -94,8 +109,8 @@
 
   /* Motion Primitives */
   --duration-instant: 0ms;
-  --duration-fast: 120ms;
-  --duration-base: 200ms;
+  --duration-fast: 140ms;
+  --duration-base: 220ms;
   --duration-moderate: 320ms;
   --duration-editorial: 480ms;
 
@@ -105,12 +120,14 @@
 
 /* ==========================================================================
    LAYER 2: SEMANTIC TOKENS
-   Light Editorial Storefront (Default & [data-theme="light"])
+   Light Editorial Storefront (Base default & explicit [data-theme="light"])
    ========================================================================== */
+:root {
+  color-scheme: light dark;
+}
+
 :root,
 [data-theme="light"] {
-  color-scheme: light;
-
   --arven-surface-canvas: var(--color-ivory-50);       /* #F8F7F3 */
   --arven-surface-subtle: var(--color-ivory-100);      /* #F1EFE9 */
   --arven-surface-panel: var(--color-cream-200);       /* #E9E4DA */
@@ -132,12 +149,16 @@
   --arven-accent-link: var(--color-blue-600);          /* #1F4E79 */
   --arven-focus-ring: var(--color-blue-600);           /* #1F4E79 */
 
-  --arven-accent-gold: var(--color-gold-400);          /* #C5A880 */
-  --arven-accent-gold-hover: var(--color-gold-600);    /* #9B7E56 */
-  --arven-accent-gold-subtle: rgba(197, 168, 128, 0.12);
-  --arven-glass-bg: rgba(248, 247, 243, 0.88);
-  --arven-glass-border: rgba(216, 211, 200, 0.7);
-  --arven-shadow-glass: 0 8px 32px 0 rgba(23, 25, 27, 0.05);
+  --arven-accent-gold: var(--color-gold-400);          /* #C5A880 solid button fill (8.16:1 w/ charcoal) */
+  --arven-accent-gold-hover: var(--color-gold-500);    /* #B59568 */
+  --arven-accent-gold-fg: var(--color-gold-700);       /* #6E542E text on light (6.48:1+) */
+  --arven-accent-gold-bg: var(--color-gold-100);       /* #F5EFE4 soft champagne badge bg */
+  --arven-accent-gold-border: var(--color-gold-500);   /* #B59568 */
+  --arven-accent-gold-subtle: var(--color-gold-100);
+
+  --arven-glass-bg: rgba(248, 247, 243, 0.92);
+  --arven-glass-border: rgba(216, 211, 200, 0.85);
+  --arven-shadow-glass: 0 8px 28px 0 rgba(23, 25, 27, 0.06);
 
   --arven-status-info-fg: var(--color-blue-600);       /* #1F4E79 */
   --arven-status-info-bg: var(--color-blue-100);       /* #E6EEF5 */
@@ -147,19 +168,80 @@
   --arven-status-warning-bg: var(--color-ochre-100);   /* #F3ECE0 */
   --arven-status-danger-fg: var(--color-terracotta-700); /* #9C3D3D */
   --arven-status-danger-bg: var(--color-terracotta-100); /* #F5EAE8 */
+
+  --arven-scrollbar-thumb: #747269;
+  --arven-scrollbar-track: #F1EFE9;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
 }
 
 /* ==========================================================================
-   Dark Showcase & Admin Operations Console ([data-theme="dark"])
-   Independently calibrated; never synthesized via CSS invert() filters.
+   Dark Showcase & Admin Operations Console
+   Follows OS prefers-color-scheme automatically when no explicit light pin
+   is active, and supports explicit [data-theme="dark"] root or subtree bands.
    ========================================================================== */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --arven-surface-canvas: var(--color-charcoal-900);   /* #17191B */
+    --arven-surface-subtle: var(--color-charcoal-800);   /* #222528 */
+    --arven-surface-panel: var(--color-graphite-700);    /* #35383A */
+    --arven-surface-panel-hover: var(--color-charcoal-800);
+    --arven-surface-elevated: var(--color-graphite-700); /* #35383A */
+    --arven-surface-inverse: var(--color-ivory-50);      /* #F8F7F3 */
+
+    --arven-text-primary: var(--color-ivory-50);         /* #F8F7F3 */
+    --arven-text-secondary: var(--color-cream-200);      /* #E9E4DA */
+    --arven-text-muted: var(--color-stone-300);          /* #B2B0A6 */
+    --arven-text-inverse: var(--color-charcoal-900);     /* #17191B */
+
+    --arven-border-hairline: var(--color-charcoal-border-hairline); /* #46494C */
+    --arven-border-control: var(--color-stone-400);      /* #9E9C92 */
+    --arven-border-strong: var(--color-ivory-50);        /* #F8F7F3 */
+
+    --arven-accent-primary: var(--color-ivory-50);       /* #F8F7F3 */
+    --arven-accent-primary-hover: var(--color-cream-200); /* #E9E4DA */
+    --arven-accent-link: var(--color-blue-300);          /* #82B0DC */
+    --arven-focus-ring: var(--color-blue-300);           /* #82B0DC */
+
+    --arven-accent-gold: var(--color-gold-300);          /* #D8C3A5 */
+    --arven-accent-gold-hover: var(--color-gold-200);    /* #E2C9A4 */
+    --arven-accent-gold-fg: var(--color-gold-200);       /* #E2C9A4 (11.1:1 on Charcoal, 7.4:1 on Graphite) */
+    --arven-accent-gold-bg: var(--color-gold-900);       /* #2C251B (9.2:1 pair) */
+    --arven-accent-gold-border: var(--color-gold-400);   /* #C5A880 */
+    --arven-accent-gold-subtle: var(--color-gold-900);
+
+    --arven-glass-bg: rgba(23, 25, 27, 0.92);
+    --arven-glass-border: rgba(70, 73, 76, 0.8);
+    --arven-shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.42);
+
+    --arven-status-info-fg: var(--color-blue-300);       /* #82B0DC */
+    --arven-status-info-bg: var(--color-blue-900);       /* #1E2C3A */
+    --arven-status-success-fg: var(--color-sage-300);    /* #89BBA6 */
+    --arven-status-success-bg: var(--color-sage-900);    /* #1E2E28 */
+    --arven-status-warning-fg: var(--color-ochre-300);   /* #E2AE55 */
+    --arven-status-warning-bg: var(--color-ochre-900);   /* #30281B */
+    --arven-status-danger-fg: var(--color-terracotta-300); /* #E48966 */
+    --arven-status-danger-bg: var(--color-terracotta-900); /* #35231E */
+
+    --arven-scrollbar-thumb: #9E9C92;
+    --arven-scrollbar-track: #222528;
+
+    --btn-accent-bg: var(--color-blue-300);
+    --btn-accent-fg: var(--color-charcoal-900);
+    --btn-danger-bg: var(--color-terracotta-300);
+    --btn-danger-fg: var(--color-charcoal-900);
+  }
+}
+
 [data-theme="dark"] {
   color-scheme: dark;
 
   --arven-surface-canvas: var(--color-charcoal-900);   /* #17191B */
   --arven-surface-subtle: var(--color-charcoal-800);   /* #222528 */
   --arven-surface-panel: var(--color-graphite-700);    /* #35383A */
-  --arven-surface-panel-hover: var(--color-charcoal-800); /* #222528 + strong border */
+  --arven-surface-panel-hover: var(--color-charcoal-800);
   --arven-surface-elevated: var(--color-graphite-700); /* #35383A */
   --arven-surface-inverse: var(--color-ivory-50);      /* #F8F7F3 */
 
@@ -178,11 +260,15 @@
   --arven-focus-ring: var(--color-blue-300);           /* #82B0DC */
 
   --arven-accent-gold: var(--color-gold-300);          /* #D8C3A5 */
-  --arven-accent-gold-hover: var(--color-gold-200);    /* #EADBCC */
-  --arven-accent-gold-subtle: rgba(216, 195, 165, 0.16);
-  --arven-glass-bg: rgba(23, 25, 27, 0.88);
-  --arven-glass-border: rgba(70, 73, 76, 0.65);
-  --arven-shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  --arven-accent-gold-hover: var(--color-gold-200);    /* #E2C9A4 */
+  --arven-accent-gold-fg: var(--color-gold-200);       /* #E2C9A4 */
+  --arven-accent-gold-bg: var(--color-gold-900);       /* #2C251B */
+  --arven-accent-gold-border: var(--color-gold-400);   /* #C5A880 */
+  --arven-accent-gold-subtle: var(--color-gold-900);
+
+  --arven-glass-bg: rgba(23, 25, 27, 0.92);
+  --arven-glass-border: rgba(70, 73, 76, 0.8);
+  --arven-shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.42);
 
   --arven-status-info-fg: var(--color-blue-300);       /* #82B0DC */
   --arven-status-info-bg: var(--color-blue-900);       /* #1E2C3A */
@@ -192,6 +278,9 @@
   --arven-status-warning-bg: var(--color-ochre-900);   /* #30281B */
   --arven-status-danger-fg: var(--color-terracotta-300); /* #E48966 */
   --arven-status-danger-bg: var(--color-terracotta-900); /* #35231E */
+
+  --arven-scrollbar-thumb: #9E9C92;
+  --arven-scrollbar-track: #222528;
 }
 
 /* ==========================================================================
@@ -243,18 +332,83 @@
 }
 
 /* ==========================================================================
-   ACCESSIBILITY & REDUCED MOTION POLICY
+   MOTION KEYFRAMES (Compositor-safe transform & opacity only)
+   ========================================================================== */
+@keyframes arven-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes arven-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes arven-drawer-in-right {
+  from {
+    opacity: 0.6;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes arven-drawer-in-left {
+  from {
+    opacity: 0.6;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ==========================================================================
+   ACCESSIBILITY, FORCED COLORS & REDUCED MOTION POLICY
    ========================================================================== */
 @layer base {
+  html {
+    accent-color: var(--arven-accent-link);
+    scrollbar-color: var(--arven-scrollbar-thumb) var(--arven-scrollbar-track);
+  }
+
   :focus-visible {
     outline: 2px solid var(--arven-focus-ring);
     outline-offset: 2px;
+  }
+
+  :target {
+    scroll-margin-top: 5.5rem;
   }
 
   input,
   select,
   textarea {
     scroll-margin-bottom: 120px;
+  }
+}
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  [aria-current="page"] {
+    outline: 1px solid Highlight;
   }
 }
 

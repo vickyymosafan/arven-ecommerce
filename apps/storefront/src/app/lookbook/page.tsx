@@ -58,14 +58,10 @@ export default function LookbookIndexPage() {
   return (
     <StorefrontShell>
       <div className="space-y-10">
-        <section className="space-y-3 border-b border-hairline pb-6">
-          <p className="font-mono text-xs uppercase tracking-[0.06em] text-ink-muted">
-            Editorial Lookbook
-          </p>
-          <h1 className="font-display text-4xl font-normal tracking-[-0.015em] text-ink sm:text-5xl">
-            ARVEN Lookbook
-          </h1>
-          <p className="max-w-[var(--container-prose)] text-sm leading-relaxed text-ink-secondary">
+        <section className="space-y-3 border-b border-hairline pb-8">
+          <p className="type-eyebrow text-ink-muted">Editorial Lookbook</p>
+          <h1 className="type-display-lg text-ink">ARVEN Lookbook</h1>
+          <p className="type-body max-w-[var(--container-prose)] text-ink-secondary">
             Seasonal silhouettes photographed in Jakarta across tailored wool, Japanese cotton, and
             architectural leather accessories.
           </p>

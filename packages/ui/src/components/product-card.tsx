@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { cn } from '../lib/cn.js';
 import { formatIDR } from '../lib/format.js';
-import { Badge } from './badge.js';
 
 export type CatalogStockStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
 
@@ -68,16 +67,17 @@ export function ProductCard({ product, href, className }: ProductCardProps) {
   return (
     <article
       className={cn(
-        'group flex flex-col justify-between rounded-[var(--radius-none)] border border-hairline bg-elevated transition-all duration-[var(--duration-moderate)] hover:border-strong-border hover:shadow-[var(--shadow-raised)]',
+        'group flex flex-col justify-between bg-canvas transition-colors duration-[var(--duration-base)]',
         className,
       )}
     >
-      <div>
-        <div className="relative aspect-[3/4] w-full overflow-hidden border-b border-hairline bg-panel">
+      <div className="space-y-3.5">
+        {/* 3:4 Editorial Media Well */}
+        <div className="relative aspect-[3/4] w-full overflow-hidden border border-hairline bg-subtle transition-colors duration-[var(--duration-base)] group-hover:border-strong-border">
           <a
             href={productHref}
-            aria-label={mediaUrl ? `Inspect ${product.name}` : undefined}
-            className="relative block h-full w-full focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus after:pointer-events-none after:absolute after:inset-0 after:z-10 focus-visible:after:border-2 focus-visible:after:border-focus"
+            aria-label={`Inspect ${product.name}`}
+            className="relative block h-full w-full focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus"
           >
             {mediaUrl ? (
               <img
@@ -85,86 +85,104 @@ export function ProductCard({ product, href, className }: ProductCardProps) {
                 alt={mediaAlt}
                 decoding="async"
                 onError={() => setImageError(true)}
-                className="h-full w-full object-cover transition-transform duration-[var(--duration-moderate)] ease-[var(--ease-editorial)] motion-safe:group-hover:scale-[1.03]"
+                className="block h-full w-full object-cover transition-transform duration-[var(--duration-editorial)] ease-[var(--ease-editorial)] motion-safe:group-hover:scale-[1.03]"
               />
             ) : (
-              <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-subtle p-6 text-center">
-                <svg
-                  width="48"
-                  height="60"
-                  viewBox="0 0 48 60"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.25"
-                  aria-hidden="true"
-                  className="text-ink-muted"
-                >
-                  <rect x="4" y="4" width="40" height="52" />
-                  <path d="M14 18h20M14 26h20M18 34h12" />
-                </svg>
-                <span className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
-                  <span className="sr-only">Inspect {product.name} in </span>
-                  {product.primaryCategory?.name ?? 'ARVEN Studio'}
+              <div className="flex h-full w-full flex-col items-center justify-between bg-subtle px-6 pt-6 pb-12 text-center">
+                <span className="type-eyebrow text-ink-muted">
+                  {product.primaryCategory?.name ?? 'ARVEN Archive'}
                 </span>
+                <div className="space-y-2 border-y border-hairline px-4 py-5">
+                  <span className="block font-display text-2xl font-normal tracking-[0.18em] uppercase text-ink">
+                    ARVEN
+                  </span>
+                  <span className="block text-xs text-ink-muted">
+                    Studio Silhouette Study
+                  </span>
+                  <span className="block pt-1 text-xs font-medium text-ink-secondary">
+                    {product.fit || 'Architectural Fit'}
+                  </span>
+                </div>
+                <span aria-hidden="true" className="h-1" />
               </div>
             )}
           </a>
 
-          <div className="pointer-events-none absolute top-3 left-3 right-3 flex flex-wrap items-start justify-between gap-1.5">
-            <div className="flex flex-wrap items-center gap-1.5">
-              {product.isFeatured ? <Badge tone="info">Featured</Badge> : null}
-              {product.has3dEnabled ? <Badge tone="gold">3D Atelier</Badge> : null}
+          {/* Opaque Architectural Indicator Chips (pinned bottom-left to never obscure top artwork headers) */}
+          {(product.has3dEnabled ||
+            product.isFeatured ||
+            product.stockStatus === 'LOW_STOCK' ||
+            product.stockStatus === 'OUT_OF_STOCK') ? (
+            <div className="pointer-events-none absolute right-2.5 bottom-2.5 left-2.5 flex flex-wrap items-end justify-between gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {product.isFeatured ? (
+                  <span className="inline-flex items-center border border-hairline bg-canvas px-2 py-1 text-xs font-semibold uppercase tracking-[0.05em] leading-none text-ink">
+                    Featured
+                  </span>
+                ) : null}
+                {product.has3dEnabled ? (
+                  <span className="inline-flex items-center border border-gold-border bg-gold-bg px-2 py-1 text-xs font-semibold uppercase tracking-[0.05em] leading-none text-gold-fg">
+                    3D View
+                  </span>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {product.stockStatus === 'LOW_STOCK' ? (
+                  <span className="inline-flex items-center border border-warning-fg/40 bg-warning-bg px-2 py-1 text-xs font-semibold uppercase tracking-[0.05em] leading-none text-warning-fg">
+                    Low Stock
+                  </span>
+                ) : null}
+                {product.stockStatus === 'OUT_OF_STOCK' ? (
+                  <span className="inline-flex items-center border border-control-border bg-panel px-2 py-1 text-xs font-semibold uppercase tracking-[0.05em] leading-none text-ink">
+                    Out of Stock
+                  </span>
+                ) : null}
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {product.stockStatus === 'LOW_STOCK' ? (
-                <Badge tone="warning">Low Stock</Badge>
-              ) : null}
-              {product.stockStatus === 'OUT_OF_STOCK' ? (
-                <Badge tone="neutral">Out of Stock</Badge>
-              ) : null}
-            </div>
-          </div>
+          ) : null}
         </div>
 
-        <div className="space-y-2 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">
+        {/* Gallery Metadata Block */}
+        <div className="space-y-1.5 px-0.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
+            <span className="font-semibold uppercase tracking-[0.05em]">
               {product.primaryCategory?.name ?? 'Garment'}
             </span>
             {product.collections && product.collections.length > 0 ? (
-              <span className="text-xs text-ink-muted">
-                {product.collections[0]?.name}
-              </span>
+              <span>{product.collections[0]?.name}</span>
             ) : null}
           </div>
 
-          <h3 className="font-display text-lg font-medium leading-snug text-ink">
+          <h3 className="font-display text-xl font-normal leading-snug text-ink">
             <a
               href={productHref}
-              className="inline-flex min-h-11 items-center py-1 text-ink hover:text-link focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+              className="inline-flex min-h-11 items-center text-ink transition-colors hover:text-link focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
               {product.name}
             </a>
           </h3>
 
           {product.material || product.fit ? (
-            <p className="text-xs leading-relaxed text-ink-secondary">
-              {[product.material, product.fit].filter(Boolean).join(' / ')}
+            <p className="text-xs leading-relaxed text-ink-muted">
+              {[product.material, product.fit].filter(Boolean).join(' · ')}
             </p>
           ) : null}
         </div>
       </div>
 
-      <div className="space-y-3 border-t border-hairline px-4 py-3">
+      {/* Price & Variant Footer */}
+      <div className="mt-3 space-y-2.5 border-t border-hairline px-0.5 pt-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <span className="font-mono text-sm font-medium tabular-nums text-ink">
+          <span className="text-sm font-semibold tabular-nums text-ink">
             {formatIDR(product.priceIdr)}
           </span>
           {hasDiscount && product.compareAtPriceIdr ? (
-            <span className="font-mono text-xs tabular-nums text-ink-muted line-through">
-              <span className="sr-only">Original price: </span>
-              <span>{formatIDR(product.compareAtPriceIdr)}</span>
-            </span>
+            <del
+              aria-label={`Original price ${formatIDR(product.compareAtPriceIdr)}`}
+              className="text-xs tabular-nums text-ink-muted line-through"
+            >
+              {formatIDR(product.compareAtPriceIdr)}
+            </del>
           ) : null}
         </div>
 
@@ -180,7 +198,7 @@ export function ProductCard({ product, href, className }: ProductCardProps) {
                 />
               ))}
               {overflowSwatchCount > 0 ? (
-                <span className="font-mono text-xs text-ink-muted">
+                <span className="tabular-nums text-xs text-ink-muted">
                   +{overflowSwatchCount}
                 </span>
               ) : null}
@@ -190,7 +208,7 @@ export function ProductCard({ product, href, className }: ProductCardProps) {
           )}
 
           {product.availableSizes.length > 0 ? (
-            <span className="font-mono text-xs text-ink-muted">
+            <span className="tabular-nums text-xs text-ink-muted">
               {product.availableSizes.join(' · ')}
             </span>
           ) : null}

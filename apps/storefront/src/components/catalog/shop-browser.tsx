@@ -14,16 +14,19 @@ import {
   Button,
   Checkbox,
   Divider,
+  Drawer,
   EmptyState,
   ErrorState,
   FormField,
+  IconClose,
+  IconFilter,
+  IconSearch,
   Input,
   LinkButton,
   LoadingState,
   ProductCard,
   Select,
   SizeGuideModal,
-  Surface,
   cn,
   formatIDR,
 } from '@arven/ui';
@@ -34,7 +37,20 @@ export interface ShopBrowserProps {
   searchFocused?: boolean;
 }
 
-const DEFAULT_SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', '30', '32', '34', '41', '42', '43', 'ONE_SIZE'];
+const DEFAULT_SIZE_OPTIONS = [
+  'XS',
+  'S',
+  'M',
+  'L',
+  'XL',
+  '30',
+  '32',
+  '34',
+  '41',
+  '42',
+  '43',
+  'ONE_SIZE',
+];
 const DEFAULT_COLOR_OPTIONS = ['Charcoal', 'Ivory', 'Cream', 'Graphite', 'Obsidian', 'Deep Stone'];
 const SEARCH_SUGGESTIONS = ['Heavyweight', 'Poplin', 'Wool', 'Sneaker', 'Calfskin', 'ARV-TOP-001'];
 
@@ -74,6 +90,7 @@ export function ShopBrowser({ fixedCategorySlug, searchFocused = false }: ShopBr
   const urlPage = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
 
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const [categories, setCategories] = useState<CategoryNodeDto[]>([]);
   const [collections, setCollections] = useState<CollectionSummaryDto[]>([]);
@@ -138,8 +155,10 @@ export function ShopBrowser({ fixedCategorySlug, searchFocused = false }: ShopBr
     let active = true;
     const minNum = urlMinPrice.trim() ? Number.parseInt(urlMinPrice.trim(), 10) : undefined;
     const maxNum = urlMaxPrice.trim() ? Number.parseInt(urlMaxPrice.trim(), 10) : undefined;
-    const validMin = minNum !== undefined && Number.isFinite(minNum) && minNum >= 0 ? minNum : undefined;
-    const validMax = maxNum !== undefined && Number.isFinite(maxNum) && maxNum >= 0 ? maxNum : undefined;
+    const validMin =
+      minNum !== undefined && Number.isFinite(minNum) && minNum >= 0 ? minNum : undefined;
+    const validMax =
+      maxNum !== undefined && Number.isFinite(maxNum) && maxNum >= 0 ? maxNum : undefined;
 
     storefrontApi
       .getProducts({
@@ -201,20 +220,27 @@ export function ShopBrowser({ fixedCategorySlug, searchFocused = false }: ShopBr
     fixedCategorySlug && taxonomyLoaded && !activeCategoryObj,
   );
 
-  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleQuickSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const qVal = String(formData.get('q') ?? '').trim();
+    updateUrlParams({ q: qVal || null });
+  };
+
+  const handlePriceFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     const minVal = String(formData.get('minPrice') ?? '').trim();
     const maxVal = String(formData.get('maxPrice') ?? '').trim();
     updateUrlParams({
-      q: qVal || null,
       minPrice: minVal && /^\d+$/.test(minVal) ? minVal : null,
       maxPrice: maxVal && /^\d+$/.test(maxVal) ? maxVal : null,
     });
+    setMobileFiltersOpen(false);
   };
 
   const handleResetFilters = () => {
+    setMobileFiltersOpen(false);
     if (fixedCategorySlug) {
       router.push('/shop');
     } else {
@@ -313,27 +339,132 @@ export function ShopBrowser({ fixedCategorySlug, searchFocused = false }: ShopBr
     );
   }
 
+  const renderFilterFacets = (idPrefix: string) => (
+    <div className="space-y-6">
+      <FormField id={`${idPrefix}-collection`} label="Collection">
+        <Select
+          id={`${idPrefix}-collection`}
+          value={urlCollection}
+          onChange={(event) => updateUrlParams({ collection: event.target.value || null })}
+        >
+          <option value="">All Collections</option>
+          {collections.map((col) => (
+            <option key={col.id} value={col.slug}>
+              {col.name}
+            </option>
+          ))}
+        </Select>
+      </FormField>
+
+      <FormField id={`${idPrefix}-size`} label="Size">
+        <Select
+          id={`${idPrefix}-size`}
+          value={urlSize}
+          onChange={(event) => updateUrlParams({ size: event.target.value || null })}
+        >
+          <option value="">All Sizes</option>
+          {DEFAULT_SIZE_OPTIONS.map((sz) => (
+            <option key={sz} value={sz}>
+              {sz}
+            </option>
+          ))}
+        </Select>
+      </FormField>
+
+      <FormField id={`${idPrefix}-color`} label="Color">
+        <Select
+          id={`${idPrefix}-color`}
+          value={urlColor}
+          onChange={(event) => updateUrlParams({ color: event.target.value || null })}
+        >
+          <option value="">All Colors</option>
+          {DEFAULT_COLOR_OPTIONS.map((clr) => (
+            <option key={clr} value={clr}>
+              {clr}
+            </option>
+          ))}
+        </Select>
+      </FormField>
+
+      <Divider />
+
+      <form
+        key={`${idPrefix}|${urlMinPrice}|${urlMaxPrice}`}
+        onSubmit={handlePriceFilterSubmit}
+        className="space-y-4"
+      >
+        <p className="type-eyebrow text-ink-muted">Price Range (IDR)</p>
+        <div className="grid grid-cols-2 gap-3">
+          <FormField id={`${idPrefix}-min-price`} label="Min">
+            <Input
+              id={`${idPrefix}-min-price`}
+              name="minPrice"
+              inputMode="numeric"
+              defaultValue={urlMinPrice}
+              placeholder="200000"
+            />
+          </FormField>
+          <FormField id={`${idPrefix}-max-price`} label="Max">
+            <Input
+              id={`${idPrefix}-max-price`}
+              name="maxPrice"
+              inputMode="numeric"
+              defaultValue={urlMaxPrice}
+              placeholder="1500000"
+            />
+          </FormField>
+        </div>
+
+        <Checkbox
+          id={`${idPrefix}-in-stock`}
+          label="In Stock Only"
+          checked={urlInStock}
+          onChange={(event) =>
+            updateUrlParams({ inStock: event.target.checked ? true : null })
+          }
+        />
+
+        <div className="flex flex-col gap-2 pt-1">
+          <Button type="submit" variant="primary" size="md" fullWidth>
+            Apply Filters
+          </Button>
+          {activeFilterChips.length > 0 ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              fullWidth
+              onClick={handleResetFilters}
+            >
+              Reset All
+            </Button>
+          ) : null}
+        </div>
+      </form>
+    </div>
+  );
+
   return (
     <div className="space-y-8">
-      {/* Header & Category Tabs */}
-      <section className="space-y-4 border-b border-hairline pb-6">
+      {/* Editorial Header & Category Route Strip */}
+      <section className="space-y-5 border-b border-hairline pb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-2">
-            <p className="font-mono text-xs uppercase tracking-[0.06em] text-ink-muted">
+            <p className="type-eyebrow text-ink-muted">
               {searchFocused
                 ? 'Archive Search'
                 : fixedCategorySlug
-                  ? `Category / ${fixedCategorySlug}`
-                  : 'Complete Index'}
+                  ? `Category · ${fixedCategorySlug}`
+                  : 'Complete Wardrobe'}
             </p>
-            <h1 className="font-display text-3xl font-normal tracking-[-0.015em] text-ink sm:text-4xl">
+            <h1 className="type-display-lg text-ink">
               {searchFocused
                 ? 'Search ARVEN Catalog'
                 : activeCategoryObj?.name ?? 'Shop All Garments'}
             </h1>
-            <p className="max-w-[var(--container-prose)] text-sm leading-relaxed text-ink-secondary">
+            <p className="type-ui max-w-[var(--container-prose)] text-ink-secondary">
               {searchFocused
-                ? 'Locate garments by silhouette name, fabric composition, category, or exact SKU identifier.'
+                ? 'Locate garments by silhouette name, natural textile composition, category, or exact SKU identifier.'
                 : activeCategoryObj?.description ??
                   'Measured unisex silhouettes across tops, bottoms, outerwear, footwear, and architectural leather goods.'}
             </p>
@@ -346,21 +477,21 @@ export function ShopBrowser({ fixedCategorySlug, searchFocused = false }: ShopBr
               size="sm"
               onClick={() => setSizeGuideOpen(true)}
             >
-              View Category Size Guide
+              Category Size Guide
             </Button>
           ) : null}
         </div>
 
-        {/* Category Route Tabs */}
-        <nav aria-label="Catalog categories" className="flex flex-wrap items-center gap-2 pt-2">
+        {/* Category Tabs */}
+        <nav aria-label="Catalog categories" className="flex flex-wrap items-center gap-2 pt-1">
           <Link
             href="/shop"
             aria-current={!urlCategory && !searchFocused ? 'page' : undefined}
             className={cn(
-              'inline-flex min-h-11 items-center rounded-[var(--radius-sm)] border px-4 py-2 text-xs font-medium uppercase tracking-[0.06em] transition-colors',
+              'inline-flex min-h-11 items-center rounded-[var(--radius-xs)] border px-4 py-2 text-xs font-semibold uppercase tracking-[0.05em] transition-colors',
               !urlCategory
                 ? 'border-strong-border bg-inverse text-ink-inverse'
-                : 'border-control-border bg-elevated text-ink-secondary hover:border-strong-border hover:text-ink',
+                : 'border-hairline bg-canvas text-ink-secondary hover:border-strong-border hover:text-ink',
             )}
           >
             All
@@ -373,21 +504,21 @@ export function ShopBrowser({ fixedCategorySlug, searchFocused = false }: ShopBr
                 href={searchFocused ? `/search?category=${cat.slug}` : `/shop/${cat.slug}`}
                 aria-current={isSelected ? 'page' : undefined}
                 className={cn(
-                  'inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-sm)] border px-4 py-2 text-xs font-medium uppercase tracking-[0.06em] transition-colors',
+                  'inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-xs)] border px-4 py-2 text-xs font-semibold uppercase tracking-[0.05em] transition-colors',
                   isSelected
                     ? 'border-strong-border bg-inverse text-ink-inverse'
-                    : 'border-control-border bg-elevated text-ink-secondary hover:border-strong-border hover:text-ink',
+                    : 'border-hairline bg-canvas text-ink-secondary hover:border-strong-border hover:text-ink',
                 )}
               >
                 <span>{cat.name}</span>
-                <span className="font-mono text-xs opacity-80">({cat.productCount})</span>
+                <span className="tabular-nums opacity-75">({cat.productCount})</span>
               </Link>
             );
           })}
         </nav>
 
         {searchFocused ? (
-          <div className="flex flex-wrap items-center gap-2 pt-2">
+          <div className="flex flex-wrap items-center gap-2 pt-1">
             <span className="text-xs font-medium text-ink-muted">Suggested queries:</span>
             {SEARCH_SUGGESTIONS.map((term) => (
               <Button
@@ -404,164 +535,97 @@ export function ShopBrowser({ fixedCategorySlug, searchFocused = false }: ShopBr
         ) : null}
       </section>
 
-      {/* Filter & Sort Workbench */}
-      <Surface variant="subtle" border="hairline" padding="md">
+      {/* Compact Top Utility Toolbar (Search + Mobile Filter Trigger + Sort) */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <form
-          key={`${urlQuery}|${urlMinPrice}|${urlMaxPrice}`}
-          onSubmit={handleSearchSubmit}
-          className="space-y-4"
+          key={urlQuery}
+          onSubmit={handleQuickSearchSubmit}
+          className="flex w-full items-center gap-2 md:max-w-md"
         >
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-            <div className="sm:col-span-2 lg:col-span-3">
-              <FormField id="catalog-search-q" label="Search Name or SKU">
-                <Input
-                  id="catalog-search-q"
-                  name="q"
-                  defaultValue={urlQuery}
-                  placeholder="e.g. Heavyweight, Wool, ARV-TOP-001"
-                />
-              </FormField>
-            </div>
-
-            <div className="lg:col-span-3">
-              <FormField id="catalog-filter-collection" label="Collection">
-                <Select
-                  id="catalog-filter-collection"
-                  value={urlCollection}
-                  onChange={(event) => updateUrlParams({ collection: event.target.value || null })}
-                >
-                  <option value="">All Collections</option>
-                  {collections.map((col) => (
-                    <option key={col.id} value={col.slug}>
-                      {col.name}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
-            </div>
-
-            <div className="lg:col-span-2">
-              <FormField id="catalog-filter-size" label="Size">
-                <Select
-                  id="catalog-filter-size"
-                  value={urlSize}
-                  onChange={(event) => updateUrlParams({ size: event.target.value || null })}
-                >
-                  <option value="">All Sizes</option>
-                  {DEFAULT_SIZE_OPTIONS.map((sz) => (
-                    <option key={sz} value={sz}>
-                      {sz}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
-            </div>
-
-            <div className="lg:col-span-2">
-              <FormField id="catalog-filter-color" label="Color">
-                <Select
-                  id="catalog-filter-color"
-                  value={urlColor}
-                  onChange={(event) => updateUrlParams({ color: event.target.value || null })}
-                >
-                  <option value="">All Colors</option>
-                  {DEFAULT_COLOR_OPTIONS.map((clr) => (
-                    <option key={clr} value={clr}>
-                      {clr}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
-            </div>
-
-            <div className="lg:col-span-2">
-              <FormField id="catalog-sort" label="Sort Order">
-                <Select
-                  id="catalog-sort"
-                  value={urlSort}
-                  onChange={(event) => updateUrlParams({ sort: event.target.value })}
-                >
-                  <option value="newest">Newest Releases</option>
-                  <option value="featured">Featured Curated</option>
-                  <option value="price_asc">Price: Low to High</option>
-                  <option value="price_desc">Price: High to Low</option>
-                </Select>
-              </FormField>
-            </div>
+          <div className="relative flex-1">
+            <Input
+              id="catalog-search-q"
+              name="q"
+              type="search"
+              aria-label="Search garments, fabrics, or SKUs"
+              defaultValue={urlQuery}
+              placeholder="Search garment, fabric, or SKU..."
+              className="pl-10"
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-muted"
+            >
+              <IconSearch size={16} />
+            </span>
           </div>
-
-          <Divider />
-
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="grid gap-4 sm:grid-cols-3 lg:flex lg:flex-wrap lg:items-end">
-              <div className="w-full sm:w-44">
-                <FormField id="catalog-min-price" label="Min Price (IDR)">
-                  <Input
-                    id="catalog-min-price"
-                    name="minPrice"
-                    inputMode="numeric"
-                    defaultValue={urlMinPrice}
-                    placeholder="200000"
-                  />
-                </FormField>
-              </div>
-              <div className="w-full sm:w-44">
-                <FormField id="catalog-max-price" label="Max Price (IDR)">
-                  <Input
-                    id="catalog-max-price"
-                    name="maxPrice"
-                    inputMode="numeric"
-                    defaultValue={urlMaxPrice}
-                    placeholder="1500000"
-                  />
-                </FormField>
-              </div>
-              <div className="pt-1">
-                <Checkbox
-                  id="catalog-in-stock"
-                  label="In Stock Only"
-                  checked={urlInStock}
-                  onChange={(event) =>
-                    updateUrlParams({ inStock: event.target.checked ? true : null })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="submit" variant="primary" size="md">
-                Apply Filters
-              </Button>
-              <Button type="button" variant="secondary" size="md" onClick={handleResetFilters}>
-                Reset Filters
-              </Button>
-            </div>
-          </div>
+          <Button type="submit" variant="secondary" size="md" className="shrink-0">
+            Search
+          </Button>
         </form>
-      </Surface>
 
-      {/* Active Filter Chips & Result Count */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 md:justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            onClick={() => setMobileFiltersOpen(true)}
+            className="lg:hidden"
+          >
+            <IconFilter size={16} />
+            <span>
+              Filters
+              {activeFilterChips.length > 0 ? ` (${activeFilterChips.length})` : ''}
+            </span>
+          </Button>
+
+          <div className="flex items-center gap-2">
+            <label htmlFor="catalog-sort" className="type-eyebrow text-ink-muted">
+              Sort
+            </label>
+            <Select
+              id="catalog-sort"
+              value={urlSort}
+              onChange={(event) => updateUrlParams({ sort: event.target.value })}
+              className="w-48"
+            >
+              <option value="newest">Newest Releases</option>
+              <option value="featured">Featured Curated</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      {/* Active Filter Chips & Count */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-xs tabular-nums text-ink-muted">
+          <span className="text-xs font-medium tabular-nums text-ink-muted">
             {loading
               ? 'Loading catalog...'
-              : `${meta.total} ${meta.total === 1 ? 'product' : 'products'} found`}
+              : `${meta.total} ${meta.total === 1 ? 'garment' : 'garments'}`}
           </span>
           {activeFilterChips.map((chip) => (
-            <Button
+            <button
               key={chip.key}
               type="button"
-              variant="secondary"
-              size="sm"
               onClick={chip.onClear}
+              className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-xs)] border border-control-border bg-subtle px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-strong-border hover:bg-panel cursor-pointer"
             >
               <span>{chip.label}</span>
-              <span aria-hidden="true" className="font-mono text-xs text-ink-muted">
-                x
-              </span>
-            </Button>
+              <IconClose size={13} />
+            </button>
           ))}
+          {activeFilterChips.length > 1 ? (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="inline-flex min-h-11 items-center px-2 text-xs font-semibold text-link hover:underline cursor-pointer"
+            >
+              Clear all
+            </button>
+          ) : null}
         </div>
 
         {meta.totalPages > 1 ? (
@@ -571,65 +635,99 @@ export function ShopBrowser({ fixedCategorySlug, searchFocused = false }: ShopBr
         ) : null}
       </div>
 
-      {/* Product Grid / States */}
-      <h2 className="sr-only">Catalog Products</h2>
-      {loading ? (
-        <LoadingState label="Fetching catalog products" rows={6} />
-      ) : error ? (
-        <ErrorState
-          title="Unable to load catalog products"
-          message={error.message}
-          requestId={error.requestId}
-          onRetry={() => void loadProducts()}
-        />
-      ) : products.length === 0 ? (
-        <EmptyState
-          title="No garments match the current selection"
-          description="Try removing one or more facet filters, widening your IDR price bounds, or resetting the search query."
-          action={
-            <Button type="button" variant="primary" size="md" onClick={handleResetFilters}>
-              Reset All Filters
-            </Button>
-          }
-        />
-      ) : (
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 gap-5 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+      {/* Main Split: Persistent Left Filter Rail (lg+) + Immediate Product Grid */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start">
+        <aside
+          aria-label="Catalog filters"
+          className="hidden lg:sticky lg:top-24 lg:block lg:border-r lg:border-hairline lg:pr-7"
+        >
+          <div className="mb-5 flex items-center justify-between">
+            <p className="type-eyebrow text-ink">Refine Archive</p>
+            {activeFilterChips.length > 0 ? (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="text-xs font-medium text-link hover:underline cursor-pointer"
+              >
+                Reset
+              </button>
+            ) : null}
           </div>
+          {renderFilterFacets('desktop-filter')}
+        </aside>
 
-          {/* Pagination */}
-          {meta.totalPages > 1 ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-6">
-              <p className="font-mono text-xs tabular-nums text-ink-muted">
-                Showing page {meta.page} of {meta.totalPages} ({meta.total} total)
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  disabled={meta.page <= 1}
-                  onClick={() => updateUrlParams({ page: meta.page - 1 })}
-                >
-                  Previous
+        <div aria-label="Catalog Products" className="min-w-0">
+          {loading ? (
+            <LoadingState label="Fetching catalog products" rows={6} />
+          ) : error ? (
+            <ErrorState
+              title="Unable to load catalog products"
+              message={error.message}
+              requestId={error.requestId}
+              onRetry={() => void loadProducts()}
+            />
+          ) : products.length === 0 ? (
+            <EmptyState
+              title="No garments match the current selection"
+              description="Try removing one or more facet filters, widening your IDR price bounds, or resetting the search query."
+              action={
+                <Button type="button" variant="primary" size="md" onClick={handleResetFilters}>
+                  Reset All Filters
                 </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  disabled={meta.page >= meta.totalPages}
-                  onClick={() => updateUrlParams({ page: meta.page + 1 })}
-                >
-                  Next
-                </Button>
+              }
+            />
+          ) : (
+            <div className="space-y-10">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-10 min-[480px]:grid-cols-2 xl:grid-cols-3">
+                {products.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
               </div>
+
+              {/* Pagination */}
+              {meta.totalPages > 1 ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-6">
+                  <p className="text-xs font-medium tabular-nums text-ink-muted">
+                    Showing page {meta.page} of {meta.totalPages} ({meta.total} total)
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={meta.page <= 1}
+                      onClick={() => updateUrlParams({ page: meta.page - 1 })}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={meta.page >= meta.totalPages}
+                      onClick={() => updateUrlParams({ page: meta.page + 1 })}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </div>
-          ) : null}
+          )}
         </div>
-      )}
+      </div>
+
+      {/* Mobile & Tablet Filter Drawer */}
+      <Drawer
+        isOpen={mobileFiltersOpen}
+        onClose={() => setMobileFiltersOpen(false)}
+        title="Filter Archive"
+        subtitle="Refine by capsule, size, color, or IDR price"
+        side="left"
+        closeLabel="Close filters"
+      >
+        {renderFilterFacets('mobile-filter')}
+      </Drawer>
 
       {activeCategoryObj ? (
         <SizeGuideModal

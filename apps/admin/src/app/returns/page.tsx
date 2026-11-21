@@ -499,7 +499,7 @@ export default function AdminReturnsAndRefundsPage() {
               {row.id.slice(0, 8)}
             </span>
             {row.piiMasked ? (
-              <p className="font-mono text-[11px] text-ink-muted">{row.customerEmail ?? 'Masked'}</p>
+              <p className="font-mono text-xs text-ink-muted">{row.customerEmail ?? 'Masked'}</p>
             ) : null}
           </div>
         ),
@@ -1128,7 +1128,7 @@ export default function AdminReturnsAndRefundsPage() {
                   />
                 </FormField>
 
-                <p className="font-mono text-[11px] text-ink-muted">
+                <p className="font-mono text-xs text-ink-muted">
                   Idempotency-Key: {receiveIdempotencyKey}
                 </p>
 

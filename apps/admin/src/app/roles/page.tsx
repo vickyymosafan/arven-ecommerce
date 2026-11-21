@@ -373,7 +373,7 @@ export default function AdminRolesPage() {
                       role.permissions.map((perm) => (
                         <code
                           key={perm}
-                          className="rounded-[var(--radius-xs)] border border-hairline bg-subtle px-2 py-0.5 font-mono text-[11px] text-ink-secondary"
+                          className="rounded-[var(--radius-xs)] border border-hairline bg-subtle px-2 py-0.5 font-mono text-xs text-ink-secondary"
                         >
                           {perm}
                         </code>

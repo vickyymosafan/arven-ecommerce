@@ -16,7 +16,7 @@ const variantMap: Record<SurfaceVariant, string> = {
   canvas: 'bg-canvas text-ink',
   subtle: 'bg-subtle text-ink',
   panel: 'bg-panel text-ink',
-  elevated: 'bg-elevated text-ink shadow-[var(--shadow-raised)]',
+  elevated: 'bg-elevated text-ink',
   glass: 'bg-glass text-ink shadow-[var(--shadow-glass)]',
 };
 
@@ -45,7 +45,7 @@ export function Surface({
   return (
     <div
       className={cn(
-        'rounded-[var(--radius-sm)]',
+        'rounded-[var(--radius-xs)]',
         variantMap[variant],
         paddingMap[padding],
         borderMap[border],

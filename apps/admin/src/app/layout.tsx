@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Cormorant_Garamond, IBM_Plex_Mono, Plus_Jakarta_Sans } from 'next/font/google';
 import { connection } from 'next/server';
 import { Suspense, type ReactNode } from 'react';
@@ -8,6 +8,7 @@ import './globals.css';
 const cormorantGaramond = Cormorant_Garamond({
   subsets: ['latin'],
   weight: ['400', '500', '600'],
+  style: ['normal', 'italic'],
   variable: '--font-display',
   display: 'swap',
 });
@@ -32,7 +33,11 @@ export const metadata: Metadata = {
     template: '%s | ARVEN Operations',
   },
   description:
-    'ARVEN staff operations portal for MFA governance, RBAC roles, user administration, audit logs, and runtime diagnostics.',
+    'ARVEN staff operations portal for catalog merchandising, commerce fulfillment, 3D assets, MFA governance, RBAC roles, and runtime diagnostics.',
+};
+
+export const viewport: Viewport = {
+  colorScheme: 'light dark',
 };
 
 async function RequestDynamicMarker() {
@@ -44,7 +49,6 @@ export default function AdminRootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
-      data-theme="dark"
       suppressHydrationWarning
       className={`${cormorantGaramond.variable} ${plusJakartaSans.variable} ${ibmPlexMono.variable}`}
     >

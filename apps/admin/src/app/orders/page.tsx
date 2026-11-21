@@ -203,7 +203,7 @@ function AdminOrdersContent() {
               {row.orderNumber}
             </Link>
             {row.latestTrackingNumber ? (
-              <p className="font-mono text-[11px] text-ink-muted">
+              <p className="font-mono text-xs text-ink-muted">
                 AWB: {row.latestTrackingNumber}
               </p>
             ) : null}

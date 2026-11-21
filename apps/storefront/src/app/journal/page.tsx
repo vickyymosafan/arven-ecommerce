@@ -57,14 +57,10 @@ export default function JournalIndexPage() {
   return (
     <StorefrontShell>
       <div className="space-y-10">
-        <section className="space-y-3 border-b border-hairline pb-6">
-          <p className="font-mono text-xs uppercase tracking-[0.06em] text-ink-muted">
-            Editorial Notes
-          </p>
-          <h1 className="font-display text-4xl font-normal tracking-[-0.015em] text-ink sm:text-5xl">
-            ARVEN Journal
-          </h1>
-          <p className="max-w-[var(--container-prose)] text-sm leading-relaxed text-ink-secondary">
+        <section className="space-y-3 border-b border-hairline pb-8">
+          <p className="type-eyebrow text-ink-muted">Editorial Notes</p>
+          <h1 className="type-display-lg text-ink">ARVEN Journal</h1>
+          <p className="type-body max-w-[var(--container-prose)] text-ink-secondary">
             Field dispatches on natural fibers, pattern architecture, garment care, and Jakarta
             studio production.
           </p>

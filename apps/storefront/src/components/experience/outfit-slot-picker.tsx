@@ -122,7 +122,7 @@ export function OutfitSlotPicker({
                   )}
                 >
                   <span>{preset.title}</span>
-                  <span className="font-mono text-[11px] tabular-nums text-ink-muted">
+                  <span className="font-mono text-xs tabular-nums text-ink-muted">
                     ({formatIDR(preset.liveTotalIdr)})
                   </span>
                 </button>
@@ -198,7 +198,7 @@ export function OutfitSlotPicker({
                 {populated ? (
                   <span
                     className={cn(
-                      'font-mono text-[11px]',
+                      'font-mono text-xs',
                       selected ? 'text-ink-inverse' : 'text-ink-muted',
                     )}
                   >
@@ -390,11 +390,11 @@ export function OutfitSlotPicker({
                     <span>
                       {variant.color} / {variant.size}
                     </span>
-                    <span className="font-mono text-[11px] tabular-nums">
+                    <span className="font-mono text-xs tabular-nums">
                       {formatIDR(variant.priceIdr)}
                     </span>
                     {!variant.inStock ? (
-                      <span className="text-[11px] no-underline">(Habis)</span>
+                      <span className="text-xs no-underline">(Habis)</span>
                     ) : null}
                   </button>
                 );

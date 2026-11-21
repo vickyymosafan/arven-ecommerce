@@ -105,12 +105,12 @@ export function OutfitStudioFallback({
                       className="h-14 w-11 shrink-0 border border-[#46494C] bg-[#17191B] object-cover"
                     />
                   ) : (
-                    <div className="flex h-14 w-11 shrink-0 items-center justify-center border border-[#46494C] bg-[#17191B] font-mono text-[11px] text-[#B2B0A6]">
+                    <div className="flex h-14 w-11 shrink-0 items-center justify-center border border-[#46494C] bg-[#17191B] font-mono text-xs text-[#B2B0A6]">
                       --
                     </div>
                   )}
                   <div className="min-w-0 space-y-0.5">
-                    <p className="font-mono text-[11px] uppercase tracking-[0.06em] text-[#B2B0A6]">
+                    <p className="font-mono text-xs uppercase tracking-[0.06em] text-[#B2B0A6]">
                       {OUTFIT_SLOT_LABELS[slot]}
                     </p>
                     {matched ? (

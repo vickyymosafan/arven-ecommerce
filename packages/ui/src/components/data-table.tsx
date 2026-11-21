@@ -146,7 +146,7 @@ export function DataTable<T>({
                     key={column.key}
                     className="flex flex-col gap-1 border-b border-hairline pb-2.5 last:border-b-0 last:pb-0"
                   >
-                    <dt className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-muted">
+                    <dt className="text-xs font-semibold uppercase tracking-[0.05em] text-ink-muted">
                       {column.header}
                     </dt>
                     <dd className="min-w-0 break-words text-sm text-ink">{column.render(row)}</dd>

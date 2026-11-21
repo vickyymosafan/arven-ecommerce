@@ -12,52 +12,71 @@ import type {
 } from '@arven/contracts';
 import type { BadgeTone } from '@arven/ui';
 
+export type AdminNavGroup = 'command' | 'catalog' | 'commerce' | 'editorial' | 'governance';
+
+export const ADMIN_NAV_GROUP_LABELS: Record<AdminNavGroup, string> = {
+  command: 'Command',
+  catalog: 'Catalog & 3D',
+  commerce: 'Commerce',
+  editorial: 'Editorial',
+  governance: 'Governance',
+};
+
 export interface AdminNavItem {
   href: string;
   label: string;
+  group: AdminNavGroup;
   requiredPermissions?: readonly PermissionCode[];
 }
 
 export const ADMIN_NAV_ITEMS: readonly AdminNavItem[] = [
-  { href: '/', label: 'Overview' },
+  { href: '/', label: 'Overview', group: 'command' },
   {
     href: '/catalog/products',
     label: 'Products',
+    group: 'catalog',
     requiredPermissions: ['product.read', 'product.write', 'product.publish'],
   },
   {
     href: '/catalog/categories',
     label: 'Categories',
+    group: 'catalog',
     requiredPermissions: ['product.read', 'product.write'],
   },
   {
     href: '/catalog/collections',
     label: 'Collections',
+    group: 'catalog',
     requiredPermissions: ['product.read', 'product.write'],
   },
   {
     href: '/experience/showroom',
     label: 'Showroom',
+    group: 'catalog',
     requiredPermissions: ['asset.read', 'asset.publish'],
   },
   {
     href: '/experience/outfit-studio',
     label: 'Outfit Studio',
+    group: 'catalog',
     requiredPermissions: ['asset.read', 'asset.publish'],
   },
   {
     href: '/inventory',
     label: 'Inventory',
+    group: 'commerce',
     requiredPermissions: ['inventory.read', 'inventory.receive', 'inventory.adjust'],
   },
   {
     href: '/orders',
     label: 'Orders',
+    group: 'commerce',
     requiredPermissions: ['order.read', 'order.read.limited', 'order.fulfill', 'order.cancel'],
   },
   {
     href: '/returns',
     label: 'Returns & Refunds',
+    group: 'commerce',
     requiredPermissions: [
       'return.read',
       'return.review',
@@ -70,29 +89,34 @@ export const ADMIN_NAV_ITEMS: readonly AdminNavItem[] = [
   {
     href: '/coupons',
     label: 'Coupons',
+    group: 'commerce',
     requiredPermissions: ['coupon.read', 'coupon.manage'],
   },
   {
     href: '/cms',
     label: 'CMS',
+    group: 'editorial',
     requiredPermissions: ['cms.read', 'cms.write', 'cms.publish'],
   },
   {
     href: '/users',
     label: 'Users',
+    group: 'governance',
     requiredPermissions: ['user.read', 'user.manage.limited', 'user.role.manage'],
   },
   {
     href: '/roles',
     label: 'Roles & Permissions',
+    group: 'governance',
     requiredPermissions: ['user.read', 'user.role.manage'],
   },
   {
     href: '/audit-logs',
     label: 'Audit Logs',
+    group: 'governance',
     requiredPermissions: ['audit.read', 'audit.read.scoped'],
   },
-  { href: '/ops/runtime', label: 'Runtime Health' },
+  { href: '/ops/runtime', label: 'Runtime Health', group: 'governance' },
 ];
 
 export function filterAdminNavItems(params: {

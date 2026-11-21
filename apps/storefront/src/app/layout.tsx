@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Cormorant_Garamond, IBM_Plex_Mono, Plus_Jakarta_Sans } from 'next/font/google';
 import { connection } from 'next/server';
 import { Suspense, type ReactNode } from 'react';
@@ -8,6 +8,7 @@ import './globals.css';
 const cormorantGaramond = Cormorant_Garamond({
   subsets: ['latin'],
   weight: ['400', '500', '600'],
+  style: ['normal', 'italic'],
   variable: '--font-display',
   display: 'swap',
 });
@@ -32,7 +33,11 @@ export const metadata: Metadata = {
     template: '%s | ARVEN',
   },
   description:
-    'ARVEN Luxury Contemporary Fashion. Customer account identity, saved delivery addresses, and session management.',
+    'ARVEN Luxury Contemporary Fashion. Architectural unisex silhouettes, natural textiles, and real-time 3D virtual showroom crafted in Jakarta.',
+};
+
+export const viewport: Viewport = {
+  colorScheme: 'light dark',
 };
 
 async function RequestDynamicMarker() {
@@ -44,7 +49,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
-      data-theme="light"
       suppressHydrationWarning
       className={`${cormorantGaramond.variable} ${plusJakartaSans.variable} ${ibmPlexMono.variable}`}
     >

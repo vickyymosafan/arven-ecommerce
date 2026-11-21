@@ -297,7 +297,7 @@ export default function AdminUsersPage() {
             <p className="font-medium text-ink">{row.fullName}</p>
             <p className="font-mono text-xs text-ink-muted">{row.email}</p>
             {row.phoneMasked ? (
-              <p className="font-mono text-[11px] text-ink-muted">{row.phoneMasked}</p>
+              <p className="font-mono text-xs text-ink-muted">{row.phoneMasked}</p>
             ) : null}
           </div>
         ),

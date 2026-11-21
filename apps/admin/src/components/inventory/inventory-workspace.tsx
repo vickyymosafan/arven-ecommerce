@@ -1347,7 +1347,7 @@ export function InventoryWorkspace() {
             />
           </FormField>
 
-          <p className="font-mono text-[11px] text-ink-muted break-all">
+          <p className="font-mono text-xs text-ink-muted break-all">
             Idempotency-Key: <span className="text-ink">{modalIdempotencyKey}</span>
           </p>
 

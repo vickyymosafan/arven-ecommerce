@@ -335,7 +335,7 @@ export function OutfitStudio3DIsland({
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#46494C] bg-[#17191B] px-3 py-2.5 sm:px-4">
         <div className="flex items-center gap-2">
-          <span className="border border-[#46494C] bg-[#35383A] px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.08em] text-[#C5A572]">
+          <span className="border border-[#46494C] bg-[#35383A] px-2 py-0.5 font-mono text-xs uppercase tracking-[0.08em] text-[#E2C9A4]">
             Manekin Standar
           </span>
           <span className="font-mono text-xs text-[#B2B0A6]">{rigId}</span>

@@ -38,7 +38,7 @@ export function FormField({
     <div className={cn('flex flex-col gap-1.5', className)}>
       <label
         htmlFor={id}
-        className="flex items-center gap-1 text-xs font-medium uppercase tracking-[0.06em] text-ink"
+        className="flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.05em] text-ink"
       >
         <span>{label}</span>
         {required ? (
@@ -77,10 +77,10 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 const baseControlClasses = cn(
-  'w-full min-h-11 rounded-[var(--radius-sm)] border px-3.5 py-2.5 text-base leading-normal',
+  'w-full min-h-11 rounded-[var(--radius-xs)] border px-3.5 py-2.5 text-sm leading-normal',
   'bg-[var(--input-bg)] text-[var(--input-fg)] placeholder:text-[var(--input-placeholder)]',
   'border-[var(--input-border)]',
-  'focus-visible:border-[var(--input-border-focus)]',
+  'hover:border-strong-border focus-visible:border-[var(--input-border-focus)]',
   'disabled:cursor-not-allowed disabled:opacity-55',
   'transition-[border-color,background-color] duration-[var(--duration-fast)] ease-[var(--ease-ui)]',
 );
@@ -136,7 +136,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           onClick={() => setVisible((prev) => !prev)}
           aria-label={visible ? hideLabel : revealLabel}
           aria-pressed={visible}
-          className="absolute right-0.5 inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] text-ink-muted hover:text-ink cursor-pointer"
+          className="absolute right-0.5 inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-xs)] text-ink-muted hover:text-ink cursor-pointer"
         >
           {visible ? <IconEyeOff size={18} /> : <IconEye size={18} />}
         </button>
@@ -209,7 +209,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Che
     <label
       htmlFor={inputId}
       className={cn(
-        'flex min-h-11 cursor-pointer items-start gap-3 rounded-[var(--radius-sm)] px-1 py-1.5 select-none',
+        'flex min-h-11 cursor-pointer items-center gap-3 rounded-[var(--radius-xs)] px-1.5 py-1.5 select-none',
         props.disabled ? 'cursor-not-allowed opacity-55' : 'hover:bg-subtle',
         className,
       )}
@@ -218,7 +218,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Che
         ref={ref}
         id={inputId}
         type="checkbox"
-        className="mt-1 h-[18px] w-[18px] shrink-0 accent-[var(--arven-accent-link)] cursor-pointer"
+        className="h-6 w-6 shrink-0 accent-[var(--arven-accent-link)] cursor-pointer"
         {...props}
       />
       <span className="flex flex-col gap-0.5">

@@ -94,16 +94,12 @@ function LoginFormContent() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">
-          Clientele Sign In
-        </p>
-        <h1 className="font-display text-3xl font-normal tracking-[-0.015em] text-ink sm:text-4xl">
-          Access Your Account
-        </h1>
-        <p className="text-sm leading-relaxed text-ink-muted">
-          Sign in with your ARVEN customer credentials to review your profile, shipping addresses,
-          and active device sessions.
+      <div className="space-y-2.5">
+        <p className="type-eyebrow text-ink-muted">Clientele Sign In</p>
+        <h1 className="type-display-lg text-ink">Access Your Account</h1>
+        <p className="type-ui text-ink-muted">
+          Sign in with your ARVEN customer credentials to review your profile, saved outfits,
+          shipping addresses, and active orders.
         </p>
       </div>
 

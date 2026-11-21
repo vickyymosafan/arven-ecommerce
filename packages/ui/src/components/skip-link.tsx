@@ -16,11 +16,11 @@ export function SkipLink({
     <a
       href={href}
       className={cn(
-        'sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[var(--z-toast)]',
-        'focus:inline-flex focus:min-h-11 focus:items-center focus:px-4 focus:py-2',
-        'focus:rounded-[var(--radius-sm)] focus:bg-[var(--arven-accent-primary)] focus:text-[var(--arven-text-inverse)]',
-        'focus:text-sm focus:font-semibold focus:tracking-[0.04em]',
-        'focus:shadow-[var(--shadow-raised)]',
+        'fixed top-3 left-3 z-[var(--z-toast)] inline-flex min-h-11 items-center px-4 py-2',
+        'rounded-[var(--radius-xs)] bg-[var(--arven-accent-primary)] text-[var(--arven-text-inverse)]',
+        'text-sm font-semibold tracking-[0.04em] shadow-[var(--shadow-raised)]',
+        '-translate-y-[250%] focus:translate-y-0 focus-visible:translate-y-0',
+        'transition-transform duration-[var(--duration-fast)] ease-[var(--ease-ui)]',
         className,
       )}
     >

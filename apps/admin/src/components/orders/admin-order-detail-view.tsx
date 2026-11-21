@@ -585,7 +585,7 @@ export function AdminOrderDetailView({ orderId }: AdminOrderDetailViewProps) {
                               {item.color} / Size {item.size}
                             </p>
                             {item.discountAllocatedIdr > 0 ? (
-                              <p className="font-mono text-[11px] tabular-nums text-success-fg">
+                              <p className="font-mono text-xs tabular-nums text-success-fg">
                                 Discount: -{formatIDR(item.discountAllocatedIdr)}
                               </p>
                             ) : null}
@@ -686,7 +686,7 @@ export function AdminOrderDetailView({ orderId }: AdminOrderDetailViewProps) {
                                   {shipment.provider} ({shipment.serviceCode})
                                 </span>
                                 {shipment.warehouseCode ? (
-                                  <span className="font-mono text-[11px] text-ink-muted">
+                                  <span className="font-mono text-xs text-ink-muted">
                                     WH: {shipment.warehouseCode}
                                   </span>
                                 ) : null}
@@ -856,7 +856,7 @@ export function AdminOrderDetailView({ orderId }: AdminOrderDetailViewProps) {
                               : ' | Awaiting OWNER approval'}
                           </p>
                           {!order.piiMasked && refund.gatewayResponse ? (
-                            <pre className="whitespace-pre-wrap break-all rounded-[var(--radius-xs)] border border-hairline bg-canvas p-2 font-mono text-[11px] text-ink-muted">
+                            <pre className="whitespace-pre-wrap break-all rounded-[var(--radius-xs)] border border-hairline bg-canvas p-2 font-mono text-xs text-ink-muted">
                               {JSON.stringify(refund.gatewayResponse, null, 2)}
                             </pre>
                           ) : null}
@@ -1178,7 +1178,7 @@ export function AdminOrderDetailView({ orderId }: AdminOrderDetailViewProps) {
             />
           </FormField>
 
-          <p className="font-mono text-[11px] text-ink-muted">
+          <p className="font-mono text-xs text-ink-muted">
             Idempotency-Key: {shipIdempotencyKey}
           </p>
         </form>
@@ -1334,7 +1334,7 @@ export function AdminOrderDetailView({ orderId }: AdminOrderDetailViewProps) {
             />
           </FormField>
 
-          <p className="font-mono text-[11px] text-ink-muted">
+          <p className="font-mono text-xs text-ink-muted">
             Idempotency-Key: {refundIdempotencyKey}
           </p>
         </form>

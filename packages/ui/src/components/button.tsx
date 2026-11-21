@@ -15,23 +15,23 @@ export interface ButtonStyleOptions {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'bg-[var(--btn-primary-bg)] text-[var(--btn-primary-fg)] border border-transparent hover:bg-[var(--btn-primary-hover-bg)] active:opacity-95',
+    'bg-[var(--btn-primary-bg)] text-[var(--btn-primary-fg)] border border-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover-bg)] hover:border-[var(--btn-primary-hover-bg)] active:opacity-95',
   secondary:
-    'bg-[var(--btn-secondary-bg)] text-[var(--btn-secondary-fg)] border border-[var(--btn-secondary-border)] hover:bg-[var(--btn-secondary-hover-bg)] hover:border-[var(--arven-border-strong)]',
+    'bg-canvas text-ink border border-[var(--btn-secondary-border)] hover:bg-[var(--btn-secondary-bg)] hover:border-[var(--arven-border-strong)]',
   accent:
-    'bg-[var(--btn-accent-bg)] text-[var(--btn-accent-fg)] border border-transparent hover:opacity-90',
+    'bg-[var(--btn-accent-bg)] text-[var(--btn-accent-fg)] border border-transparent hover:opacity-92',
   danger:
-    'bg-[var(--btn-danger-bg)] text-[var(--btn-danger-fg)] border border-transparent hover:opacity-90',
+    'bg-[var(--btn-danger-bg)] text-[var(--btn-danger-fg)] border border-transparent hover:opacity-92',
   ghost:
-    'bg-transparent text-ink border border-transparent hover:bg-panel hover:border-[var(--arven-border-control)]',
+    'bg-transparent text-ink border border-transparent hover:bg-subtle hover:border-hairline',
   gold:
-    'bg-gold text-[var(--color-charcoal-900)] border border-gold-hover hover:bg-gold-hover active:opacity-95 font-medium',
+    'bg-gold text-[var(--color-charcoal-900)] border border-gold-border hover:bg-gold-hover active:opacity-95 font-semibold',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: 'min-h-11 min-w-11 px-3.5 py-2 text-xs font-medium tracking-[0.04em]',
-  md: 'min-h-11 min-w-11 px-5 py-2.5 text-sm font-medium tracking-[0.03em]',
-  lg: 'min-h-12 min-w-11 px-6 py-3 text-sm font-semibold tracking-[0.04em]',
+  sm: 'min-h-11 min-w-11 px-4 py-2 text-xs font-semibold tracking-[0.04em]',
+  md: 'min-h-11 min-w-11 px-5 py-2.5 text-sm font-medium tracking-[0.02em]',
+  lg: 'min-h-12 min-w-11 px-7 py-3 text-sm font-semibold tracking-[0.03em]',
 };
 
 export function buttonClassName({
@@ -41,12 +41,13 @@ export function buttonClassName({
   className,
 }: ButtonStyleOptions = {}): string {
   return cn(
-    'inline-flex items-center justify-center gap-2 rounded-[var(--radius-sm)]',
+    'inline-flex items-center justify-center gap-2 rounded-[var(--radius-xs)]',
     'whitespace-normal text-center leading-snug',
     'transition-[background-color,border-color,color,opacity] duration-[var(--duration-fast)] ease-[var(--ease-ui)]',
     'cursor-pointer select-none',
-    'disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50',
     variantClasses[variant],
+    'disabled:cursor-not-allowed disabled:bg-subtle disabled:text-ink-muted disabled:border-hairline disabled:hover:bg-subtle disabled:hover:border-hairline',
+    'aria-disabled:cursor-not-allowed aria-disabled:bg-subtle aria-disabled:text-ink-muted aria-disabled:border-hairline',
     sizeClasses[size],
     fullWidth ? 'w-full' : undefined,
     className,

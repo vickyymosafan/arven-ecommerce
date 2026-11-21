@@ -15,7 +15,7 @@ const toneClasses: Record<BadgeTone, string> = {
   success: 'bg-success-bg text-success-fg border-success-fg/35',
   warning: 'bg-warning-bg text-warning-fg border-warning-fg/35',
   danger: 'bg-danger-bg text-danger-fg border-danger-fg/35',
-  gold: 'bg-gold-subtle text-ink border-gold/40',
+  gold: 'bg-gold-bg text-gold-fg border-gold-border/60',
 };
 
 export function Badge({ tone = 'neutral', icon, className, children, ...props }: BadgeProps) {
@@ -23,7 +23,7 @@ export function Badge({ tone = 'neutral', icon, className, children, ...props }:
     <span
       className={cn(
         'inline-flex items-center gap-1.5 rounded-[var(--radius-xs)] border px-2.5 py-1',
-        'text-xs font-medium uppercase tracking-[0.06em] leading-none',
+        'text-xs font-semibold uppercase tracking-[0.05em] leading-none',
         toneClasses[tone],
         className,
       )}

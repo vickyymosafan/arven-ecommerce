@@ -91,15 +91,9 @@ export function AccountShell({ title, description, children }: AccountShellProps
       <div className="space-y-8">
         <div className="flex flex-col gap-4 border-b border-hairline pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-[0.08em] text-ink-muted">
-              Clientele Account
-            </p>
-            <h1 className="font-display text-3xl font-normal tracking-[-0.015em] text-ink sm:text-4xl">
-              {title}
-            </h1>
-            <p className="max-w-[var(--container-prose)] text-sm leading-relaxed text-ink-muted">
-              {description}
-            </p>
+            <p className="type-eyebrow text-ink-muted">Clientele Account</p>
+            <h1 className="type-display-lg text-ink">{title}</h1>
+            <p className="type-ui max-w-[var(--container-prose)] text-ink-muted">{description}</p>
           </div>
           <Button
             type="button"

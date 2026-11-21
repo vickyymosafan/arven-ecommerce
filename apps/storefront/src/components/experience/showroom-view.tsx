@@ -231,7 +231,7 @@ export function ShowroomView({
             <div className="flex flex-wrap items-center gap-3">
               <a
                 href="#showroom-catalog-directory"
-                className="sr-only focus:not-sr-only focus:inline-flex focus:min-h-11 focus:items-center focus:rounded-[var(--radius-sm)] focus:border focus:border-[#82B0DC] focus:bg-[#222528] focus:px-4 focus:py-2 focus:text-xs focus:font-semibold focus:text-[#F8F7F3] focus:outline-2 focus:outline-offset-2 focus:outline-[#82B0DC]"
+                className="fixed top-3 left-3 z-[var(--z-toast)] inline-flex min-h-11 -translate-y-[250%] items-center rounded-[var(--radius-xs)] border border-[#82B0DC] bg-[#222528] px-4 py-2 text-xs font-semibold text-[#F8F7F3] shadow-[var(--shadow-raised)] transition-transform duration-[var(--duration-fast)] focus:translate-y-0 focus-visible:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#82B0DC]"
               >
                 Lewati Ruang Pamer 3D
               </a>
@@ -360,7 +360,7 @@ export function ShowroomView({
                         />
                       ) : null}
                       <span>{zone.title}</span>
-                      <span className="font-mono text-[11px] tabular-nums text-[#B2B0A6]">
+                      <span className="font-mono text-xs tabular-nums text-[#B2B0A6]">
                         ({zone.hotspots.length})
                       </span>
                     </button>

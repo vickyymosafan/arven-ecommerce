@@ -14,13 +14,13 @@ export function EmptyState({ title, description, action, className }: EmptyState
   return (
     <div
       className={cn(
-        'flex flex-col items-start justify-center gap-3 rounded-[var(--radius-sm)] border border-hairline bg-subtle p-6 sm:p-8',
+        'flex flex-col items-start justify-center gap-4 rounded-[var(--radius-xs)] border border-hairline bg-subtle p-7 sm:p-10',
         className,
       )}
     >
-      <div className="space-y-1.5 max-w-[var(--container-prose)]">
-        <h3 className="font-display text-xl font-normal text-ink">{title}</h3>
-        <p className="text-sm leading-relaxed text-ink-muted">{description}</p>
+      <div className="max-w-[var(--container-prose)] space-y-2">
+        <h3 className="font-display text-2xl font-normal leading-snug text-ink">{title}</h3>
+        <p className="type-ui leading-relaxed text-ink-muted">{description}</p>
       </div>
       {action ? <div className="pt-1">{action}</div> : null}
     </div>
@@ -44,7 +44,7 @@ export function LoadingState({
       aria-live="polite"
       aria-busy="true"
       className={cn(
-        'space-y-3 rounded-[var(--radius-sm)] border border-hairline bg-subtle p-6',
+        'space-y-4 rounded-[var(--radius-xs)] border border-hairline bg-subtle p-6 sm:p-8',
         className,
       )}
     >
@@ -55,11 +55,11 @@ export function LoadingState({
         />
         <span>{label}</span>
       </div>
-      <div className="space-y-2.5 pt-1">
+      <div className="space-y-3 pt-1">
         {Array.from({ length: Math.max(1, rows) }).map((_, index) => (
           <div
             key={index}
-            className="h-10 w-full rounded-[var(--radius-xs)] border border-hairline bg-panel motion-safe:animate-pulse"
+            className="h-10 w-full rounded-[var(--radius-xs)] border border-hairline bg-panel/75"
           />
         ))}
       </div>
@@ -88,7 +88,7 @@ export function ErrorState({
     <div
       role="alert"
       className={cn(
-        'flex flex-col items-start gap-4 rounded-[var(--radius-sm)] border border-danger-fg/40 bg-danger-bg p-6',
+        'flex flex-col items-start gap-4 rounded-[var(--radius-xs)] border border-danger-fg/40 bg-danger-bg p-6 sm:p-8',
         className,
       )}
     >

@@ -85,14 +85,12 @@ export default function AboutCmsPage() {
         />
       ) : notFound || !page ? (
         <article className="mx-auto max-w-[var(--container-prose)] space-y-6">
-          <p className="font-mono text-xs uppercase tracking-[0.06em] text-ink-muted">
-            Jakarta Atelier
-          </p>
-          <h1 className="font-display text-4xl font-normal tracking-[-0.02em] text-ink sm:text-5xl">
-            Beyond Trends. Beyond Time.
+          <p className="type-eyebrow text-ink-muted">Jakarta Atelier</p>
+          <h1 className="type-display-xl text-ink">
+            Beyond Trends. <em className="font-normal italic">Beyond Time.</em>
           </h1>
           <Divider />
-          <p className="text-base leading-relaxed text-ink-secondary">
+          <p className="type-body text-ink-secondary">
             ARVEN designs contemporary unisex garments, footwear, and architectural objects built
             around proportion, natural textile weight, and long-term wear.
           </p>
@@ -108,12 +106,8 @@ export default function AboutCmsPage() {
       ) : (
         <article className="mx-auto max-w-[var(--container-prose)] space-y-8">
           <header className="space-y-3 border-b border-hairline pb-6">
-            <p className="font-mono text-xs uppercase tracking-[0.06em] text-ink-muted">
-              ARVEN House
-            </p>
-            <h1 className="font-display text-4xl font-normal tracking-[-0.02em] text-ink sm:text-5xl">
-              {page.title}
-            </h1>
+            <p className="type-eyebrow text-ink-muted">ARVEN House</p>
+            <h1 className="type-display-lg text-ink">{page.title}</h1>
           </header>
 
           <div className="space-y-6">

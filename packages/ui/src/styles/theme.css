@@ -29,6 +29,9 @@
 
   --color-gold: var(--arven-accent-gold);
   --color-gold-hover: var(--arven-accent-gold-hover);
+  --color-gold-fg: var(--arven-accent-gold-fg);
+  --color-gold-bg: var(--arven-accent-gold-bg);
+  --color-gold-border: var(--arven-accent-gold-border);
   --color-gold-subtle: var(--arven-accent-gold-subtle);
   --color-glass-bg: var(--arven-glass-bg);
   --color-glass-border: var(--arven-glass-border);
@@ -50,6 +53,7 @@
     background-color: var(--arven-surface-canvas);
     color: var(--arven-text-primary);
     font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: clip;
@@ -59,21 +63,180 @@
     background-color: var(--arven-accent-link);
     color: var(--color-white);
   }
+
+  /* Native details/summary architectural disclosure reset */
+  details > summary {
+    list-style: none;
+  }
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
 }
 
 @layer utilities {
+  /* ========================================================================
+     MODULAR FLUID TYPOGRAPHY ROLES (DESIGN.md 4.2)
+     ======================================================================== */
+  .type-display-xl {
+    font-family: var(--font-display), Georgia, "Times New Roman", serif;
+    font-size: var(--text-display-xl);
+    line-height: 1.04;
+    font-weight: 400;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+
+  .type-display-lg {
+    font-family: var(--font-display), Georgia, "Times New Roman", serif;
+    font-size: var(--text-display-lg);
+    line-height: 1.1;
+    font-weight: 400;
+    letter-spacing: -0.018em;
+    text-wrap: balance;
+  }
+
+  .type-h1 {
+    font-family: var(--font-display), Georgia, "Times New Roman", serif;
+    font-size: var(--text-h1);
+    line-height: 1.15;
+    font-weight: 400;
+    letter-spacing: -0.014em;
+    text-wrap: balance;
+  }
+
+  .type-h2 {
+    font-family: var(--font-display), Georgia, "Times New Roman", serif;
+    font-size: clamp(1.5rem, 1.3vw + 0.95rem, 2rem);
+    line-height: 1.2;
+    font-weight: 400;
+    letter-spacing: -0.012em;
+    text-wrap: balance;
+  }
+
+  .type-h3 {
+    font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: var(--text-h3);
+    line-height: 1.3;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+
+  .type-body {
+    font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: var(--text-body);
+    line-height: 1.62;
+    font-weight: 400;
+    text-wrap: pretty;
+  }
+
+  .type-ui {
+    font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: var(--text-ui);
+    line-height: 1.45;
+  }
+
+  .type-eyebrow {
+    font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: var(--text-micro-label);
+    line-height: 1.3;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .type-caption {
+    font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: var(--text-caption);
+    line-height: 1.4;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .type-sku {
+    font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: var(--text-sku);
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ========================================================================
+     ARCHITECTURAL INTERACTION & LAYOUT UTILITIES
+     ======================================================================== */
   .bg-glass {
     background-color: var(--arven-glass-bg);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
+
   .border-glass {
     border-color: var(--arven-glass-border);
   }
+
   .hairline-b {
     border-bottom: 1px solid var(--arven-border-hairline);
   }
+
   .hairline-t {
     border-top: 1px solid var(--arven-border-hairline);
+  }
+
+  /* Compositor-safe architectural underline for editorial navigation & links */
+  .nav-underline {
+    position: relative;
+  }
+
+  .nav-underline::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0.75rem;
+    inset-block-end: 0.45rem;
+    block-size: 1.5px;
+    background-color: currentColor;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform var(--duration-base) var(--ease-editorial);
+  }
+
+  .nav-underline:hover::after,
+  .nav-underline[aria-current="page"]::after {
+    transform: scaleX(1);
+  }
+
+  .editorial-link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .editorial-link::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0.25rem;
+    block-size: 1px;
+    background-color: currentColor;
+    opacity: 0.45;
+    transition: opacity var(--duration-fast) var(--ease-ui);
+  }
+
+  .editorial-link:hover::after {
+    opacity: 1;
+  }
+
+  .animate-arven-fade {
+    animation: arven-fade-in var(--duration-base) var(--ease-ui) both;
+  }
+
+  .animate-arven-dialog {
+    animation: arven-dialog-in var(--duration-moderate) var(--ease-editorial) both;
+  }
+
+  .animate-arven-drawer-right {
+    animation: arven-drawer-in-right var(--duration-moderate) var(--ease-editorial) both;
+  }
+
+  .animate-arven-drawer-left {
+    animation: arven-drawer-in-left var(--duration-moderate) var(--ease-editorial) both;
   }
 }

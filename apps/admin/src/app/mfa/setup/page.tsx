@@ -279,7 +279,7 @@ function MfaSetupContent() {
             />
             <div className="space-y-1 text-center">
               <p className="font-mono text-xs text-ink">{setupData.issuer}</p>
-              <p className="break-all font-mono text-[11px] text-ink-muted">
+              <p className="break-all font-mono text-xs text-ink-muted">
                 {setupData.accountName}
               </p>
             </div>

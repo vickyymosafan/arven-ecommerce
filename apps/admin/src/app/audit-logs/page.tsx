@@ -174,7 +174,7 @@ export default function AdminAuditLogsPage() {
           <div className="space-y-1">
             {row.actorRole ? <Badge tone="info">{row.actorRole}</Badge> : <Badge>SYSTEM</Badge>}
             {row.actorId ? (
-              <p className="font-mono text-[11px] text-ink-muted">{row.actorId}</p>
+              <p className="font-mono text-xs text-ink-muted">{row.actorId}</p>
             ) : null}
           </div>
         ),
@@ -186,7 +186,7 @@ export default function AdminAuditLogsPage() {
           <div className="space-y-0.5">
             <p className="font-mono text-xs text-ink">{row.resourceType}</p>
             {row.resourceId ? (
-              <p className="font-mono text-[11px] text-ink-muted">{row.resourceId}</p>
+              <p className="font-mono text-xs text-ink-muted">{row.resourceId}</p>
             ) : null}
           </div>
         ),
@@ -195,7 +195,7 @@ export default function AdminAuditLogsPage() {
         key: 'network',
         header: 'Masked IP & Trace',
         render: (row) => (
-          <div className="space-y-0.5 font-mono text-[11px] text-ink-muted">
+          <div className="space-y-0.5 font-mono text-xs text-ink-muted">
             <p>{row.ipMasked ?? '-'}</p>
             {row.requestId ? <p className="truncate max-w-36">{row.requestId}</p> : null}
           </div>

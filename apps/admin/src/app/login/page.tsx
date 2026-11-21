@@ -93,16 +93,12 @@ function AdminLoginContent() {
   return (
     <div className="w-full max-w-md space-y-6">
       <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge tone="warning">Staff Portal</Badge>
-          <span className="font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">
-            Mandatory TOTP MFA
-          </span>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Badge tone="gold">Staff Portal</Badge>
+          <span className="type-eyebrow text-ink-muted">Mandatory TOTP MFA</span>
         </div>
-        <h1 className="font-display text-3xl font-normal tracking-[-0.015em] text-ink sm:text-4xl">
-          Operations Sign In
-        </h1>
-        <p className="text-sm leading-relaxed text-ink-muted">
+        <h1 className="type-display-lg text-ink">Operations Sign In</h1>
+        <p className="type-ui text-ink-muted">
           Authorized ARVEN personnel only. Storefront customer accounts are rejected at this
           portal boundary.
         </p>

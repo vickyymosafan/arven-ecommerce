@@ -373,7 +373,7 @@ export default function AdminCouponsPage() {
         key: 'window',
         header: 'Active Window (WIB)',
         render: (row) => (
-          <div className="space-y-0.5 font-mono text-[11px] tabular-nums text-ink-muted">
+          <div className="space-y-0.5 font-mono text-xs tabular-nums text-ink-muted">
             <p>From: {formatWIB(row.startsAt)}</p>
             <p>To: {formatWIB(row.endsAt)}</p>
           </div>

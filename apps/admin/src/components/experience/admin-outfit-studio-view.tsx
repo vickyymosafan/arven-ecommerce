@@ -718,7 +718,7 @@ export function AdminOutfitStudioView() {
 
                     <div className="flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-3">
                       <div className="space-y-0.5">
-                        <span className="text-[11px] uppercase tracking-[0.06em] text-ink-muted">
+                        <span className="text-xs uppercase tracking-[0.06em] text-ink-muted">
                           Live Preset Total
                         </span>
                         <p className="font-mono text-sm font-semibold tabular-nums text-ink">

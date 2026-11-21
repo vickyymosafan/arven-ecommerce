@@ -644,23 +644,46 @@ export function CheckoutView() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-6">
-        <div className="space-y-2">
-          <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">
-            Checkout
-          </p>
-          <h1 className="font-display text-3xl font-normal tracking-[-0.015em] text-ink sm:text-4xl">
-            Shipping & Order Review
-          </h1>
-          <p className="text-sm text-ink-muted">
-            Prices, stock reservation, and Indonesian courier rates are verified directly by
-            Jakarta Atelier Main.
-          </p>
+      <div className="space-y-6 border-b border-hairline pb-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="space-y-2">
+            <p className="type-eyebrow text-ink-muted">Checkout</p>
+            <h1 className="type-display-lg text-ink">Shipping &amp; Order Review</h1>
+            <p className="type-ui text-ink-muted">
+              Prices, stock reservation, and Indonesian courier rates are verified live by Jakarta
+              Atelier Main.
+            </p>
+          </div>
+
+          <LinkButton href="/cart" variant="secondary" size="sm">
+            Edit Bag
+          </LinkButton>
         </div>
 
-        <LinkButton href="/cart" variant="secondary" size="sm">
-          Edit Bag
-        </LinkButton>
+        {/* Visual Checkout Progress Stepper */}
+        <ol
+          aria-label="Checkout stages"
+          className="grid grid-cols-3 gap-3 border-t border-hairline pt-4 text-xs"
+        >
+          <li className="flex items-center gap-2 font-semibold text-ink">
+            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-xs)] bg-inverse font-mono text-xs tabular-nums text-ink-inverse">
+              01
+            </span>
+            <span>Delivery Address</span>
+          </li>
+          <li className="flex items-center gap-2 font-medium text-ink-secondary">
+            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-xs)] border border-control-border font-mono text-xs tabular-nums text-ink">
+              02
+            </span>
+            <span>Courier &amp; Promo</span>
+          </li>
+          <li className="flex items-center gap-2 font-medium text-ink-muted">
+            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-xs)] border border-hairline font-mono text-xs tabular-nums text-ink-muted">
+              03
+            </span>
+            <span>Payment Settlement</span>
+          </li>
+        </ol>
       </div>
 
       {submitError ? (
@@ -1286,7 +1309,7 @@ export function CheckoutView() {
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center font-mono text-[10px] text-ink-muted">
+                          <div className="flex h-full w-full items-center justify-center font-mono text-xs text-ink-muted">
                             ARV
                           </div>
                         )}

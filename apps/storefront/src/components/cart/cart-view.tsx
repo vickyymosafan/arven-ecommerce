@@ -75,7 +75,7 @@ function CartItemThumbnail({
             <rect x="4" y="4" width="40" height="52" />
             <path d="M14 18h20M14 26h20M18 34h12" />
           </svg>
-          <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-ink-muted">
+          <span className="text-xs font-medium uppercase tracking-[0.06em] text-ink-muted">
             ARVEN
           </span>
         </div>
@@ -208,10 +208,10 @@ export function CartView() {
     return (
       <div className="space-y-8">
         <div className="space-y-2 border-b border-hairline pb-6">
-          <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">
+          <p className="type-eyebrow text-ink-muted">
             Clientele Bag
           </p>
-          <h1 className="font-display text-3xl font-normal tracking-[-0.015em] text-ink sm:text-4xl">
+          <h1 className="type-display-lg text-ink">
             Shopping Bag
           </h1>
         </div>
@@ -241,16 +241,16 @@ export function CartView() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-6">
         <div className="space-y-2">
-          <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">
+          <p className="type-eyebrow text-ink-muted">
             Clientele Bag
           </p>
-          <h1 className="font-display text-3xl font-normal tracking-[-0.015em] text-ink sm:text-4xl">
+          <h1 className="type-display-lg text-ink">
             Shopping Bag
           </h1>
           <p className="text-sm text-ink-muted">
-            <span className="font-mono tabular-nums text-ink">{cart.totalQuantity}</span>{' '}
-            {cart.totalQuantity === 1 ? 'piece' : 'pieces'} staged with live Jakarta warehouse
-            verification.
+            <span className="font-semibold tabular-nums text-ink">{cart.totalQuantity}</span>{' '}
+            {cart.totalQuantity === 1 ? 'piece' : 'pieces'} staged with live Jakarta studio
+            inventory verification.
           </p>
         </div>
 
@@ -341,10 +341,12 @@ export function CartView() {
                           {formatIDR(item.unitPriceIdr)}
                         </span>
                         {hasDiscount && item.compareAtIdr ? (
-                          <span className="font-mono text-xs tabular-nums text-ink-muted line-through">
-                            <span className="sr-only">Original price: </span>
+                          <del
+                            aria-label={`Original price ${formatIDR(item.compareAtIdr)}`}
+                            className="font-mono text-xs tabular-nums text-ink-muted line-through"
+                          >
                             {formatIDR(item.compareAtIdr)}
-                          </span>
+                          </del>
                         ) : null}
                       </div>
 
@@ -378,10 +380,10 @@ export function CartView() {
                   {/* Quantity Controls, Line Subtotal & Remove */}
                   <div className="flex flex-wrap items-center justify-between gap-4 border-t border-hairline pt-3 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
                     <div className="text-left sm:text-right">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-muted">
+                      <p className="type-eyebrow text-ink-muted">
                         Line Subtotal
                       </p>
-                      <p className="whitespace-nowrap font-mono text-base font-medium tabular-nums text-ink">
+                      <p className="whitespace-nowrap text-base font-semibold tabular-nums text-ink">
                         {formatIDR(item.lineSubtotalIdr)}
                       </p>
                     </div>
@@ -441,10 +443,10 @@ export function CartView() {
         <aside aria-label="Bag summary" className="min-w-0 lg:col-span-4 lg:sticky lg:top-24">
           <Surface variant="subtle" border="hairline" padding="lg" className="space-y-5">
             <div className="space-y-1">
-              <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">
+              <p className="type-eyebrow text-ink-muted">
                 Summary
               </p>
-              <h2 className="font-display text-2xl font-normal text-ink">Bag Totals</h2>
+              <h2 className="type-h2 text-ink">Order Summary</h2>
             </div>
 
             <Divider />
@@ -452,13 +454,13 @@ export function CartView() {
             <dl className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-ink-muted">Total Pieces</dt>
-                <dd className="font-mono font-medium tabular-nums text-ink">
+                <dd className="font-semibold tabular-nums text-ink">
                   {cart.totalQuantity}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-ink-muted">Currency</dt>
-                <dd className="font-mono text-xs uppercase tracking-[0.06em] text-ink">
+                <dd className="text-xs font-semibold uppercase tracking-[0.06em] text-ink">
                   {cart.currency}
                 </dd>
               </div>
@@ -468,10 +470,10 @@ export function CartView() {
 
             <dl className="text-sm">
               <div className="flex items-baseline justify-between gap-3 pt-1">
-                <dt className="text-xs font-semibold uppercase tracking-[0.06em] text-ink">
-                  Authoritative Server Subtotal
+                <dt className="type-eyebrow text-ink">
+                  Estimated Subtotal
                 </dt>
-                <dd className="whitespace-nowrap font-mono text-xl font-medium tabular-nums text-ink">
+                <dd className="whitespace-nowrap text-xl font-semibold tabular-nums text-ink">
                   {formatIDR(cart.subtotalIdr)}
                 </dd>
               </div>

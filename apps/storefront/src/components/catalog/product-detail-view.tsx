@@ -13,18 +13,21 @@ import {
   Divider,
   EmptyState,
   ErrorState,
+  IconChevronDown,
+  IconMinus,
+  IconPlus,
   LinkButton,
   LoadingState,
   ProductCard,
   SizeGuideModal,
   StatusBanner,
-  Surface,
   VariantSelector,
   cn,
   formatIDR,
   useToast,
 } from '@arven/ui';
 import { Product3DViewerIsland } from '@/components/catalog/product-3d-viewer-island';
+import { OPEN_CART_DRAWER_EVENT } from '@/components/storefront-shell';
 import { ApiClientError, notifyCartUpdated, storefrontApi } from '@/lib/api-client';
 
 export function ProductDetailView({ slug }: { slug: string }) {
@@ -302,7 +305,7 @@ export function ProductDetailView({ slug }: { slug: string }) {
   const hasDiscount = typeof displayCompareAtIdr === 'number' && displayCompareAtIdr > displayPriceIdr;
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-14">
       {/* Breadcrumb */}
       <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
         <Link href="/" className="inline-flex min-h-11 items-center px-1 hover:text-ink hover:underline">
@@ -330,25 +333,25 @@ export function ProductDetailView({ slug }: { slug: string }) {
         <span className="font-medium text-ink">{product.name}</span>
       </nav>
 
-      {/* Main 2-Column PDP Layout */}
+      {/* Main 7:5 Editorial PDP Split */}
       {has3dControlSurface ? (
         <a
           href="#pdp-purchase-controls"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[var(--z-toast)] focus:inline-flex focus:min-h-11 focus:items-center focus:rounded-[var(--radius-sm)] focus:border focus:border-strong-border focus:bg-canvas focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-ink focus:shadow-[var(--shadow-raised)] focus:outline-2 focus:outline-offset-2 focus:outline-focus"
+          className="fixed top-3 left-3 z-[var(--z-toast)] inline-flex min-h-11 -translate-y-[250%] items-center rounded-[var(--radius-xs)] border border-strong-border bg-inverse px-4 py-2 text-sm font-semibold text-ink-inverse shadow-[var(--shadow-raised)] transition-transform duration-[var(--duration-fast)] focus:translate-y-0 focus-visible:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         >
           Lewati Tampilan 3D
         </a>
       ) : null}
 
-      <div className="grid gap-10 lg:grid-cols-12">
-        {/* Left Column: 2D Studio Gallery & Progressive 3D Viewer */}
-        <section aria-label="Product media gallery" className="space-y-4 lg:col-span-6">
+      <div className="grid gap-10 lg:grid-cols-12 lg:items-start lg:gap-12">
+        {/* Left Column (7 cols): 2D Studio Gallery & Progressive 3D Viewer */}
+        <section aria-label="Product media gallery" className="space-y-4 lg:col-span-7">
           {has3dControlSurface ? (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div
                 role="group"
                 aria-label="Mode Tampilan Produk"
-                className="inline-flex flex-wrap items-center gap-2"
+                className="inline-flex items-center border border-control-border bg-subtle p-1"
               >
                 <button
                   type="button"
@@ -358,11 +361,11 @@ export function ProductDetailView({ slug }: { slug: string }) {
                     setFallbackNotice(null);
                   }}
                   className={cn(
-                    'inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-sm)] border px-4 py-2 text-xs font-medium tracking-[0.04em] transition-[background-color,border-color,color] cursor-pointer',
+                    'inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-xs)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.05em] transition-[background-color,color] cursor-pointer',
                     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
                     viewMode === '2d'
-                      ? 'border-strong-border bg-inverse text-ink-inverse font-semibold'
-                      : 'border-control-border bg-panel text-ink-muted hover:border-strong-border hover:text-ink',
+                      ? 'bg-inverse text-ink-inverse'
+                      : 'text-ink-secondary hover:text-ink',
                   )}
                 >
                   Foto 2D
@@ -375,19 +378,19 @@ export function ProductDetailView({ slug }: { slug: string }) {
                     setViewMode('3d');
                   }}
                   className={cn(
-                    'inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-sm)] border px-4 py-2 text-xs font-medium tracking-[0.04em] transition-[background-color,border-color,color] cursor-pointer',
+                    'inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-xs)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.05em] transition-[background-color,color] cursor-pointer',
                     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
                     viewMode === '3d'
-                      ? 'border-strong-border bg-inverse text-ink-inverse font-semibold'
-                      : 'border-control-border bg-panel text-ink-muted hover:border-strong-border hover:text-ink',
+                      ? 'bg-inverse text-ink-inverse'
+                      : 'text-ink-secondary hover:text-ink',
                   )}
                 >
                   Model 3D
                 </button>
               </div>
               {asset3d ? (
-                <span className="font-mono text-xs tabular-nums text-ink-muted">
-                  Studio 3D v{String(asset3d.version).padStart(4, '0')}
+                <span className="type-sku text-ink-muted">
+                  3D Studio v{String(asset3d.version).padStart(4, '0')}
                 </span>
               ) : null}
             </div>
@@ -437,30 +440,36 @@ export function ProductDetailView({ slug }: { slug: string }) {
                 />
               ) : null}
 
-              <div className="relative aspect-[3/4] w-full overflow-hidden border border-hairline bg-panel">
+              <div className="relative aspect-[3/4] w-full overflow-hidden border border-hairline bg-subtle">
                 {activeMedia ? (
                   <img
                     src={activeMedia.url}
                     alt={activeMedia.altText || product.name}
-                    className="h-full w-full object-cover"
+                    className="block h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-subtle p-8 text-center">
-                    <span className="font-display text-2xl text-ink-muted">{product.name}</span>
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-subtle p-8 text-center">
+                    <span className="font-display text-3xl tracking-[0.18em] uppercase text-ink">
+                      ARVEN
+                    </span>
+                    <span className="text-sm text-ink-muted">{product.name}</span>
                   </div>
                 )}
 
-                <div className="pointer-events-none absolute top-3 left-3 flex flex-wrap items-center gap-2">
-                  {activeMedia ? <Badge tone="neutral">{activeMedia.type}</Badge> : null}
-                  {product.isFeatured ? <Badge tone="info">Featured</Badge> : null}
-                </div>
+                {product.isFeatured ? (
+                  <div className="pointer-events-none absolute bottom-3 left-3">
+                    <span className="inline-flex items-center border border-hairline bg-canvas px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.05em] text-ink">
+                      Featured
+                    </span>
+                  </div>
+                ) : null}
               </div>
 
               {product.media.length > 1 ? (
                 <div
                   role="group"
                   aria-label="Gallery view selector"
-                  className="grid grid-cols-3 gap-3 sm:grid-cols-4"
+                  className="grid grid-cols-4 gap-3 sm:grid-cols-5"
                 >
                   {product.media.map((media, idx) => {
                     const isSelected = activeMedia?.id === media.id;
@@ -472,7 +481,7 @@ export function ProductDetailView({ slug }: { slug: string }) {
                         aria-current={isSelected ? 'true' : undefined}
                         onClick={() => setSelectedMediaId(media.id)}
                         className={cn(
-                          'group relative min-h-11 min-w-11 overflow-hidden border bg-panel transition-colors cursor-pointer',
+                          'group relative aspect-[3/4] min-h-11 min-w-11 overflow-hidden border bg-subtle transition-colors cursor-pointer',
                           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
                           isSelected
                             ? 'border-2 border-strong-border'
@@ -482,11 +491,8 @@ export function ProductDetailView({ slug }: { slug: string }) {
                         <img
                           src={media.url}
                           alt={media.altText}
-                          className="aspect-[3/4] w-full object-cover"
+                          className="block h-full w-full object-cover"
                         />
-                        <span className="block border-t border-hairline bg-canvas px-2 py-1 text-left font-mono text-xs text-ink-muted">
-                          {media.type}
-                        </span>
                       </button>
                     );
                   })}
@@ -496,19 +502,19 @@ export function ProductDetailView({ slug }: { slug: string }) {
           )}
         </section>
 
-        {/* Right Column: Specifications & Variant Selector */}
+        {/* Right Column (5 cols): Sticky Specifications & Purchase Controls */}
         <section
           id="pdp-purchase-controls"
           tabIndex={-1}
           aria-label="Product details and selection"
-          className="space-y-6 lg:col-span-6 focus:outline-none"
+          className="space-y-6 lg:sticky lg:top-24 lg:col-span-5 focus:outline-none"
         >
           <div className="space-y-3 border-b border-hairline pb-6">
             <div className="flex flex-wrap items-center gap-2">
               {product.primaryCategory ? (
                 <Link
                   href={`/shop/${product.primaryCategory.slug}`}
-                  className="inline-flex min-h-11 items-center text-xs font-semibold uppercase tracking-[0.06em] text-link hover:underline"
+                  className="type-eyebrow inline-flex min-h-11 items-center text-link hover:underline"
                 >
                   {product.primaryCategory.name}
                 </Link>
@@ -524,40 +530,38 @@ export function ProductDetailView({ slug }: { slug: string }) {
               ))}
             </div>
 
-            <h1 className="font-display text-3xl font-normal leading-tight tracking-[-0.015em] text-ink sm:text-4xl">
-              {product.name}
-            </h1>
+            <h1 className="type-h1 text-ink">{product.name}</h1>
 
             <div className="flex flex-wrap items-baseline justify-between gap-4 pt-1">
               <div className="flex flex-wrap items-baseline gap-3">
-                <span className="font-mono text-2xl font-medium tabular-nums text-ink">
+                <span className="text-2xl font-semibold tabular-nums text-ink">
                   {formatIDR(displayPriceIdr)}
                 </span>
                 {hasDiscount && displayCompareAtIdr ? (
-                  <span className="font-mono text-sm tabular-nums text-ink-muted line-through">
-                    <span className="sr-only">Original price: </span>
+                  <del
+                    aria-label={`Original price ${formatIDR(displayCompareAtIdr)}`}
+                    className="text-sm tabular-nums text-ink-muted line-through"
+                  >
                     {formatIDR(displayCompareAtIdr)}
-                  </span>
+                  </del>
                 ) : null}
               </div>
 
               {selectedVariant ? (
-                <span className="font-mono text-xs tabular-nums text-ink-muted">
+                <span className="type-sku text-ink-muted">
                   SKU: <strong className="font-medium text-ink">{selectedVariant.sku}</strong>
                 </span>
               ) : null}
             </div>
 
-            <p className="text-sm leading-relaxed text-ink-secondary">{product.description}</p>
+            <p className="type-ui leading-relaxed text-ink-secondary">{product.description}</p>
           </div>
 
           {/* Material & Color Presets (Server-driven 3D & Variant Sync) */}
           {activePresets.length > 0 ? (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.06em] text-ink">
-                  Material &amp; Color Presets
-                </span>
+                <span className="type-eyebrow text-ink">Material &amp; Color Presets</span>
                 {activePreset ? (
                   <span className="text-xs font-medium text-ink-secondary">
                     {activePreset.label}
@@ -603,7 +607,7 @@ export function ProductDetailView({ slug }: { slug: string }) {
                         }
                       }}
                       className={cn(
-                        'inline-flex min-h-11 min-w-11 items-center gap-2.5 rounded-[var(--radius-sm)] border px-3.5 py-2 text-xs font-medium transition-[background-color,border-color,color] cursor-pointer',
+                        'inline-flex min-h-11 min-w-11 items-center gap-2.5 rounded-[var(--radius-xs)] border px-3.5 py-2 text-xs font-medium transition-[background-color,border-color,color] cursor-pointer',
                         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
                         isSelected
                           ? 'border-2 border-strong-border bg-panel text-ink font-semibold'
@@ -650,18 +654,16 @@ export function ProductDetailView({ slug }: { slug: string }) {
           {/* Quantity Stepper */}
           <div className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-semibold uppercase tracking-[0.06em] text-ink">
-                Quantity
-              </span>
+              <span className="type-eyebrow text-ink">Quantity</span>
               {selectedVariant && selectedVariant.availableQty > 0 ? (
-                <span className="font-mono text-xs tabular-nums text-ink-muted">
+                <span className="text-xs tabular-nums text-ink-muted">
                   Max {maxOrderQuantity} per order ({selectedVariant.availableQty} available)
                 </span>
               ) : (
-                <span className="font-mono text-xs text-ink-muted">Unavailable</span>
+                <span className="text-xs text-ink-muted">Unavailable</span>
               )}
             </div>
-            <div className="inline-flex items-center rounded-[var(--radius-sm)] border border-control-border bg-elevated">
+            <div className="inline-flex items-center rounded-[var(--radius-xs)] border border-control-border bg-elevated">
               <button
                 type="button"
                 aria-label="Decrease quantity"
@@ -672,15 +674,15 @@ export function ProductDetailView({ slug }: { slug: string }) {
                   addingToBag
                 }
                 onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center border-r border-control-border text-base font-medium text-ink transition-colors hover:bg-panel disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center border-r border-control-border text-ink transition-colors hover:bg-panel disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
               >
-                -
+                <IconMinus size={15} />
               </button>
               <span
                 role="status"
                 aria-live="polite"
                 aria-label={`Selected quantity ${selectedVariant && selectedVariant.availableQty > 0 ? clampedQuantity : 0}`}
-                className="inline-flex min-h-11 min-w-12 items-center justify-center px-3 font-mono text-sm font-medium tabular-nums text-ink"
+                className="inline-flex min-h-11 min-w-12 items-center justify-center px-3 text-sm font-semibold tabular-nums text-ink"
               >
                 {selectedVariant && selectedVariant.availableQty > 0 ? clampedQuantity : 0}
               </span>
@@ -696,9 +698,9 @@ export function ProductDetailView({ slug }: { slug: string }) {
                 onClick={() =>
                   setQuantity((prev) => Math.min(maxOrderQuantity, Math.max(1, prev + 1)))
                 }
-                className="inline-flex min-h-11 min-w-11 items-center justify-center border-l border-control-border text-base font-medium text-ink transition-colors hover:bg-panel disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center border-l border-control-border text-ink transition-colors hover:bg-panel disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
               >
-                +
+                <IconPlus size={15} />
               </button>
             </div>
           </div>
@@ -746,76 +748,109 @@ export function ProductDetailView({ slug }: { slug: string }) {
               title="Added to Bag"
               description={addedToBagMessage}
               action={
-                <LinkButton href="/cart" variant="secondary" size="sm">
-                  View Bag
-                </LinkButton>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent(OPEN_CART_DRAWER_EVENT));
+                      }
+                    }}
+                  >
+                    Open Bag
+                  </Button>
+                  <LinkButton href="/cart" variant="secondary" size="sm">
+                    View Bag
+                  </LinkButton>
+                </div>
               }
             />
           ) : null}
 
           <Divider />
 
-          {/* Architectural Craft & Care Specifications */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Surface variant="subtle" border="hairline" padding="md" className="space-y-1.5">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">
-                Material &amp; Composition
-              </h2>
-              <p className="text-sm leading-relaxed text-ink">{product.material}</p>
-            </Surface>
-
-            <Surface variant="subtle" border="hairline" padding="md" className="space-y-1.5">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">
-                Fit &amp; Silhouette
-              </h2>
-              <p className="text-sm leading-relaxed text-ink">{product.fit}</p>
-            </Surface>
-
-            <Surface variant="subtle" border="hairline" padding="md" className="space-y-1.5">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">
-                Care Instructions
-              </h2>
-              <p className="text-sm leading-relaxed text-ink">{product.careInstruction}</p>
-            </Surface>
-
-            <Surface variant="subtle" border="hairline" padding="md" className="space-y-1.5">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">
-                Warehouse Dispatch
-              </h2>
-              <p className="text-sm leading-relaxed text-ink">
-                Jakarta Atelier Main (JKT-MAIN-01). Verified physical inventory check before checkout.
+          {/* Native Editorial Disclosure Accordions (content-first noise reduction) */}
+          <div className="divide-y divide-hairline border-b border-hairline">
+            <details open className="group py-3.5">
+              <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.06em] text-ink">
+                <span>Material &amp; Composition</span>
+                <IconChevronDown
+                  size={16}
+                  className="shrink-0 text-ink-muted transition-transform duration-[var(--duration-fast)] group-open:rotate-180"
+                />
+              </summary>
+              <p className="pt-2 pb-1 text-sm leading-relaxed text-ink-secondary">
+                {product.material}
               </p>
-            </Surface>
+            </details>
+
+            <details open className="group py-3.5">
+              <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.06em] text-ink">
+                <span>Fit &amp; Silhouette</span>
+                <IconChevronDown
+                  size={16}
+                  className="shrink-0 text-ink-muted transition-transform duration-[var(--duration-fast)] group-open:rotate-180"
+                />
+              </summary>
+              <p className="pt-2 pb-1 text-sm leading-relaxed text-ink-secondary">{product.fit}</p>
+            </details>
+
+            <details className="group py-3.5">
+              <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.06em] text-ink">
+                <span>Care Instructions</span>
+                <IconChevronDown
+                  size={16}
+                  className="shrink-0 text-ink-muted transition-transform duration-[var(--duration-fast)] group-open:rotate-180"
+                />
+              </summary>
+              <p className="pt-2 pb-1 text-sm leading-relaxed text-ink-secondary">
+                {product.careInstruction}
+              </p>
+            </details>
+
+            <details className="group py-3.5">
+              <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.06em] text-ink">
+                <span>Jakarta Studio Dispatch</span>
+                <IconChevronDown
+                  size={16}
+                  className="shrink-0 text-ink-muted transition-transform duration-[var(--duration-fast)] group-open:rotate-180"
+                />
+              </summary>
+              <p className="pt-2 pb-1 text-sm leading-relaxed text-ink-secondary">
+                Dispatched directly from Jakarta Atelier Main (JKT-MAIN-01) with live inventory
+                verification and insured domestic shipping.
+              </p>
+            </details>
           </div>
         </section>
       </div>
 
       {/* Related Garments */}
       {product.relatedProducts.length > 0 ? (
-        <section aria-labelledby="related-garments-heading" className="space-y-6 border-t border-hairline pt-10">
+        <section
+          aria-labelledby="related-garments-heading"
+          className="space-y-8 border-t border-hairline pt-12"
+        >
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <div className="space-y-1">
-              <p className="font-mono text-xs uppercase tracking-[0.06em] text-ink-muted">
-                Complementary Silhouettes
-              </p>
-              <h2
-                id="related-garments-heading"
-                className="font-display text-2xl font-normal text-ink sm:text-3xl"
-              >
-                Related Garments
+            <div className="space-y-1.5">
+              <p className="type-eyebrow text-ink-muted">Complementary Silhouettes</p>
+              <h2 id="related-garments-heading" className="type-display-lg text-ink">
+                Pair With
               </h2>
             </div>
             <Link
               href="/shop"
-              className="inline-flex min-h-11 items-center text-sm font-medium text-link hover:underline"
+              className="editorial-link inline-flex min-h-11 items-center text-sm font-medium text-ink hover:text-link"
             >
-              View Complete Catalog
+              Explore Full Catalog
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 min-[480px]:grid-cols-2 lg:grid-cols-4">
-            {product.relatedProducts.map((item) => (
-              <ProductCard key={item.id} product={item} />
+          <div className="grid grid-cols-1 gap-x-6 gap-y-10 min-[480px]:grid-cols-2 lg:grid-cols-4">
+            {product.relatedProducts.map((related) => (
+              <ProductCard key={related.id} product={related} />
             ))}
           </div>
         </section>
